@@ -2,17 +2,16 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Logo } from "@/components/logo";
 import { Progress } from "@/components/ui/progress";
-import { Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info } from "lucide-react";
+import { Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight, Banknote, Calendar } from "lucide-react";
 import jsPDF from 'jspdf';
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { InstructionCard } from "@/components/instruction-card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { format, addMonths } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
 interface PropertyAnalysis {
@@ -21,32 +20,28 @@ interface PropertyAnalysis {
     location: number;
     condition: number;
     market: number;
+    potential: number;
   };
   priceHistory: { date: string; value: number }[];
-  similarProperties: { price: number; distance: number }[];
+  similarProperties: { price: number; distance: number; features: string[] }[];
+  forecast: { date: string; optimistic: number; conservative: number }[];
+  riskAssessment: {
+    score: number;
+    factors: { name: string; impact: number }[];
+  };
+  investmentMetrics: {
+    roi: number;
+    breakeven: number;
+    appreciation: number;
+  };
 }
 
-const STEPS = [
-  {
-    title: "Основна информация",
-    description: "Въведете детайли за имота"
-  },
-  {
-    title: "Медия файлове",
-    description: "Качете снимки и документи"
-  },
-  {
-    title: "Оценка",
-    description: "Преглед на резултатите"
-  }
-];
-
 function calculatePropertyValue(property: any): PropertyAnalysis {
-  // Базова цена според квадратура (примерно 1000 евро на кв.м)
+  // Базова цена според квадратура
   const basePrice = property.squareMeters * 1000;
 
   // Фактори за корекция
-  const locationFactor = 0.9; // Базирано на местоположението
+  const locationFactor = 0.9;
   const yearFactor = Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
   const typeFactor = {
     apartment: 1,
@@ -58,22 +53,39 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
 
   const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
 
-  // Генериране на история на цените (последните 6 месеца)
-  const priceHistory = Array.from({ length: 6 }).map((_, i) => {
+  // История на цените (12 месеца)
+  const priceHistory = Array.from({ length: 12 }).map((_, i) => {
     const date = new Date();
-    date.setMonth(date.getMonth() - (5 - i));
-    const variation = 0.95 + Math.random() * 0.1; // ±5% вариация
+    date.setMonth(date.getMonth() - (11 - i));
+    const variation = 0.95 + Math.random() * 0.1;
     return {
       date: format(date, 'MMM yyyy', { locale: bg }),
       value: Math.round(estimatedValue * variation)
     };
   });
 
-  // Подобни имоти (3-5 имота)
-  const similarCount = 3 + Math.floor(Math.random() * 3);
-  const similarProperties = Array.from({ length: similarCount }).map(() => ({
+  // Прогноза за следващите 24 месеца
+  const forecast = Array.from({ length: 24 }).map((_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + i);
+    const trend = 1 + (i * 0.005); // 0.5% месечен ръст
+    return {
+      date: format(date, 'MMM yyyy', { locale: bg }),
+      optimistic: Math.round(estimatedValue * trend * 1.1),
+      conservative: Math.round(estimatedValue * trend * 0.9)
+    };
+  });
+
+  // Подобни имоти
+  const similarProperties = Array.from({ length: 5 }).map(() => ({
     price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
-    distance: Math.round(1 + Math.random() * 4)
+    distance: Math.round(1 + Math.random() * 4),
+    features: [
+      'Сходна квадратура',
+      'Близка локация',
+      'Подобно състояние',
+      'Сходна година на строеж'
+    ].sort(() => Math.random() - 0.5).slice(0, 2)
   }));
 
   return {
@@ -81,10 +93,25 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
     factors: {
       location: Math.round(locationFactor * 100),
       condition: Math.round(yearFactor * 100),
-      market: Math.round(typeFactor * 70)
+      market: Math.round(typeFactor * 70),
+      potential: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100)
     },
     priceHistory,
-    similarProperties
+    similarProperties,
+    forecast,
+    riskAssessment: {
+      score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
+      factors: [
+        { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
+        { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
+        { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) }
+      ]
+    },
+    investmentMetrics: {
+      roi: 5.5 + Math.random() * 2,
+      breakeven: Math.round(48 + Math.random() * 24),
+      appreciation: 3.5 + Math.random() * 1.5
+    }
   };
 }
 
@@ -100,7 +127,6 @@ export default function Step3() {
       return;
     }
 
-    // Симулираме зареждане на данни
     const timer = setTimeout(() => {
       const mockProperty = {
         type: "apartment",
@@ -121,24 +147,55 @@ export default function Step3() {
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
 
-      pdf.setFontSize(20);
+      // Заглавна страница
+      pdf.setFontSize(24);
       pdf.setTextColor(0, 51, 102);
-      pdf.text('Оценка на имот', 20, 20);
+      pdf.text('Детайлна оценка на имот', 20, 30);
 
       pdf.setFontSize(14);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(`Оценена стойност: €${analysis?.estimatedValue.toLocaleString() || 0}`, 20, 40);
+      pdf.text('Изготвено от Homiq', 20, 40);
+      pdf.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 50);
 
-      pdf.setFontSize(12);
-      pdf.text('Фактори за оценката:', 20, 60);
-      pdf.text(`• Локация: ${analysis?.factors.location || 0}/100`, 25, 70);
-      pdf.text(`• Състояние: ${analysis?.factors.condition || 0}/100`, 25, 80);
-      pdf.text(`• Пазарни условия: ${analysis?.factors.market || 0}/100`, 25, 90);
+      // Основна информация
+      pdf.addPage();
+      pdf.setFontSize(20);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('Оценка на стойността', 20, 20);
 
-      pdf.setFontSize(10);
-      pdf.text(`Дата на оценката: ${new Date().toLocaleDateString('bg-BG')}`, 20, 120);
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`€${analysis?.estimatedValue.toLocaleString() || 0}`, 20, 35);
 
-      pdf.save('оценка-на-имот.pdf');
+      // Фактори
+      pdf.setFontSize(14);
+      pdf.text('Фактори за оценката:', 20, 50);
+      pdf.text(`• Локация: ${analysis?.factors.location || 0}/100`, 25, 60);
+      pdf.text(`• Състояние: ${analysis?.factors.condition || 0}/100`, 25, 70);
+      pdf.text(`• Пазарни условия: ${analysis?.factors.market || 0}/100`, 25, 80);
+      pdf.text(`• Потенциал за развитие: ${analysis?.factors.potential || 0}/100`, 25, 90);
+
+      // Инвестиционни метрики
+      pdf.text('Инвестиционен анализ:', 20, 110);
+      pdf.text(`• Очаквана възвръщаемост: ${analysis?.investmentMetrics.roi.toFixed(1)}% годишно`, 25, 120);
+      pdf.text(`• Период на изплащане: ${analysis?.investmentMetrics.breakeven} месеца`, 25, 130);
+      pdf.text(`• Очаквано поскъпване: ${analysis?.investmentMetrics.appreciation.toFixed(1)}% годишно`, 25, 140);
+
+      // Рискова оценка
+      pdf.addPage();
+      pdf.setFontSize(20);
+      pdf.setTextColor(0, 51, 102);
+      pdf.text('Оценка на риска', 20, 20);
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Обща оценка на риска: ${analysis?.riskAssessment.score || 0}/100`, 20, 35);
+
+      analysis?.riskAssessment.factors.forEach((factor, index) => {
+        pdf.text(`• ${factor.name}: ${factor.impact}%`, 25, 50 + index * 10);
+      });
+
+      pdf.save('homiq-оценка.pdf');
 
       toast({
         title: "PDF генериран успешно",
@@ -167,20 +224,6 @@ export default function Step3() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-10">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Logo />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
         <ProgressSteps currentStep={3} steps={STEPS} />
 
@@ -194,7 +237,7 @@ export default function Step3() {
               <CardHeader>
                 <CardTitle>Резултат от оценката</CardTitle>
                 <CardDescription>
-                  Детайлен анализ на стойността на вашия имот
+                  Професионален анализ на стойността на вашия имот
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -210,7 +253,7 @@ export default function Step3() {
                       <Progress value={45} className="w-full h-2" />
                       <p>Изчисляваме стойността на имота...</p>
                       <p className="text-sm text-gray-500">
-                        Анализираме предоставената информация
+                        Анализираме всички фактори за точна оценка
                       </p>
                     </motion.div>
                   ) : analysis ? (
@@ -229,22 +272,24 @@ export default function Step3() {
                           €{analysis.estimatedValue.toLocaleString()}
                         </h3>
                         <p className="text-sm text-gray-500 mt-2">
-                          Оценена стойност на имота
+                          Оценена пазарна стойност
                         </p>
                       </motion.div>
 
                       <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                        className="grid grid-cols-2 gap-4"
                       >
                         <Card className="p-4">
                           <div className="flex items-center gap-3">
                             <MapPin className="h-5 w-5 text-blue-500" />
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">Локация</p>
                               <Progress value={analysis.factors.location} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">{analysis.factors.location}/100</p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {analysis.factors.location}/100
+                              </p>
                             </div>
                           </div>
                         </Card>
@@ -252,10 +297,12 @@ export default function Step3() {
                         <Card className="p-4">
                           <div className="flex items-center gap-3">
                             <Home className="h-5 w-5 text-green-500" />
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">Състояние</p>
                               <Progress value={analysis.factors.condition} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">{analysis.factors.condition}/100</p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {analysis.factors.condition}/100
+                              </p>
                             </div>
                           </div>
                         </Card>
@@ -263,10 +310,25 @@ export default function Step3() {
                         <Card className="p-4">
                           <div className="flex items-center gap-3">
                             <TrendingUp className="h-5 w-5 text-purple-500" />
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">Пазар</p>
                               <Progress value={analysis.factors.market} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">{analysis.factors.market}/100</p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {analysis.factors.market}/100
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <Card className="p-4">
+                          <div className="flex items-center gap-3">
+                            <ArrowUpRight className="h-5 w-5 text-orange-500" />
+                            <div className="flex-1">
+                              <p className="font-medium">Потенциал</p>
+                              <Progress value={analysis.factors.potential} className="h-2 mt-2" />
+                              <p className="text-sm text-gray-500 mt-1">
+                                {analysis.factors.potential}/100
+                              </p>
                             </div>
                           </div>
                         </Card>
@@ -277,21 +339,45 @@ export default function Step3() {
                         animate={{ y: 0, opacity: 1 }}
                       >
                         <Card className="p-6">
-                          <h4 className="font-medium mb-4">История на цените</h4>
-                          <div className="h-[200px] w-full">
+                          <h4 className="font-medium mb-4">Прогноза за развитие на цената</h4>
+                          <div className="h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={analysis.priceHistory}>
+                              <AreaChart data={analysis.forecast}>
+                                <defs>
+                                  <linearGradient id="optimisticGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#4CAF50" stopOpacity={0}/>
+                                  </linearGradient>
+                                  <linearGradient id="conservativeGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#003366" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#003366" stopOpacity={0}/>
+                                  </linearGradient>
+                                </defs>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
+                                <XAxis 
+                                  dataKey="date" 
+                                  tick={{ fontSize: 12 }}
+                                  interval={2}
+                                />
                                 <YAxis />
                                 <Tooltip />
-                                <Line
+                                <Area
                                   type="monotone"
-                                  dataKey="value"
-                                  stroke="#003366"
+                                  dataKey="optimistic"
+                                  stroke="#4CAF50"
+                                  fill="url(#optimisticGradient)"
                                   strokeWidth={2}
+                                  name="Оптимистична"
                                 />
-                              </LineChart>
+                                <Area
+                                  type="monotone"
+                                  dataKey="conservative"
+                                  stroke="#003366"
+                                  fill="url(#conservativeGradient)"
+                                  strokeWidth={2}
+                                  name="Консервативна"
+                                />
+                              </AreaChart>
                             </ResponsiveContainer>
                           </div>
                         </Card>
@@ -300,21 +386,45 @@ export default function Step3() {
                       <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
                       >
                         <Card className="p-6">
-                          <h4 className="font-medium mb-4">Подобни имоти в района</h4>
+                          <h4 className="font-medium mb-4">Инвестиционни метрики</h4>
                           <div className="space-y-4">
-                            {analysis.similarProperties.map((prop, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                              >
-                                <div>
-                                  <p className="font-medium">€{prop.price.toLocaleString()}</p>
-                                  <p className="text-sm text-gray-500">
-                                    на {prop.distance} км разстояние
-                                  </p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Banknote className="h-5 w-5 text-green-500" />
+                                <span>Очаквана възвръщаемост</span>
+                              </div>
+                              <span className="font-medium">{analysis.investmentMetrics.roi.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-blue-500" />
+                                <span>Период на изплащане</span>
+                              </div>
+                              <span className="font-medium">{analysis.investmentMetrics.breakeven} месеца</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-purple-500" />
+                                <span>Очаквано поскъпване</span>
+                              </div>
+                              <span className="font-medium">{analysis.investmentMetrics.appreciation.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <Card className="p-6">
+                          <h4 className="font-medium mb-4">Оценка на риска</h4>
+                          <div className="space-y-4">
+                            {analysis.riskAssessment.factors.map((factor, index) => (
+                              <div key={index} className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span>{factor.name}</span>
+                                  <span className="font-medium">{factor.impact}%</span>
                                 </div>
+                                <Progress value={factor.impact} className="h-2" />
                               </div>
                             ))}
                           </div>
@@ -331,7 +441,7 @@ export default function Step3() {
                           className="flex-1 bg-[#4CAF50] hover:bg-[#45a049]"
                         >
                           <Download className="h-4 w-4 mr-2" />
-                          Изтегли PDF
+                          Изтегли PDF отчет
                         </Button>
 
                         <Dialog>
@@ -386,12 +496,12 @@ export default function Step3() {
             <InstructionCard
               icon={<Info className="h-5 w-5 text-blue-500" />}
               title="Как се изчислява оценката?"
-              description="Оценката се базира на множество фактори, включително локация, състояние на имота и текущи пазарни условия."
+              description="Нашият алгоритъм анализира множество фактори, включително локация, състояние на имота, пазарни тенденции и инвестиционен потенциал за максимално точна оценка."
             />
             <InstructionCard
               icon={<HelpCircle className="h-5 w-5 text-green-500" />}
-              title="Какво следва?"
-              description="Можете да изтеглите подробен отчет в PDF формат или да споделите резултатите с други."
+              title="Как да използвате оценката?"
+              description="Разгледайте прогнозите за развитие, инвестиционните метрики и оценката на риска за по-информирано решение. Можете да изтеглите подробен PDF отчет."
             />
           </div>
         </div>
@@ -409,8 +519,8 @@ export default function Step3() {
         <DialogContent>
           <DialogTitle>Как да разчетете оценката?</DialogTitle>
           <DialogDescription>
-            Оценката включва анализ на локацията, състоянието на имота и текущите пазарни условия.
-            Разгледайте графиките и сравнителния анализ за по-добро разбиране.
+            Оценката включва детайлен анализ на множество фактори, прогнози за развитие и инвестиционни метрики.
+            Разгледайте внимателно всички показатели за по-добро разбиране на стойността и потенциала на имота.
           </DialogDescription>
         </DialogContent>
       </Dialog>
