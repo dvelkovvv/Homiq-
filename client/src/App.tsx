@@ -3,7 +3,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { VoiceCommands } from "@/components/voice-commands";
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard } from "lucide-react";
 import { Link } from "wouter";
@@ -18,8 +17,7 @@ import NotFound from "@/pages/not-found";
 function Header() {
   return (
     <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-50">
-      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-        <Logo />
+      <div className="container mx-auto px-4 h-14 flex items-center justify-end">
         <div className="flex items-center space-x-2">
           <VoiceCommands />
           <Link href="/dashboard">
