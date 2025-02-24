@@ -26,12 +26,11 @@ export interface DocumentAnalysis {
       lat: number;
       lng: number;
     };
-    // Допълнителни данни за скици
-    buildingFootprint?: number; // Застроена площ
-    buildingHeight?: number; // Височина на сградата
-    allowedUsage?: string[]; // Допустимо предназначение
-    developmentDensity?: number; // Плътност на застрояване
-    floorAreaRatio?: number; // Коефициент на интензивност
+    buildingFootprint?: number;
+    buildingHeight?: number;
+    allowedUsage?: string[];
+    developmentDensity?: number;
+    floorAreaRatio?: number;
     neighboringProperties?: Array<{
       cadastralNumber: string;
       type: string;
@@ -40,15 +39,12 @@ export interface DocumentAnalysis {
 }
 
 export interface AIPropertyAnalysis {
-  // Основна оценка
   estimatedValue: number;
   confidence: number;
   valueRange: {
     min: number;
     max: number;
   };
-
-  // Детайлен анализ на документите
   documentAnalysis: {
     totalDocuments: number;
     averageConfidence: number;
@@ -60,8 +56,6 @@ export interface AIPropertyAnalysis {
       };
     };
   };
-
-  // Анализ на локацията
   locationAnalysis: {
     score: number;
     confidence: number;
@@ -77,8 +71,6 @@ export interface AIPropertyAnalysis {
       impact: number;
     }>;
   };
-
-  // Строителен анализ
   constructionAnalysis: {
     score: number;
     confidence: number;
@@ -90,8 +82,6 @@ export interface AIPropertyAnalysis {
     };
     recommendations: string[];
   };
-
-  // Пазарен анализ
   marketAnalysis: {
     currentTrend: 'rising' | 'stable' | 'declining';
     confidence: number;
@@ -107,8 +97,6 @@ export interface AIPropertyAnalysis {
       confidence: number;
     }>;
   };
-
-  // Правен анализ
   legalAnalysis: {
     score: number;
     confidence: number;
@@ -120,8 +108,6 @@ export interface AIPropertyAnalysis {
     };
     risks: string[];
   };
-
-  // Инвестиционен анализ
   investmentAnalysis: {
     score: number;
     confidence: number;
@@ -165,6 +151,11 @@ export class PropertyAIAnalyzer {
   }
 
   private async callDeepSeekAPI(prompt: string): Promise<any> {
+    if (!DEEPSEEK_API_KEY) {
+      console.warn('DeepSeek API key not found, using fallback extraction');
+      throw new Error('DeepSeek API key not configured');
+    }
+
     try {
       const response = await fetch(DEEPSEEK_API_URL, {
         method: 'POST',
@@ -202,6 +193,10 @@ export class PropertyAIAnalyzer {
 
   private async extractDataFromText(text: string, documentType: DocumentAnalysis['type']): Promise<DocumentAnalysis['extractedData']> {
     try {
+      if (!DEEPSEEK_API_KEY) {
+        return this.fallbackExtraction(text, documentType);
+      }
+
       const prompt = this.generatePromptForDocumentType(text, documentType);
       const result = await this.callDeepSeekAPI(prompt);
       return this.validateAndCleanData(result, documentType);
@@ -260,7 +255,6 @@ export class PropertyAIAnalyzer {
   private validateAndCleanData(data: any, documentType: DocumentAnalysis['type']): DocumentAnalysis['extractedData'] {
     const cleanData: DocumentAnalysis['extractedData'] = {};
 
-    // Обща валидация
     if (typeof data.squareMeters === 'number' && data.squareMeters > 0) {
       cleanData.squareMeters = data.squareMeters;
     }
@@ -271,7 +265,6 @@ export class PropertyAIAnalyzer {
       cleanData.address = data.address;
     }
 
-    // Специфична валидация според типа документ
     switch (documentType) {
       case 'sketch':
         if (typeof data.buildingFootprint === 'number' && data.buildingFootprint > 0) {
@@ -319,7 +312,6 @@ export class PropertyAIAnalyzer {
   private fallbackExtraction(text: string, documentType: DocumentAnalysis['type']): DocumentAnalysis['extractedData'] {
     const data: DocumentAnalysis['extractedData'] = {};
 
-    // Базово извличане на данни с регулярни изрази
     const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
     if (areaMatch) {
       data.squareMeters = parseFloat(areaMatch[1]);
@@ -349,7 +341,6 @@ export class PropertyAIAnalyzer {
     try {
       const extractedData = await this.extractDataFromText(text, documentType);
 
-      // Изчисляваме увереността на базата на количеството извлечени данни
       const totalFields = Object.keys(extractedData).length;
       const expectedFields = documentType === 'sketch' ? 8 :
                            documentType === 'notary_act' ? 7 :
@@ -376,34 +367,21 @@ export class PropertyAIAnalyzer {
     property: Property,
     documents: DocumentAnalysis[]
   ): Promise<AIPropertyAnalysis> {
-    // Анализ на всички документи и извличане на най-достоверната информация
     const consolidatedData = this.consolidateDocumentData(documents);
-
-    // Базова оценка на имота
     const baseAnalysis = await this.calculateBaseValue(property, consolidatedData);
-
-    // Анализ на локацията
     const locationAnalysis = await this.analyzeLocation(
       consolidatedData.address || property.location
     );
-
-    // Строителен анализ
     const constructionAnalysis = await this.analyzeConstruction(
       consolidatedData,
       property
     );
-
-    // Пазарен анализ
     const marketAnalysis = await this.analyzeMarket(
       property,
       consolidatedData,
       locationAnalysis
     );
-
-    // Правен анализ на документите
     const legalAnalysis = await this.analyzeLegalAspects(documents);
-
-    // Инвестиционен анализ
     const investmentAnalysis = await this.analyzeInvestmentPotential(
       baseAnalysis,
       marketAnalysis,
@@ -457,18 +435,11 @@ export class PropertyAIAnalyzer {
     property: Property,
     consolidatedData: Record<string, any>
   ) {
-    // Базова цена според локацията
     const basePrice = this.getLocationBasePrice(property.location);
-
-    // Корекция според типа конструкция
     const constructionFactor = this.getConstructionFactor(
       consolidatedData.constructionType
     );
-
-    // Корекция според годината
     const ageFactor = this.getAgeFactor(consolidatedData.constructionYear);
-
-    // Реална площ от документите или от първоначалните данни
     const area = consolidatedData.squareMeters || property.squareMeters;
 
     const estimatedValue = basePrice * area * constructionFactor * ageFactor;
@@ -517,12 +488,11 @@ export class PropertyAIAnalyzer {
   }
 
   private async analyzeLocation(location: string) {
-    // Анализ на локацията със специфични фактори за българския пазар
     const premiumLocations = ['витоша', 'лозенец', 'иван вазов', 'докторски паметник'];
     const goodLocations = ['младост', 'студентски град', 'център'];
 
     const lowerLocation = location.toLowerCase();
-    let score = 0.75; // База оценка
+    let score = 0.75;
 
     if (premiumLocations.some(loc => lowerLocation.includes(loc))) {
       score = 0.95;

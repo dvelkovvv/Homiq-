@@ -6,6 +6,7 @@ import { VoiceCommands } from "@/components/voice-commands";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard } from "lucide-react";
 import { Link } from "wouter";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 import Home from "@/pages/home";
 import Step1 from "@/pages/evaluation/step1";
@@ -43,10 +44,12 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router />
+        <Toaster />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
