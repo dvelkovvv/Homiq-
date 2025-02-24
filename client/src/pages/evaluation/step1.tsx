@@ -30,17 +30,16 @@ export default function Step1() {
       location: {
         lat: 42.6977,
         lng: 23.3219
-      }, // София по подразбиране
+      },
     }
   });
 
   const onSubmit = async (data: any) => {
     try {
-      // Форматиране на данните преди изпращане
       const formattedData = {
         ...data,
         yearBuilt: data.yearBuilt ? new Date(data.yearBuilt) : new Date(),
-        location: data.location || { lat: 42.6977, lng: 23.3219 }, // София по подразбиране ако няма избрана локация
+        location: data.location || { lat: 42.6977, lng: 23.3219 },
         rooms: 1,
         floor: 0,
         totalFloors: 1,
@@ -167,9 +166,9 @@ export default function Step1() {
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "LLLL yyyy", { locale: bg })
+                            format(field.value, "dd MMMM yyyy", { locale: bg })
                           ) : (
-                            "Изберете година"
+                            "Изберете дата"
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -188,8 +187,6 @@ export default function Step1() {
                         captionLayout="dropdown-buttons"
                         fromYear={1800}
                         toYear={new Date().getFullYear()}
-                        ISOWeek
-                        showMonthYearPicker
                       />
                     </PopoverContent>
                   </Popover>
