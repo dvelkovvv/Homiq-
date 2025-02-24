@@ -4,11 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { HelpCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
-import { InstructionCard } from "@/components/instruction-card";
-import { DocumentScanner } from "@/components/document-scanner";
-import { Info } from "lucide-react";
 
 const STEPS = [
   {
@@ -27,8 +23,6 @@ const STEPS = [
 
 export default function Step2() {
   const [, navigate] = useLocation();
-  const [scannedText, setScannedText] = useState<string>("");
-  const [extractedData, setExtractedData] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -37,23 +31,8 @@ export default function Step2() {
     }
   }, [propertyId, navigate]);
 
-  const handleScanComplete = (text: string, data: any) => {
-    console.log('Scan completed:', { text, data }); // Debug log
-    setScannedText(text);
-    setExtractedData(data);
-    toast({
-      title: "Документът е сканиран успешно",
-      description: "Текстът е извлечен от документа.",
-    });
-  };
-
   const handleContinue = () => {
-    const params = new URLSearchParams();
-    params.set('propertyId', propertyId!);
-    if (extractedData) {
-      params.set('extractedData', JSON.stringify(extractedData));
-    }
-    navigate(`/evaluation/step3?${params.toString()}`);
+    navigate(`/evaluation/step3?propertyId=${propertyId}`);
   };
 
   return (
@@ -64,7 +43,6 @@ export default function Step2() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <HelpCircle className="h-5 w-5" />
@@ -75,61 +53,31 @@ export default function Step2() {
       <main className="container mx-auto px-4 py-8">
         <ProgressSteps currentStep={2} steps={STEPS} />
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="max-w-3xl mx-auto">
-              <CardHeader>
-                <CardTitle>Качване на документи</CardTitle>
-                <CardDescription>
-                  Качете документи за вашия имот за по-точна оценка
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <DocumentScanner onScanComplete={handleScanComplete} />
-
-                  {scannedText && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium mb-2">Извлечен текст и данни:</h4>
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{scannedText}</p>
-                      {extractedData && (
-                        <div className="mt-4 space-y-2">
-                          {extractedData.squareMeters && (
-                            <p className="text-sm">Квадратура: {extractedData.squareMeters} кв.м</p>
-                          )}
-                          {extractedData.constructionYear && (
-                            <p className="text-sm">Година на строителство: {extractedData.constructionYear}</p>
-                          )}
-                          {extractedData.address && (
-                            <p className="text-sm">Адрес: {extractedData.address}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
-                  Назад
-                </Button>
-                <Button
-                  onClick={handleContinue}
-                  className="bg-[#003366] hover:bg-[#002244]"
-                >
-                  Продължи към оценка
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-
-          <div className="hidden lg:block space-y-4">
-            <InstructionCard
-              icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="Как да качите документи?"
-              description="Изберете качествени снимки на документите. Системата автоматично ще анализира текста в документите."
-            />
-          </div>
+        <div className="mt-8">
+          <Card className="max-w-3xl mx-auto">
+            <CardHeader>
+              <CardTitle>Качване на документи</CardTitle>
+              <CardDescription>
+                Качете документи за вашия имот за по-точна оценка
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center p-8 text-muted-foreground">
+                Тази функционалност е временно изключена
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
+                Назад
+              </Button>
+              <Button
+                onClick={handleContinue}
+                className="bg-[#003366] hover:bg-[#002244]"
+              >
+                Продължи към оценка
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </main>
     </div>
