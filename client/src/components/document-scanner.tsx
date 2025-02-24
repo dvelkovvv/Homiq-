@@ -20,33 +20,56 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       setProgress(0);
 
       // Create a new worker for each scan
-      const worker = await createWorker();
+      const worker = await createWorker({
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setProgress(m.progress * 100);
+          }
+        }
+      });
+
+      // Настройваме за български език и добавяме специфични параметри
       await worker.loadLanguage('bul');
       await worker.initialize('bul');
+      await worker.setParameters({
+        tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,- ',
+        preserve_interword_spaces: '1',
+        tessedit_pageseg_mode: '1'
+      });
 
       // Convert file to image URL
       const imageUrl = URL.createObjectURL(file);
 
       // Recognize text
-      const result = await worker.recognize(imageUrl);
+      const { data: { text } } = await worker.recognize(imageUrl);
 
-      // Cleanup
+      // Clean up
       URL.revokeObjectURL(imageUrl);
       await worker.terminate();
 
-      // Return result
-      if (result.data.text) {
-        onScanComplete(result.data.text);
-        toast({
-          title: "Документът е сканиран успешно",
-          description: "Текстът е извлечен от документа.",
-        });
+      if (text) {
+        // Премахваме излишни интервали и нови редове
+        const cleanedText = text
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (cleanedText.length > 0) {
+          onScanComplete(cleanedText);
+          toast({
+            title: "Документът е сканиран успешно",
+            description: "Текстът е извлечен от документа.",
+          });
+        } else {
+          throw new Error("Не беше открит текст в документа");
+        }
+      } else {
+        throw new Error("Не беше открит текст в документа");
       }
     } catch (error) {
       console.error('OCR Error:', error);
       toast({
         title: "Грешка при сканиране",
-        description: "Моля, опитайте отново с друг документ.",
+        description: "Моля, опитайте отново с друг документ или проверете дали изображението е ясно.",
         variant: "destructive"
       });
     } finally {
