@@ -6,18 +6,18 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
-import { PropertyAIAnalyzer, DocumentAnalysis } from "@/lib/propertyAIAnalyzer";
+import { PropertyAIAnalyzer } from "@/lib/propertyAIAnalyzer";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
-  onScanComplete: (text: string, extractedData?: any, documentAnalysis?: DocumentAnalysis) => void;
+  onScanComplete: (text: string, extractedData?: any, documentAnalysis?: any) => void;
 }
 
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const detectDocumentType = (text: string): DocumentAnalysis['type'] => {
+  const detectDocumentType = (text: string) => {
     const lowerText = text.toLowerCase();
     if (lowerText.includes('нотариален акт') || lowerText.includes('нотариус')) {
       return 'notary_act';
@@ -29,6 +29,16 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       return 'tax_assessment';
     }
     return 'other';
+  };
+
+  const getDocumentTypeName = (type: string): string => {
+    const types: Record<string, string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка',
+      'other': 'Друг документ'
+    };
+    return types[type];
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -69,27 +79,37 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          // Определяме типа на документа
-          const documentType = detectDocumentType(processedText);
+          // Базов анализ на документа
+          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
 
-          // Използваме AI анализатора за по-прецизно извличане на данни
-          const aiAnalyzer = PropertyAIAnalyzer.getInstance();
-          const documentAnalysis = await aiAnalyzer.analyzeDocument(processedText, documentType);
+          let documentAnalysis = null;
+          try {
+            // Опитваме се да използваме AI анализатора, но имаме fallback
+            const aiAnalyzer = PropertyAIAnalyzer.getInstance();
+            const documentType = detectDocumentType(processedText);
+            documentAnalysis = await aiAnalyzer.analyzeDocument(processedText, documentType);
 
-          // Показваме предупреждения, ако анализът не е достатъчно уверен
-          if (documentAnalysis.confidence < 0.7) {
-            toast({
-              title: "Внимание при анализа",
-              description: "Някои данни може да не са извлечени с достатъчна точност.",
-              variant: "warning",
-            });
+            if (documentAnalysis.confidence < 0.7) {
+              toast({
+                title: "Внимание при анализа",
+                description: "Някои данни може да не са извлечени с достатъчна точност.",
+                variant: "warning",
+              });
+            }
+          } catch (error) {
+            console.warn('AI analysis failed, using basic analysis:', error);
+            documentAnalysis = {
+              type: detectDocumentType(processedText),
+              confidence: analysisResult.confidence,
+              extractedData: analysisResult.extractedData
+            };
           }
 
-          onScanComplete(processedText, documentAnalysis.extractedData, documentAnalysis);
+          onScanComplete(processedText, analysisResult.extractedData, documentAnalysis);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(documentAnalysis.confidence * 100)}%`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentAnalysis.type)}. Точност на анализа: ${Math.round(documentAnalysis.confidence * 100)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -112,16 +132,6 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
     maxFiles: 1,
     multiple: false
   });
-
-  const getDocumentTypeName = (type: DocumentAnalysis['type']): string => {
-    const types: Record<DocumentAnalysis['type'], string> = {
-      'notary_act': 'Нотариален акт',
-      'sketch': 'Скица',
-      'tax_assessment': 'Данъчна оценка',
-      'other': 'Друг документ'
-    };
-    return types[type];
-  };
 
   return (
     <Card>
