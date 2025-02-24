@@ -5,12 +5,33 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
-import { Upload, X, Image as ImageIcon, FileText } from "lucide-react";
+import { Upload, X, Image as ImageIcon, FileText, Info, HelpCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ProgressSteps } from "@/components/progress-steps";
+import { motion, AnimatePresence } from "framer-motion";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
+import { InstructionCard } from "@/components/instruction-card";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+
 
 interface FileWithPreview extends File {
   preview?: string;
 }
+
+const STEPS = [
+  {
+    title: "Основна информация",
+    description: "Въведете детайли за имота"
+  },
+  {
+    title: "Медия файлове",
+    description: "Качете снимки и документи"
+  },
+  {
+    title: "Оценка",
+    description: "Преглед на резултатите"
+  }
+];
 
 export default function Step2() {
   const [, navigate] = useLocation();
@@ -22,9 +43,10 @@ export default function Step2() {
     if (!propertyId) {
       navigate('/evaluation/step1');
     }
-    // Cleanup function to revoke object URLs
     return () => images.forEach(image => image.preview && URL.revokeObjectURL(image.preview));
   }, [propertyId, navigate, images]);
+
+  useUnsavedChanges(images.length > 0 || documents.length > 0);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -74,147 +96,210 @@ export default function Step2() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center">
+      <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-10">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Logo />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Card className="max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle>Качване на файлове</CardTitle>
-            <CardDescription>
-              Качете снимки и документи за вашия имот за по-точна оценка
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <Label>Снимки на имота</Label>
-                <div className="mt-2">
-                  <div className="flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-                    <div className="text-center">
-                      <ImageIcon className="mx-auto h-12 w-12 text-gray-300" />
-                      <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                        <label
-                          htmlFor="photos"
-                          className="relative cursor-pointer rounded-md bg-white font-semibold text-primary hover:text-primary/80"
-                        >
-                          <span>Качете снимки</span>
-                          <Input
-                            id="photos"
-                            name="photos"
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={handleImageChange}
-                          />
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        PNG, JPG до 10MB
-                      </p>
-                    </div>
-                  </div>
-                </div>
+        <ProgressSteps currentStep={2} steps={STEPS} />
 
-                {images.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-medium mb-4">Качени снимки:</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {images.map((file, i) => (
-                        <div key={`img-${i}`} className="relative group">
-                          <img
-                            src={file.preview}
-                            alt={`Preview ${i + 1}`}
-                            className="h-40 w-full object-cover rounded-lg"
-                          />
-                          <button
-                            onClick={() => removeImage(i)}
-                            className="absolute top-2 right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-4 w-4 text-white" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-6 border-t">
-                <Label>Документи за имота</Label>
-                <div className="mt-2">
-                  <div className="flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-                    <div className="text-center">
-                      <FileText className="mx-auto h-12 w-12 text-gray-300" />
-                      <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                        <label
-                          htmlFor="documents"
-                          className="relative cursor-pointer rounded-md bg-white font-semibold text-primary hover:text-primary/80"
-                        >
-                          <span>Качете документи</span>
-                          <Input
-                            id="documents"
-                            name="documents"
-                            type="file"
-                            multiple
-                            accept=".pdf"
-                            className="sr-only"
-                            onChange={handleDocumentChange}
-                          />
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        PDF до 10MB
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {documents.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-medium mb-4">Качени документи:</h3>
-                    <div className="space-y-2">
-                      {documents.map((file, i) => (
-                        <div
-                          key={`doc-${i}`}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-600">{file.name}</span>
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div
+            className="lg:col-span-2"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Card className="max-w-3xl mx-auto">
+              <CardHeader>
+                <CardTitle>Качване на файлове</CardTitle>
+                <CardDescription>
+                  Качете снимки и документи за вашия имот за по-точна оценка
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <Label>Снимки на имота</Label>
+                    <div className="mt-2">
+                      <div className="flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+                        <div className="text-center">
+                          <ImageIcon className="mx-auto h-12 w-12 text-gray-300" />
+                          <div className="mt-4 flex text-sm leading-6 text-gray-600">
+                            <label
+                              htmlFor="photos"
+                              className="relative cursor-pointer rounded-md bg-white font-semibold text-primary hover:text-primary/80"
+                            >
+                              <span>Качете снимки</span>
+                              <Input
+                                id="photos"
+                                name="photos"
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={handleImageChange}
+                              />
+                            </label>
                           </div>
-                          <button
-                            onClick={() => removeDocument(i)}
-                            className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                          >
-                            <X className="h-4 w-4 text-gray-500" />
-                          </button>
+                          <p className="text-xs text-gray-500 mt-2">
+                            PNG, JPG до 10MB
+                          </p>
                         </div>
-                      ))}
+                      </div>
                     </div>
+
+                    <AnimatePresence>
+                      {images.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          className="mt-6"
+                        >
+                          <h3 className="font-medium mb-4">Качени снимки:</h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {images.map((file, i) => (
+                              <motion.div
+                                key={`img-${i}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="relative group aspect-square"
+                              >
+                                <img
+                                  src={file.preview}
+                                  alt={`Preview ${i + 1}`}
+                                  className="h-full w-full object-cover rounded-lg"
+                                />
+                                <button
+                                  onClick={() => removeImage(i)}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="h-4 w-4 text-white" />
+                                </button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
-              Назад
-            </Button>
-            <Button 
-              onClick={() => navigate(`/evaluation/step3?propertyId=${propertyId}`)}
-              className="bg-[#003366] hover:bg-[#002244]"
-              disabled={images.length === 0}
-            >
-              Продължи към оценка
-            </Button>
-          </CardFooter>
-        </Card>
+
+                  <div className="pt-6 border-t">
+                    <Label>Документи за имота</Label>
+                    <div className="mt-2">
+                      <div className="flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+                        <div className="text-center">
+                          <FileText className="mx-auto h-12 w-12 text-gray-300" />
+                          <div className="mt-4 flex text-sm leading-6 text-gray-600">
+                            <label
+                              htmlFor="documents"
+                              className="relative cursor-pointer rounded-md bg-white font-semibold text-primary hover:text-primary/80"
+                            >
+                              <span>Качете документи</span>
+                              <Input
+                                id="documents"
+                                name="documents"
+                                type="file"
+                                multiple
+                                accept=".pdf"
+                                className="sr-only"
+                                onChange={handleDocumentChange}
+                              />
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            PDF до 10MB
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {documents.length > 0 && (
+                      <div className="mt-6">
+                        <h3 className="font-medium mb-4">Качени документи:</h3>
+                        <div className="space-y-2">
+                          {documents.map((file, i) => (
+                            <div
+                              key={`doc-${i}`}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">{file.name}</span>
+                              </div>
+                              <button
+                                onClick={() => removeDocument(i)}
+                                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                              >
+                                <X className="h-4 w-4 text-gray-500" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
+                  Назад
+                </Button>
+                <Button
+                  onClick={() => navigate(`/evaluation/step3?propertyId=${propertyId}`)}
+                  className="bg-[#003366] hover:bg-[#002244]"
+                  disabled={images.length === 0}
+                >
+                  Продължи към оценка
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+
+          <div className="hidden lg:block space-y-4">
+            <InstructionCard
+              icon={<Info className="h-5 w-5 text-blue-500" />}
+              title="Как да качите снимки?"
+              description="Изберете качествени снимки на имота, които показват ясно всички важни детайли. Можете да качите множество снимки наведнъж."
+            />
+            <InstructionCard
+              icon={<HelpCircle className="h-5 w-5 text-green-500" />}
+              title="Какви документи са необходими?"
+              description="Качете сканирани копия на документите за собственост и други релевантни документи в PDF формат."
+            />
+          </div>
+        </div>
       </main>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            className="fixed bottom-4 right-4 md:hidden rounded-full h-12 w-12 bg-primary shadow-lg"
+            size="icon"
+          >
+            <HelpCircle className="h-6 w-6" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogTitle>Как да качите файлове?</DialogTitle>
+          <DialogDescription>
+            Изберете качествени снимки на имота и сканирани копия на необходимите документи.
+            Поддържаните формати са JPG, PNG за снимки и PDF за документи.
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
