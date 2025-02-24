@@ -38,6 +38,7 @@ export default function Step2() {
   const [documents, setDocuments] = useState<File[]>([]);
   const [scannedText, setScannedText] = useState<string>("");
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [documentAnalysis, setDocumentAnalysis] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -71,9 +72,10 @@ export default function Step2() {
     });
   };
 
-  const handleScanComplete = (text: string, data: any) => {
+  const handleScanComplete = (text: string, data: any, analysis: any) => {
     setScannedText(text);
     setExtractedData(data);
+    setDocumentAnalysis(analysis);
     toast({
       title: "Документът е сканиран успешно",
       description: "Текстът е извлечен от документа.",
@@ -104,6 +106,9 @@ export default function Step2() {
     params.set('propertyId', propertyId!);
     if (extractedData) {
       params.set('extractedData', JSON.stringify(extractedData));
+    }
+    if (documentAnalysis) {
+      params.set('documentAnalysis', JSON.stringify(documentAnalysis));
     }
     navigate(`/evaluation/step3?${params.toString()}`);
   };

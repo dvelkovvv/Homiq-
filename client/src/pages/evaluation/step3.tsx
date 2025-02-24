@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { DocumentDataSection } from "@/components/property-analysis/document-data-section";
 import { InstructionCard } from "@/components/instruction-card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { format } from 'date-fns';
@@ -402,10 +403,11 @@ async function generateProfessionalReport(analysis: PropertyAnalysis) {
   doc.save('homiq-оценка.pdf');
 }
 
-
 export default function Step3() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [documentAnalysis, setDocumentAnalysis] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
   const [, navigate] = useLocation();
 
@@ -415,6 +417,27 @@ export default function Step3() {
       return;
     }
 
+    // Parse extracted data from URL if available
+    const params = new URLSearchParams(window.location.search);
+    const extractedDataParam = params.get('extractedData');
+    const documentAnalysisParam = params.get('documentAnalysis');
+
+    if (extractedDataParam) {
+      try {
+        setExtractedData(JSON.parse(extractedDataParam));
+      } catch (error) {
+        console.error('Error parsing extracted data:', error);
+      }
+    }
+
+    if (documentAnalysisParam) {
+      try {
+        setDocumentAnalysis(JSON.parse(documentAnalysisParam));
+      } catch (error) {
+        console.error('Error parsing document analysis:', error);
+      }
+    }
+
     const timer = setTimeout(async () => {
       const mockProperty = {
         type: "apartment",
@@ -422,14 +445,9 @@ export default function Step3() {
         yearBuilt: 2010,
         location: "София"
       };
-      const mockExtractedData: ExtractedPropertyData = {
-        address: "ул. Витоша 123",
-        constructionYear: 2021,
-        constructionType: 'Тухла'
-      };
 
       try {
-        const result = await calculatePropertyValue(mockProperty, mockExtractedData);
+        const result = await calculatePropertyValue(mockProperty, extractedData);
         setAnalysis(result);
       } catch (error) {
         console.error('Error calculating property value:', error);
@@ -493,6 +511,19 @@ export default function Step3() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
+            {(extractedData || documentAnalysis) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6"
+              >
+                <DocumentDataSection 
+                  extractedData={extractedData}
+                  documentAnalysis={documentAnalysis}
+                />
+              </motion.div>
+            )}
+
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
                 <CardTitle>Резултат от оценката</CardTitle>
