@@ -2,7 +2,6 @@ import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { VoiceCommands } from "@/components/voice-commands";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard } from "lucide-react";
 import { Link } from "wouter";
@@ -21,7 +20,6 @@ function Router() {
       <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-end">
           <div className="flex items-center space-x-2">
-            <VoiceCommands />
             <Link href="/dashboard">
               <Button variant="outline" size="icon" title="История на оценките">
                 <LayoutDashboard className="h-5 w-5" />

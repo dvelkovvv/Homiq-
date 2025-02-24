@@ -10,7 +10,6 @@ import { InstructionCard } from "@/components/instruction-card";
 import { DocumentScanner } from "@/components/document-scanner";
 import { Info } from "lucide-react";
 
-
 const STEPS = [
   {
     title: "Основна информация",
