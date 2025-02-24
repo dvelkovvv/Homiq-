@@ -2,9 +2,8 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, Check } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface DocumentScannerProps {
@@ -21,20 +20,20 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       setProgress(0);
 
       const worker = await createWorker({
-        logger: progress => {
-          if (progress.status === 'recognizing text') {
-            setProgress(progress.progress * 100);
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setProgress(m.progress * 100);
           }
         },
       });
 
       await worker.loadLanguage('bul');
       await worker.initialize('bul');
-      
+
       const { data: { text } } = await worker.recognize(file);
-      
+
       await worker.terminate();
-      
+
       onScanComplete(text);
       toast({
         title: "Документът е сканиран успешно",
@@ -83,7 +82,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
           `}
         >
           <input {...getInputProps()} />
-          
+
           {scanning ? (
             <div className="space-y-4">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
