@@ -20,6 +20,7 @@ import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { InstructionCard } from "@/components/instruction-card";
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 const propertyTypeIcons = {
   apartment: Building2,
@@ -586,7 +587,14 @@ export default function Step1() {
                     className="bg-[#003366] hover:bg-[#002244]"
                     disabled={form.formState.isSubmitting}
                   >
-                    Продължи напред
+                    {form.formState.isSubmitting ? (
+                      <>
+                        <Spinner className="mr-2" />
+                        Обработка...
+                      </>
+                    ) : (
+                      'Продължи напред'
+                    )}
                   </Button>
                 </div>
               </form>

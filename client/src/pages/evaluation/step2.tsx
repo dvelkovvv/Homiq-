@@ -9,6 +9,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
 import { Info } from "lucide-react";
 import { InstructionCard } from "@/components/instruction-card";
+import { Spinner } from "@/components/ui/spinner";
 
 const STEPS = [
   {
@@ -27,6 +28,7 @@ const STEPS = [
 
 export default function Step2() {
   const [, navigate] = useLocation();
+  const [isScanning, setIsScanning] = useState(false);
   const [scannedText, setScannedText] = useState<string>("");
   const [extractedData, setExtractedData] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
@@ -38,7 +40,7 @@ export default function Step2() {
   }, [propertyId, navigate]);
 
   const handleScanComplete = (text: string, data: any) => {
-    console.log('Scan completed:', { text, data }); 
+    setIsScanning(false);
     setScannedText(text);
     setExtractedData(data);
     toast({
@@ -85,7 +87,17 @@ export default function Step2() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <DocumentScanner onScanComplete={handleScanComplete} />
+                  {isScanning && (
+                    <div className="flex items-center justify-center p-8">
+                      <Spinner className="h-8 w-8" />
+                      <span className="ml-3">Сканиране на документа...</span>
+                    </div>
+                  )}
+
+                  <DocumentScanner 
+                    onScanStart={() => setIsScanning(true)}
+                    onScanComplete={handleScanComplete} 
+                  />
 
                   {scannedText && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -115,8 +127,16 @@ export default function Step2() {
                 <Button
                   onClick={handleContinue}
                   className="bg-[#003366] hover:bg-[#002244]"
+                  disabled={isScanning}
                 >
-                  Продължи към оценка
+                  {isScanning ? (
+                    <>
+                      <Spinner className="mr-2" />
+                      Обработка...
+                    </>
+                  ) : (
+                    'Продължи към оценка'
+                  )}
                 </Button>
               </CardFooter>
             </Card>
