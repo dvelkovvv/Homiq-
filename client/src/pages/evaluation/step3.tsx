@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { Progress } from "@/components/ui/progress";
-import { Download, TrendingUp, MapPin, Home, Calendar, Share2, HelpCircle, Info, CheckCircle2 } from "lucide-react";
+import { Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info } from "lucide-react";
 import jsPDF from 'jspdf';
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
@@ -12,30 +12,18 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { motion, AnimatePresence } from "framer-motion";
 import { InstructionCard } from "@/components/instruction-card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { analyzePropertyWithAI } from '@/lib/ai-analysis';
-import { Property } from '@shared/schema';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
-
-interface EvaluationScore {
-  locationScore: number;
-  conditionScore: number;
-  marketScore: number;
-  totalScore: number;
-}
-
 interface PropertyAnalysis {
   estimatedValue: number;
-  confidence: number;
   factors: {
     location: number;
     condition: number;
     market: number;
   };
-  marketTrends: { date: string; value: number }[];
-  similarProperties: { price: number; distance: number; similarity: number }[];
-  recommendations: string[];
+  priceHistory: { date: string; value: number }[];
+  similarProperties: { price: number; distance: number }[];
 }
 
 const STEPS = [
@@ -53,6 +41,53 @@ const STEPS = [
   }
 ];
 
+function calculatePropertyValue(property: any): PropertyAnalysis {
+  // Базова цена според квадратура (примерно 1000 евро на кв.м)
+  const basePrice = property.squareMeters * 1000;
+
+  // Фактори за корекция
+  const locationFactor = 0.9; // Базирано на местоположението
+  const yearFactor = Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
+  const typeFactor = {
+    apartment: 1,
+    house: 1.2,
+    villa: 1.3,
+    agricultural: 0.5,
+    industrial: 1.5
+  }[property.type] || 1;
+
+  const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
+
+  // Генериране на история на цените (последните 6 месеца)
+  const priceHistory = Array.from({ length: 6 }).map((_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - i));
+    const variation = 0.95 + Math.random() * 0.1; // ±5% вариация
+    return {
+      date: format(date, 'MMM yyyy', { locale: bg }),
+      value: Math.round(estimatedValue * variation)
+    };
+  });
+
+  // Подобни имоти (3-5 имота)
+  const similarCount = 3 + Math.floor(Math.random() * 3);
+  const similarProperties = Array.from({ length: similarCount }).map(() => ({
+    price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
+    distance: Math.round(1 + Math.random() * 4)
+  }));
+
+  return {
+    estimatedValue: Math.round(estimatedValue),
+    factors: {
+      location: Math.round(locationFactor * 100),
+      condition: Math.round(yearFactor * 100),
+      market: Math.round(typeFactor * 70)
+    },
+    priceHistory,
+    similarProperties
+  };
+}
+
 export default function Step3() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
@@ -65,35 +100,21 @@ export default function Step3() {
       return;
     }
 
-    const fetchAnalysis = async () => {
-      try {
-        // TODO: Fetch actual property data from API
-        const mockProperty: Property = {
-          id: 1,
-          type: "apartment",
-          address: "Example Street",
-          squareMeters: 85,
-          yearBuilt: 2010,
-          location: { lat: 42.6977, lng: 23.3219 },
-          photos: [],
-          documents: [],
-          createdAt: new Date()
-        };
+    // Симулираме зареждане на данни
+    const timer = setTimeout(() => {
+      const mockProperty = {
+        type: "apartment",
+        squareMeters: 85,
+        yearBuilt: 2010,
+        location: { lat: 42.6977, lng: 23.3219 }
+      };
 
-        const result = await analyzePropertyWithAI(mockProperty);
-        setAnalysis(result);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching analysis:', error);
-        toast({
-          title: "Грешка при анализа",
-          description: "Моля, опитайте отново по-късно.",
-          variant: "destructive"
-        });
-      }
-    };
+      const result = calculatePropertyValue(mockProperty);
+      setAnalysis(result);
+      setLoading(false);
+    }, 1500);
 
-    fetchAnalysis();
+    return () => clearTimeout(timer);
   }, [propertyId, navigate]);
 
   const generatePDF = () => {
@@ -107,18 +128,17 @@ export default function Step3() {
       pdf.setFontSize(14);
       pdf.setTextColor(0, 0, 0);
       pdf.text(`Оценена стойност: €${analysis?.estimatedValue.toLocaleString() || 0}`, 20, 40);
-      pdf.text(`Обща оценка: ${analysis?.factors.location + analysis?.factors.condition + analysis?.factors.market || 0}/300`, 20, 50);
 
       pdf.setFontSize(12);
-      pdf.text('Детайлни оценки:', 20, 70);
-      pdf.text(`• Локация: ${analysis?.factors.location || 0}/100`, 25, 80);
-      pdf.text(`• Състояние: ${analysis?.factors.condition || 0}/100`, 25, 90);
-      pdf.text(`• Пазарни условия: ${analysis?.factors.market || 0}/100`, 25, 100);
+      pdf.text('Фактори за оценката:', 20, 60);
+      pdf.text(`• Локация: ${analysis?.factors.location || 0}/100`, 25, 70);
+      pdf.text(`• Състояние: ${analysis?.factors.condition || 0}/100`, 25, 80);
+      pdf.text(`• Пазарни условия: ${analysis?.factors.market || 0}/100`, 25, 90);
 
       pdf.setFontSize(10);
-      pdf.text(`Дата на оценката: ${new Date().toLocaleDateString('bg-BG')}`, 20, 130);
+      pdf.text(`Дата на оценката: ${new Date().toLocaleDateString('bg-BG')}`, 20, 120);
 
-      pdf.save('homiq-оценка.pdf');
+      pdf.save('оценка-на-имот.pdf');
 
       toast({
         title: "PDF генериран успешно",
@@ -169,13 +189,12 @@ export default function Step3() {
             className="lg:col-span-2"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
           >
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
                 <CardTitle>Резултат от оценката</CardTitle>
                 <CardDescription>
-                  Детайлен AI анализ на стойността на вашия имот
+                  Детайлен анализ на стойността на вашия имот
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -189,9 +208,9 @@ export default function Step3() {
                       className="space-y-4 text-center py-8"
                     >
                       <Progress value={45} className="w-full h-2" />
-                      <p>Анализираме данните за имота...</p>
+                      <p>Изчисляваме стойността на имота...</p>
                       <p className="text-sm text-gray-500">
-                        Нашият AI асистент обработва информацията за точна оценка
+                        Анализираме предоставената информация
                       </p>
                     </motion.div>
                   ) : analysis ? (
@@ -211,9 +230,6 @@ export default function Step3() {
                         </h3>
                         <p className="text-sm text-gray-500 mt-2">
                           Оценена стойност на имота
-                          <span className="ml-2 text-green-600">
-                            ({analysis.confidence * 100}% точност)
-                          </span>
                         </p>
                       </motion.div>
 
@@ -261,10 +277,10 @@ export default function Step3() {
                         animate={{ y: 0, opacity: 1 }}
                       >
                         <Card className="p-6">
-                          <h4 className="font-medium mb-4">Пазарни тенденции</h4>
+                          <h4 className="font-medium mb-4">История на цените</h4>
                           <div className="h-[200px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={analysis.marketTrends}>
+                              <LineChart data={analysis.priceHistory}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="date" />
                                 <YAxis />
@@ -299,31 +315,6 @@ export default function Step3() {
                                     на {prop.distance} км разстояние
                                   </p>
                                 </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-medium text-green-600">
-                                    {prop.similarity}% съвпадение
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                      >
-                        <Card className="p-6">
-                          <h4 className="font-medium mb-4">Препоръки</h4>
-                          <div className="space-y-2">
-                            {analysis.recommendations.map((rec, index) => (
-                              <div
-                                key={index}
-                                className="flex items-start gap-2 text-gray-600"
-                              >
-                                <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
-                                <p>{rec}</p>
                               </div>
                             ))}
                           </div>
@@ -394,13 +385,13 @@ export default function Step3() {
           <div className="hidden lg:block space-y-4">
             <InstructionCard
               icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="AI Анализ"
-              description="Нашият AI анализира множество фактори, включително локация, състояние, пазарни тенденции и подобни имоти в района за максимално точна оценка."
+              title="Как се изчислява оценката?"
+              description="Оценката се базира на множество фактори, включително локация, състояние на имота и текущи пазарни условия."
             />
             <InstructionCard
               icon={<HelpCircle className="h-5 w-5 text-green-500" />}
               title="Какво следва?"
-              description="Можете да изтеглите подробен отчет в PDF формат или да споделите резултатите с други. Препоръчваме периодично обновяване на оценката."
+              description="Можете да изтеглите подробен отчет в PDF формат или да споделите резултатите с други."
             />
           </div>
         </div>
@@ -418,8 +409,8 @@ export default function Step3() {
         <DialogContent>
           <DialogTitle>Как да разчетете оценката?</DialogTitle>
           <DialogDescription>
-            AI анализът включва оценка на локацията, състоянието на имота и текущите пазарни условия.
-            Разгледайте графиките и препоръките за по-добро разбиране на оценката.
+            Оценката включва анализ на локацията, състоянието на имота и текущите пазарни условия.
+            Разгледайте графиките и сравнителния анализ за по-добро разбиране.
           </DialogDescription>
         </DialogContent>
       </Dialog>
