@@ -11,92 +11,26 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { InstructionCard } from "@/components/instruction-card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
-import { format, addMonths } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { InvestmentScenarios } from "@/components/property-analysis/investment-scenarios";
 import { NeighborhoodAnalysis } from "@/components/property-analysis/neighborhood-analysis";
 
-interface PropertyAnalysis {
-  estimatedValue: number;
-  factors: {
-    location: number;
-    condition: number;
-    market: number;
-    potential: number;
-  };
-  priceHistory: { date: string; value: number }[];
-  similarProperties: {
-    price: number;
-    distance: number;
-    features: string[];
-    prediction: {
-      oneYear: number;
-      threeYears: number;
-      fiveYears: number;
-    };
-  }[];
-  forecast: {
-    date: string;
-    optimistic: number;
-    conservative: number;
-    marketTrend: number;
-  }[];
-  riskAssessment: {
-    score: number;
-    factors: { name: string; impact: number }[];
-    marketVolatility: number;
-    economicFactors: {
-      interestRates: number;
-      economicGrowth: number;
-      inflation: number;
-    };
-  };
-  investmentMetrics: {
-    roi: number;
-    breakeven: number;
-    appreciation: number;
-    rentalYield: number;
-    cashFlow: {
-      monthly: number;
-      annual: number;
-    };
-    investmentScenarios: {
-      conservative: {
-        returnRate: number;
-        totalReturn: number;
-        timeline: number;
-      };
-      moderate: {
-        returnRate: number;
-        totalReturn: number;
-        timeline: number;
-      };
-      aggressive: {
-        returnRate: number;
-        totalReturn: number;
-        timeline: number;
-      };
-    };
-  };
-  neighborhoodAnalysis: {
-    score: number;
-    amenities: {
-      type: string;
-      distance: number;
-      impact: number;
-    }[];
-    development: {
-      planned: string[];
-      impact: number;
-    };
-    demographics: {
-      population: number;
-      growth: number;
-      income: number;
-    };
-  };
-}
+const STEPS = [
+  {
+    title: "Основна информация",
+    description: "Въведете детайли за имота"
+  },
+  {
+    title: "Медия файлове",
+    description: "Качете снимки и документи"
+  },
+  {
+    title: "Оценка",
+    description: "Преглед на резултатите"
+  }
+];
 
 //This is a placeholder.  Replace with your actual data provider.
 class PropertyDataProvider {
@@ -336,6 +270,87 @@ async function generateProfessionalReport(analysis: PropertyAnalysis) {
   doc.save('homiq-оценка.pdf');
 }
 
+
+interface PropertyAnalysis {
+  estimatedValue: number;
+  factors: {
+    location: number;
+    condition: number;
+    market: number;
+    potential: number;
+  };
+  priceHistory: { date: string; value: number }[];
+  similarProperties: {
+    price: number;
+    distance: number;
+    features: string[];
+    prediction: {
+      oneYear: number;
+      threeYears: number;
+      fiveYears: number;
+    };
+  }[];
+  forecast: {
+    date: string;
+    optimistic: number;
+    conservative: number;
+    marketTrend: number;
+  }[];
+  riskAssessment: {
+    score: number;
+    factors: { name: string; impact: number }[];
+    marketVolatility: number;
+    economicFactors: {
+      interestRates: number;
+      economicGrowth: number;
+      inflation: number;
+    };
+  };
+  investmentMetrics: {
+    roi: number;
+    breakeven: number;
+    appreciation: number;
+    rentalYield: number;
+    cashFlow: {
+      monthly: number;
+      annual: number;
+    };
+    investmentScenarios: {
+      conservative: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+      moderate: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+      aggressive: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+    };
+  };
+  neighborhoodAnalysis: {
+    score: number;
+    amenities: {
+      type: string;
+      distance: number;
+      impact: number;
+    }[];
+    development: {
+      planned: string[];
+      impact: number;
+    };
+    demographics: {
+      population: number;
+      growth: number;
+      income: number;
+    };
+  };
+}
 
 export default function Step3() {
   const [loading, setLoading] = useState(true);
