@@ -5,17 +5,11 @@ import { insertPropertySchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
 import { GoogleMaps } from "@/components/google-maps";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { NumericFormat } from "react-number-format";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { bg } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 
 export default function Step1() {
   const [, navigate] = useLocation();
@@ -26,31 +20,25 @@ export default function Step1() {
       address: "",
       type: undefined,
       squareMeters: 1,
-      yearBuilt: undefined,
+      yearBuilt: new Date().getFullYear(),
       location: {
         lat: 42.6977,
         lng: 23.3219
       },
+      rooms: 1,
+      floor: 0,
+      totalFloors: 1,
+      heating: "electric",
+      parking: false
     }
   });
 
   const onSubmit = async (data: any) => {
     try {
-      const formattedData = {
-        ...data,
-        yearBuilt: data.yearBuilt ? new Date(data.yearBuilt) : new Date(),
-        location: data.location || { lat: 42.6977, lng: 23.3219 },
-        rooms: 1,
-        floor: 0,
-        totalFloors: 1,
-        heating: "electric",
-        parking: false
-      };
-
       const response = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formattedData)
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -113,7 +101,7 @@ export default function Step1() {
                 <FormControl>
                   <Input 
                     placeholder="Въведете адрес" 
-                    {...field}
+                    {...field} 
                     className="bg-white"
                   />
                 </FormControl>
@@ -130,17 +118,12 @@ export default function Step1() {
                 <FormItem>
                   <FormLabel>Площ (кв.м)</FormLabel>
                   <FormControl>
-                    <NumericFormat
-                      customInput={Input}
-                      value={field.value}
-                      onValueChange={(values) => {
-                        field.onChange(values.floatValue || 1);
-                      }}
-                      thousandSeparator=" "
-                      decimalScale={2}
-                      allowNegative={false}
-                      min={1}
+                    <Input
+                      type="number"
+                      min="1"
                       placeholder="Въведете площ"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                       className="bg-white"
                     />
                   </FormControl>
@@ -153,44 +136,128 @@ export default function Step1() {
               control={form.control}
               name="yearBuilt"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Година на строеж</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal bg-white",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "dd MMMM yyyy", { locale: bg })
-                          ) : (
-                            "Изберете дата"
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date(1800, 0, 1)
-                        }
-                        initialFocus
-                        locale={bg}
-                        captionLayout="dropdown-buttons"
-                        fromYear={1800}
-                        toYear={new Date().getFullYear()}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1800"
+                      max={new Date().getFullYear()}
+                      placeholder="Въведете година"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      className="bg-white"
+                    />
+                  </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              control={form.control}
+              name="rooms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Брой стаи</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Брой стаи"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      className="bg-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="floor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Етаж</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Етаж"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      className="bg-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="totalFloors"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Общо етажи</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Общо етажи"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      className="bg-white"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="heating"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Отопление</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Изберете тип отопление" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="electric">Електричество</SelectItem>
+                      <SelectItem value="gas">Газ</SelectItem>
+                      <SelectItem value="other">Друго</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="parking"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Паркомясто</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
