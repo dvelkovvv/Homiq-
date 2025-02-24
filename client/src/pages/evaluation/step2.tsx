@@ -3,13 +3,14 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Image as ImageIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
 import { Info } from "lucide-react";
 import { InstructionCard } from "@/components/instruction-card";
 import { Spinner } from "@/components/ui/spinner";
+import { FileUploadZone } from "@/components/file-upload-zone";
 
 const STEPS = [
   {
@@ -31,6 +32,8 @@ export default function Step2() {
   const [isScanning, setIsScanning] = useState(false);
   const [scannedText, setScannedText] = useState<string>("");
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -49,13 +52,43 @@ export default function Step2() {
     });
   };
 
-  const handleContinue = () => {
-    const params = new URLSearchParams();
-    params.set('propertyId', propertyId!);
-    if (extractedData) {
-      params.set('extractedData', JSON.stringify(extractedData));
+  const handleImagesAdded = (files: File[]) => {
+    setUploadedImages(prev => [...prev, ...files]);
+    toast({
+      title: "Снимките са качени успешно",
+      description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`,
+    });
+  };
+
+  const handleDocumentsAdded = (files: File[]) => {
+    setUploadedDocuments(prev => [...prev, ...files]);
+    toast({
+      title: "Документите са качени успешно",
+      description: `${files.length} ${files.length === 1 ? 'документ е добавен' : 'документа са добавени'}`,
+    });
+  };
+
+  const handleContinue = async () => {
+    try {
+      // Here we would typically upload the files to a server
+      // For now, we'll just simulate it
+      const formData = new FormData();
+      uploadedImages.forEach(file => formData.append('images', file));
+      uploadedDocuments.forEach(file => formData.append('documents', file));
+
+      const params = new URLSearchParams();
+      params.set('propertyId', propertyId!);
+      if (extractedData) {
+        params.set('extractedData', JSON.stringify(extractedData));
+      }
+      navigate(`/evaluation/step3?${params.toString()}`);
+    } catch (error) {
+      toast({
+        title: "Грешка",
+        description: "Възникна проблем при качването на файловете.",
+        variant: "destructive"
+      });
     }
-    navigate(`/evaluation/step3?${params.toString()}`);
   };
 
   return (
@@ -77,8 +110,45 @@ export default function Step2() {
         <ProgressSteps currentStep={2} steps={STEPS} />
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="max-w-3xl mx-auto">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Upload Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Снимки на имота
+                </CardTitle>
+                <CardDescription>
+                  Качете снимки на имота за по-добра оценка
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FileUploadZone
+                  accept={{
+                    'image/*': ['.png', '.jpg', '.jpeg']
+                  }}
+                  maxFiles={10}
+                  onFilesAdded={handleImagesAdded}
+                  fileType="image"
+                />
+                {uploadedImages.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {uploadedImages.map((file, index) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Document Upload and Scan Section */}
+            <Card>
               <CardHeader>
                 <CardTitle>Качване на документи</CardTitle>
                 <CardDescription>
@@ -97,6 +167,16 @@ export default function Step2() {
                   <DocumentScanner 
                     onScanStart={() => setIsScanning(true)}
                     onScanComplete={handleScanComplete} 
+                  />
+
+                  <FileUploadZone
+                    accept={{
+                      'application/pdf': ['.pdf'],
+                      'image/*': ['.png', '.jpg', '.jpeg']
+                    }}
+                    maxFiles={5}
+                    onFilesAdded={handleDocumentsAdded}
+                    fileType="document"
                   />
 
                   {scannedText && (
@@ -145,8 +225,8 @@ export default function Step2() {
           <div className="hidden lg:block space-y-4">
             <InstructionCard
               icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="Как да качите документи?"
-              description="Изберете качествени снимки на документите. Системата автоматично ще анализира текста в документите."
+              title="Как да качите документи и снимки?"
+              description="Изберете качествени снимки на имота и документите. Системата автоматично ще анализира текста в документите."
             />
           </div>
         </div>
