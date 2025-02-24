@@ -23,6 +23,8 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
 
       try {
         const file = acceptedFiles[0];
+
+        // Създаваме URL от файла
         const imageUrl = URL.createObjectURL(file);
 
         toast({
@@ -30,29 +32,50 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
           description: "Моля, изчакайте докато анализираме документа.",
         });
 
+        // Създаваме нов worker с подобрени настройки за български
         const worker = await createWorker();
+
+        // Задаваме български език
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
 
+        // Задаваме специфични настройки за по-добро разпознаване
+        await worker.setParameters({
+          tessedit_ocr_engine_mode: '1', // Legacy engine, по-добър за кирилица
+          tessedit_pageseg_mode: '1', // Автоматична сегментация
+          tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
+          preserve_interword_spaces: '1'
+        });
+
+        // Разпознаваме текста
         const { data: { text } } = await worker.recognize(imageUrl);
 
+        // Освобождаваме ресурсите
         await worker.terminate();
         URL.revokeObjectURL(imageUrl);
 
         if (text && text.trim().length > 0) {
-          onScanComplete(text.trim());
+          // Обработваме текста за по-добър резултат
+          const processedText = text
+            .trim()
+            .replace(/\s+/g, ' ') // Премахваме множество интервали
+            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '') // Премахваме специални символи
+            .trim();
+
+          onScanComplete(processedText);
+
           toast({
             title: "Успешно сканиране",
             description: "Текстът е успешно извлечен от документа.",
           });
         } else {
-          throw new Error("Не беше открит текст");
+          throw new Error("Не беше открит текст в документа");
         }
       } catch (error) {
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: "Моля, опитайте с друг документ или проверете качеството на изображението.",
+          description: "Моля, опитайте с друг документ или проверете дали изображението е достатъчно ясно.",
           variant: "destructive"
         });
       } finally {
@@ -98,7 +121,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
                   {isDragActive ? "Пуснете документа тук" : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Поддържани формати: PNG, JPG
+                  Поддържани формати: PNG, JPG (ясни снимки на документи)
                 </p>
               </div>
             </div>
