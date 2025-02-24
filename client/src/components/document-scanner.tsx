@@ -16,30 +16,6 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const detectDocumentType = (text: string): string => {
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('нотариален акт') || lowerText.includes('нотариус')) {
-      return 'notary_act';
-    }
-    if (lowerText.includes('скица') || lowerText.includes('кадастрална')) {
-      return 'sketch';
-    }
-    if (lowerText.includes('данъчна оценка') || lowerText.includes('удостоверение за данъчна')) {
-      return 'tax_assessment';
-    }
-    return 'other';
-  };
-
-  const getDocumentTypeName = (type: string): string => {
-    const types: Record<string, string> = {
-      'notary_act': 'Нотариален акт',
-      'sketch': 'Скица',
-      'tax_assessment': 'Данъчна оценка',
-      'other': 'Друг документ'
-    };
-    return types[type];
-  };
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
@@ -77,14 +53,12 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          const documentType = detectDocumentType(processedText);
           const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
-
           onScanComplete(processedText, analysisResult.extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence * 100)}%`,
+            description: "Документът е анализиран успешно.",
           });
         } else {
           throw new Error("Не беше открит текст в документа");
