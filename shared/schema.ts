@@ -2,42 +2,62 @@ import { pgTable, text, serial, integer, jsonb, timestamp, boolean, numeric } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Основна таблица за имотите
+// Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
-  // Основна информация
+  // Basic information
   type: text("type").notNull(),
   address: text("address").notNull(),
   squareMeters: integer("square_meters").notNull(),
   yearBuilt: integer("year_built").notNull(),
   location: jsonb("location").$type<{lat: number, lng: number}>().notNull(),
 
-  // Характеристики на имота
+  // Property characteristics
   rooms: integer("rooms"),
   floor: integer("floor"),
   totalFloors: integer("total_floors"),
   heating: text("heating"),
   parking: boolean("parking"),
 
-  // Индустриални характеристики
+  // Industrial characteristics
   productionArea: integer("production_area"),
   storageArea: integer("storage_area"),
   loadingDock: boolean("loading_dock"),
   ceilingHeight: numeric("ceiling_height"),
   threePhasePower: boolean("three_phase_power"),
 
-  // Медия файлове
+  // Media files
   photos: text("photos").array().notNull().default([]),
   documents: text("documents").array().notNull().default([]),
 
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Валидационна схема за имот
+// Evaluations table
+export const evaluations = pgTable("evaluations", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull().references(() => properties.id),
+  value: numeric("value").notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  evaluationDate: timestamp("evaluation_date").notNull().defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Achievements table
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  points: integer("points").notNull(),
+  icon: text("icon").notNull(),
+});
+
+// Validation schemas
 export const insertPropertySchema = createInsertSchema(properties, {
   type: z.enum(["apartment", "house", "villa", "agricultural", "industrial"]),
-  address: z.string().min(3, "Адресът трябва да бъде поне 3 символа"),
-  squareMeters: z.number().min(1, "Площта трябва да бъде поне 1 кв.м"),
+  address: z.string().min(3, "Address must be at least 3 characters"),
+  squareMeters: z.number().min(1, "Area must be at least 1 sq.m"),
   yearBuilt: z.number().min(1800).max(new Date().getFullYear()),
   location: z.object({
     lat: z.number(),
@@ -49,7 +69,6 @@ export const insertPropertySchema = createInsertSchema(properties, {
   heating: z.enum(["electric", "gas", "other"]).optional(),
   parking: z.boolean().optional(),
 
-  // Индустриални характеристики
   productionArea: z.number().min(0).optional(),
   storageArea: z.number().min(0).optional(),
   loadingDock: z.boolean().optional(),
@@ -62,6 +81,19 @@ export const insertPropertySchema = createInsertSchema(properties, {
   documents: true
 });
 
-// Типове за TypeScript
+export const insertEvaluationSchema = createInsertSchema(evaluations, {
+  value: z.number().min(0),
+  currency: z.string().default("EUR"),
+  notes: z.string().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  evaluationDate: true
+});
+
+// Types for TypeScript
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type Evaluation = typeof evaluations.$inferSelect;
+export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+export type Achievement = typeof achievements.$inferSelect;

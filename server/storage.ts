@@ -1,4 +1,7 @@
 import { type Property, type InsertProperty, type Evaluation, type InsertEvaluation, type Achievement } from "@shared/schema";
+import { properties, evaluations, achievements } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
@@ -9,86 +12,46 @@ export interface IStorage {
   getAchievements(): Promise<Achievement[]>;
 }
 
-export class MemStorage implements IStorage {
-  private properties: Map<number, Property>;
-  private evaluations: Map<number, Evaluation>;
-  private achievements: Map<number, Achievement>;
-  private propertyId: number;
-  private evaluationId: number;
-
-  constructor() {
-    this.properties = new Map();
-    this.evaluations = new Map();
-    this.achievements = new Map();
-    this.propertyId = 1;
-    this.evaluationId = 1;
-
-    // Seed achievements
-    this.achievements.set(1, {
-      id: 1,
-      name: "First Evaluation",
-      description: "Complete your first property evaluation",
-      points: 100,
-      icon: "🏆"
-    });
-    this.achievements.set(2, {
-      id: 2, 
-      name: "Document Master",
-      description: "Upload all required documents",
-      points: 200,
-      icon: "📄"
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   async createProperty(insertProperty: InsertProperty): Promise<Property> {
-    const id = this.propertyId++;
-    const property: Property = {
-      ...insertProperty,
-      id,
-      createdAt: new Date()
-    };
-    this.properties.set(id, property);
+    const [property] = await db.insert(properties).values(insertProperty).returning();
     return property;
   }
 
   async getProperty(id: number): Promise<Property | undefined> {
-    return this.properties.get(id);
+    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    return property;
   }
 
   async createEvaluation(insertEvaluation: InsertEvaluation): Promise<Evaluation> {
-    const id = this.evaluationId++;
-    const evaluation: Evaluation = {
-      ...insertEvaluation,
-      id,
-      createdAt: new Date()
-    };
-    this.evaluations.set(id, evaluation);
+    const [evaluation] = await db.insert(evaluations).values(insertEvaluation).returning();
     return evaluation;
   }
 
   async getEvaluation(id: number): Promise<Evaluation | undefined> {
-    return this.evaluations.get(id);
+    const [evaluation] = await db.select().from(evaluations).where(eq(evaluations.id, id));
+    return evaluation;
   }
 
   async getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]> {
-    const history: (Evaluation & { property: Property })[] = [];
+    const result = await db
+      .select({
+        evaluation: evaluations,
+        property: properties,
+      })
+      .from(evaluations)
+      .innerJoin(properties, eq(evaluations.propertyId, properties.id))
+      .orderBy(evaluations.createdAt);
 
-    for (const evaluation of this.evaluations.values()) {
-      const property = await this.getProperty(evaluation.propertyId);
-      if (property) {
-        history.push({
-          ...evaluation,
-          property
-        });
-      }
-    }
-
-    return history.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return result.map(({ evaluation, property }) => ({
+      ...evaluation,
+      property,
+    }));
   }
 
   async getAchievements(): Promise<Achievement[]> {
-    return Array.from(this.achievements.values());
+    return db.select().from(achievements);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
