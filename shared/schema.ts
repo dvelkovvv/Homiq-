@@ -37,10 +37,19 @@ export const userAchievements = pgTable("user_achievements", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertPropertySchema = createInsertSchema(properties).omit({ 
-  id: true,
-  createdAt: true 
-});
+export const insertPropertySchema = createInsertSchema(properties)
+  .extend({
+    squareMeters: z.number().min(1, "Площта трябва да бъде поне 1 кв.м"),
+    yearBuilt: z.number().min(1800, "Годината трябва да бъде след 1800").max(new Date().getFullYear(), "Годината не може да бъде в бъдещето"),
+    address: z.string().min(5, "Адресът трябва да бъде поне 5 символа"),
+    type: z.enum(["apartment", "house", "villa", "agricultural"], {
+      errorMap: () => ({ message: "Моля изберете валиден тип имот" })
+    })
+  })
+  .omit({ 
+    id: true,
+    createdAt: true 
+  });
 
 export const insertEvaluationSchema = createInsertSchema(evaluations).omit({
   id: true,

@@ -18,7 +18,7 @@ export default function Step1() {
     defaultValues: {
       address: "",
       type: "",
-      squareMeters: 0,
+      squareMeters: 1,
       yearBuilt: new Date().getFullYear(),
       location: undefined,
       photos: [],
@@ -64,7 +64,7 @@ export default function Step1() {
                       <FormControl>
                         <Input placeholder="Въведете адрес" {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
@@ -85,9 +85,10 @@ export default function Step1() {
                           <SelectItem value="apartment">Апартамент</SelectItem>
                           <SelectItem value="house">Къща</SelectItem>
                           <SelectItem value="villa">Вила</SelectItem>
+                          <SelectItem value="agricultural">Земеделска земя</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
@@ -101,12 +102,16 @@ export default function Step1() {
                       <FormControl>
                         <Input 
                           type="number" 
+                          min="1"
                           placeholder="Въведете площ"
                           {...field} 
-                          onChange={e => field.onChange(Number(e.target.value))}
+                          onChange={e => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(value < 1 ? 1 : value);
+                          }}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
@@ -119,13 +124,18 @@ export default function Step1() {
                       <FormLabel>Година на строеж</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
+                          type="number"
+                          min="1800"
+                          max={new Date().getFullYear()}
                           placeholder="Въведете година"
                           {...field}
-                          onChange={e => field.onChange(Number(e.target.value))}
+                          onChange={e => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(value);
+                          }}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
@@ -142,13 +152,18 @@ export default function Step1() {
                           initialLocation={field.value}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
 
                 <CardFooter className="px-0 pt-6">
-                  <Button type="submit" className="w-full">Продължи към стъпка 2</Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-[#003366] hover:bg-[#002244]"
+                  >
+                    Продължи към стъпка 2
+                  </Button>
                 </CardFooter>
               </form>
             </Form>
