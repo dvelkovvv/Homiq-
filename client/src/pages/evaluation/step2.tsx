@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle, Image as ImageIcon } from "lucide-react";
+import { HelpCircle, Image as ImageIcon, Download, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
@@ -68,10 +68,27 @@ export default function Step2() {
     });
   };
 
+  const handleDownload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveDocument = (index: number) => {
+    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleContinue = async () => {
     try {
-      // Here we would typically upload the files to a server
-      // For now, we'll just simulate it
       const formData = new FormData();
       uploadedImages.forEach(file => formData.append('images', file));
       uploadedDocuments.forEach(file => formData.append('documents', file));
@@ -134,12 +151,30 @@ export default function Step2() {
                 {uploadedImages.length > 0 && (
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {uploadedImages.map((file, index) => (
-                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                      <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
                         <img
                           src={URL.createObjectURL(file)}
                           alt={`Preview ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                            onClick={() => handleDownload(file)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                            onClick={() => handleRemoveImage(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -178,6 +213,34 @@ export default function Step2() {
                     onFilesAdded={handleDocumentsAdded}
                     fileType="document"
                   />
+
+                  {uploadedDocuments.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {uploadedDocuments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 rounded-lg border">
+                          <span className="text-sm truncate">{file.name}</span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleDownload(file)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleRemoveDocument(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {scannedText && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
