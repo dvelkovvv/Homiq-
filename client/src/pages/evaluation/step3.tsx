@@ -1,3 +1,18 @@
+const STEPS = [
+  {
+    title: "Основна информация",
+    description: "Въведете детайли за имота"
+  },
+  {
+    title: "Медия файлове",
+    description: "Качете снимки и документи"
+  },
+  {
+    title: "Оценка",
+    description: "Преглед на резултатите"
+  }
+];
+
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
