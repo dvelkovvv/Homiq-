@@ -11,6 +11,7 @@ import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { InstructionCard } from "@/components/instruction-card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { FileUploadZone } from "@/components/file-upload-zone";
+import { DocumentScanner } from "@/components/document-scanner";
 
 interface FileWithPreview extends File {
   preview?: string;
@@ -35,6 +36,7 @@ export default function Step2() {
   const [, navigate] = useLocation();
   const [images, setImages] = useState<FileWithPreview[]>([]);
   const [documents, setDocuments] = useState<File[]>([]);
+  const [scannedText, setScannedText] = useState<string>("");
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -65,6 +67,14 @@ export default function Step2() {
     toast({
       title: "Документи качени успешно",
       description: `${files.length} ${files.length === 1 ? 'документ беше качен' : 'документа бяха качени'} успешно.`
+    });
+  };
+
+  const handleScanComplete = (text: string) => {
+    setScannedText(text);
+    toast({
+      title: "Документът е сканиран успешно",
+      description: "Текстът е извлечен от документа.",
     });
   };
 
@@ -174,13 +184,24 @@ export default function Step2() {
 
                   <div className="pt-6 border-t">
                     <h3 className="text-base font-medium mb-2">Документи за имота</h3>
-                    <FileUploadZone
-                      accept={{ 'application/pdf': ['.pdf'] }}
-                      maxFiles={5}
-                      maxSize={10 * 1024 * 1024}
-                      onFilesAdded={handleDocumentsAdded}
-                      fileType="document"
-                    />
+                    <DocumentScanner onScanComplete={handleScanComplete} />
+
+                    {scannedText && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium mb-2">Извлечен текст:</h4>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{scannedText}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-6">
+                      <FileUploadZone
+                        accept={{ 'application/pdf': ['.pdf'] }}
+                        maxFiles={5}
+                        maxSize={10 * 1024 * 1024}
+                        onFilesAdded={handleDocumentsAdded}
+                        fileType="document"
+                      />
+                    </div>
 
                     {documents.length > 0 && (
                       <div className="mt-6">
@@ -229,13 +250,13 @@ export default function Step2() {
           <div className="hidden lg:block space-y-4">
             <InstructionCard
               icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="Как да качите снимки?"
-              description="Изберете качествени снимки на имота, които показват ясно всички важни детайли. Можете да качите множество снимки наведнъж."
+              title="Как да качите файлове?"
+              description="Изберете качествени снимки на имота и сканирани копия на необходимите документи. Системата автоматично ще анализира текста в документите."
             />
             <InstructionCard
               icon={<HelpCircle className="h-5 w-5 text-green-500" />}
               title="Какви документи са необходими?"
-              description="Качете сканирани копия на документите за собственост и други релевантни документи в PDF формат."
+              description="Качете сканирани копия на документите за собственост, скици, данъчни оценки и други релевантни документи. Системата ще извлече важната информация автоматично."
             />
           </div>
         </div>
@@ -254,7 +275,7 @@ export default function Step2() {
           <DialogTitle>Как да качите файлове?</DialogTitle>
           <DialogDescription>
             Изберете качествени снимки на имота и сканирани копия на необходимите документи.
-            Поддържаните формати са JPG, PNG за снимки и PDF за документи.
+            Системата поддържа автоматично разпознаване на текст от документи и ще извлече важната информация.
           </DialogDescription>
         </DialogContent>
       </Dialog>
