@@ -5,6 +5,7 @@ export interface IStorage {
   getProperty(id: number): Promise<Property | undefined>;
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
   getEvaluation(id: number): Promise<Evaluation | undefined>;
+  getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]>;
   getAchievements(): Promise<Achievement[]>;
 }
 
@@ -67,6 +68,22 @@ export class MemStorage implements IStorage {
 
   async getEvaluation(id: number): Promise<Evaluation | undefined> {
     return this.evaluations.get(id);
+  }
+
+  async getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]> {
+    const history: (Evaluation & { property: Property })[] = [];
+
+    for (const evaluation of this.evaluations.values()) {
+      const property = await this.getProperty(evaluation.propertyId);
+      if (property) {
+        history.push({
+          ...evaluation,
+          property
+        });
+      }
+    }
+
+    return history.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async getAchievements(): Promise<Achievement[]> {

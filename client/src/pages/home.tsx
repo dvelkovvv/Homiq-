@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { VoiceCommands } from "@/components/voice-commands";
 import { Logo } from "@/components/logo";
+import { LayoutDashboard } from "lucide-react";
 
 export default function Home() {
   return (
@@ -9,7 +10,15 @@ export default function Home() {
       <header className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Logo />
-          <VoiceCommands />
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant="outline" className="flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                История
+              </Button>
+            </Link>
+            <VoiceCommands />
+          </div>
         </div>
       </header>
 

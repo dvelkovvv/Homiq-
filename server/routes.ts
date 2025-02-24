@@ -9,7 +9,7 @@ export async function registerRoutes(app: Express) {
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
-    
+
     const property = await storage.createProperty(result.data);
     res.json(property);
   });
@@ -38,6 +38,11 @@ export async function registerRoutes(app: Express) {
       return res.status(404).json({ error: "Evaluation not found" });
     }
     res.json(evaluation);
+  });
+
+  app.get("/api/evaluations/history", async (_req, res) => {
+    const history = await storage.getEvaluationHistory();
+    res.json(history);
   });
 
   app.get("/api/achievements", async (_req, res) => {
