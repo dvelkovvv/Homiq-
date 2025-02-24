@@ -14,80 +14,54 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const processFile = async (file: File) => {
-    try {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: async (acceptedFiles) => {
+      if (acceptedFiles.length === 0) return;
+
       setScanning(true);
       setProgress(0);
 
-      // Create a new worker for each scan
-      const worker = await createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            setProgress(m.progress * 100);
-          }
-        }
-      });
+      try {
+        const file = acceptedFiles[0];
+        const imageUrl = URL.createObjectURL(file);
 
-      // Настройваме за български език и добавяме специфични параметри
-      await worker.loadLanguage('bul');
-      await worker.initialize('bul');
-      await worker.setParameters({
-        tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,- ',
-        preserve_interword_spaces: '1',
-        tessedit_pageseg_mode: '1'
-      });
+        toast({
+          title: "Сканиране започна",
+          description: "Моля, изчакайте докато анализираме документа.",
+        });
 
-      // Convert file to image URL
-      const imageUrl = URL.createObjectURL(file);
+        const worker = await createWorker();
+        await worker.loadLanguage('bul');
+        await worker.initialize('bul');
 
-      // Recognize text
-      const { data: { text } } = await worker.recognize(imageUrl);
+        const { data: { text } } = await worker.recognize(imageUrl);
 
-      // Clean up
-      URL.revokeObjectURL(imageUrl);
-      await worker.terminate();
+        await worker.terminate();
+        URL.revokeObjectURL(imageUrl);
 
-      if (text) {
-        // Премахваме излишни интервали и нови редове
-        const cleanedText = text
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        if (cleanedText.length > 0) {
-          onScanComplete(cleanedText);
+        if (text && text.trim().length > 0) {
+          onScanComplete(text.trim());
           toast({
-            title: "Документът е сканиран успешно",
-            description: "Текстът е извлечен от документа.",
+            title: "Успешно сканиране",
+            description: "Текстът е успешно извлечен от документа.",
           });
         } else {
-          throw new Error("Не беше открит текст в документа");
+          throw new Error("Не беше открит текст");
         }
-      } else {
-        throw new Error("Не беше открит текст в документа");
-      }
-    } catch (error) {
-      console.error('OCR Error:', error);
-      toast({
-        title: "Грешка при сканиране",
-        description: "Моля, опитайте отново с друг документ или проверете дали изображението е ясно.",
-        variant: "destructive"
-      });
-    } finally {
-      setScanning(false);
-      setProgress(0);
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: async (acceptedFiles) => {
-      const file = acceptedFiles[0];
-      if (file) {
-        await processFile(file);
+      } catch (error) {
+        console.error('OCR Error:', error);
+        toast({
+          title: "Грешка при сканиране",
+          description: "Моля, опитайте с друг документ или проверете качеството на изображението.",
+          variant: "destructive"
+        });
+      } finally {
+        setScanning(false);
+        setProgress(100);
       }
     },
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp'],
-      'application/pdf': ['.pdf']
+      'image/*': ['.png', '.jpg', '.jpeg']
     },
     maxFiles: 1,
     multiple: false
@@ -124,7 +98,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
                   {isDragActive ? "Пуснете документа тук" : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Поддържани формати: PNG, JPG, PDF
+                  Поддържани формати: PNG, JPG
                 </p>
               </div>
             </div>
