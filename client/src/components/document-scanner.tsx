@@ -5,18 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
-  onScanComplete: (text: string, extractedData?: any) => void;
+  onScanComplete: (text: string, data?: any) => void;
 }
 
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const detectDocumentType = (text: string) => {
+  const detectDocumentType = (text: string): string => {
     const lowerText = text.toLowerCase();
     if (lowerText.includes('нотариален акт') || lowerText.includes('нотариус')) {
       return 'notary_act';
@@ -38,6 +37,27 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       'other': 'Друг документ'
     };
     return types[type];
+  };
+
+  const extractData = (text: string) => {
+    const data: any = {};
+
+    const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
+    if (areaMatch) {
+      data.squareMeters = parseFloat(areaMatch[1]);
+    }
+
+    const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
+    if (yearMatch) {
+      data.constructionYear = parseInt(yearMatch[1]);
+    }
+
+    const addressMatch = text.match(/(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i);
+    if (addressMatch) {
+      data.address = addressMatch[1].trim();
+    }
+
+    return data;
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -62,8 +82,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
 
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
-          preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '1'
+          preserve_interword_spaces: '1'
         });
 
         const { data: { text } } = await worker.recognize(imageUrl);
@@ -78,14 +97,14 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
           const documentType = detectDocumentType(processedText);
+          const extractedData = extractData(processedText);
 
-          onScanComplete(processedText, analysisResult.extractedData);
+          onScanComplete(processedText, extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence * 100)}%`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}.`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
