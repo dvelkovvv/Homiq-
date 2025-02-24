@@ -30,7 +30,6 @@ export default function Step3() {
 
   const generatePDF = () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
-
     pdf.setFontSize(20);
     pdf.setTextColor(0, 51, 102);
     pdf.text('Оценка на имот', 20, 20);

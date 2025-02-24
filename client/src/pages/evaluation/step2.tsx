@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +17,6 @@ export default function Step2() {
       navigate('/evaluation/step1');
     }
   }, [propertyId, navigate]);
-
-  const onSubmit = () => {
-    navigate(`/evaluation/step3?propertyId=${propertyId}`);
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -89,7 +85,10 @@ export default function Step2() {
             <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
               Назад
             </Button>
-            <Button onClick={onSubmit} className="bg-[#003366] hover:bg-[#002244]">
+            <Button 
+              onClick={() => navigate(`/evaluation/step3?propertyId=${propertyId}`)} 
+              className="bg-[#003366] hover:bg-[#002244]"
+            >
               Продължи към оценка
             </Button>
           </CardFooter>
