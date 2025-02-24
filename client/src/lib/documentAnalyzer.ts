@@ -1,57 +1,42 @@
-import { createWorker } from 'tesseract.js';
-
-interface ExtractedPropertyData {
+interface ExtractedData {
   squareMeters?: number;
   constructionYear?: number;
   address?: string;
   documentType?: string;
 }
 
-interface AnalysisResult {
-  extractedData: ExtractedPropertyData;
-  confidence: number;
-}
-
 export class DocumentAnalyzer {
-  static async analyzeDocument(text: string): Promise<AnalysisResult> {
-    const result: ExtractedPropertyData = {};
-    let foundFields = 0;
-    let totalFields = 3; // базови полета които търсим
+  static async analyzeDocument(text: string): Promise<ExtractedData> {
+    const data: ExtractedData = {};
 
     // Определяме типа на документа
     const lowerText = text.toLowerCase();
     if (lowerText.includes('нотариален акт')) {
-      result.documentType = 'notary_act';
+      data.documentType = 'notary_act';
     } else if (lowerText.includes('скица')) {
-      result.documentType = 'sketch';
+      data.documentType = 'sketch';
     } else if (lowerText.includes('данъчна оценка')) {
-      result.documentType = 'tax_assessment';
+      data.documentType = 'tax_assessment';
     }
 
     // Търсим квадратура
     const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
     if (areaMatch) {
-      result.squareMeters = parseFloat(areaMatch[1]);
-      foundFields++;
+      data.squareMeters = parseFloat(areaMatch[1]);
     }
 
     // Търсим година на строителство
     const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
     if (yearMatch) {
-      result.constructionYear = parseInt(yearMatch[1]);
-      foundFields++;
+      data.constructionYear = parseInt(yearMatch[1]);
     }
 
     // Търсим адрес
     const addressMatch = text.match(/(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i);
     if (addressMatch) {
-      result.address = addressMatch[1].trim();
-      foundFields++;
+      data.address = addressMatch[1].trim();
     }
 
-    return {
-      extractedData: result,
-      confidence: foundFields / totalFields
-    };
+    return data;
   }
 }

@@ -63,14 +63,13 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
-
-          onScanComplete(processedText, analysisResult.extractedData);
+          const extractedData = await DocumentAnalyzer.analyzeDocument(processedText);
+          onScanComplete(processedText, extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: analysisResult.extractedData.documentType 
-              ? `Документът е разпознат като ${getDocumentTypeName(analysisResult.extractedData.documentType)}`
+            description: extractedData.documentType 
+              ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
               : "Документът е сканиран успешно",
           });
         } else {
