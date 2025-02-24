@@ -53,6 +53,26 @@ export function VoiceCommands() {
           description: "Пренасочване към оценка на имот",
         });
         navigate('/evaluation/step1');
+      } else if (command.includes('назад')) {
+        window.history.back();
+      } else if (command.includes('продължи') || command.includes('напред')) {
+        // Имплементиране на изпращане на формата или навигация
+        const form = document.querySelector('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit'));
+        }
+      } else if (command.includes('запази')) {
+        // Запазване на текущия прогрес
+        const saveButton = document.querySelector('button[type="submit"]');
+        if (saveButton) {
+          saveButton.click();
+        }
+      } else if (command.includes('помощ')) {
+        // Показване на помощно съдържание
+        toast({
+          title: "Достъпни команди",
+          description: "започни оценка, назад, продължи, запази, помощ",
+        });
       } else {
         toast({
           title: "Неразпозната команда",
