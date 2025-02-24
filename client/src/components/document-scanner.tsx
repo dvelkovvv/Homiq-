@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
@@ -37,27 +38,6 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       'other': 'Друг документ'
     };
     return types[type];
-  };
-
-  const extractData = (text: string) => {
-    const data: any = {};
-
-    const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
-    if (areaMatch) {
-      data.squareMeters = parseFloat(areaMatch[1]);
-    }
-
-    const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
-    if (yearMatch) {
-      data.constructionYear = parseInt(yearMatch[1]);
-    }
-
-    const addressMatch = text.match(/(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i);
-    if (addressMatch) {
-      data.address = addressMatch[1].trim();
-    }
-
-    return data;
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -98,13 +78,13 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .trim();
 
           const documentType = detectDocumentType(processedText);
-          const extractedData = extractData(processedText);
+          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
 
-          onScanComplete(processedText, extractedData);
+          onScanComplete(processedText, analysisResult.extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}.`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence * 100)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
