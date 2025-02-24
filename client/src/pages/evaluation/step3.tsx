@@ -1,18 +1,3 @@
-const STEPS = [
-  {
-    title: "Основна информация",
-    description: "Въведете детайли за имота"
-  },
-  {
-    title: "Медия файлове",
-    description: "Качете снимки и документи"
-  },
-  {
-    title: "Оценка",
-    description: "Преглед на резултатите"
-  }
-];
-
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -29,6 +14,8 @@ import { InstructionCard } from "@/components/instruction-card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 import { format, addMonths } from 'date-fns';
 import { bg } from 'date-fns/locale';
+import { InvestmentScenarios } from "@/components/property-analysis/investment-scenarios";
+import { NeighborhoodAnalysis } from "@/components/property-analysis/neighborhood-analysis";
 
 interface PropertyAnalysis {
   estimatedValue: number;
@@ -540,6 +527,20 @@ export default function Step3() {
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                       >
+                        <InvestmentScenarios scenarios={analysis.investmentMetrics.investmentScenarios} />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                      >
+                        <NeighborhoodAnalysis analysis={analysis.neighborhoodAnalysis} />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                      >
                         <Card className="p-6">
                           <h4 className="font-medium mb-4">Прогноза за развитие на цената</h4>
                           <div className="h-[250px] w-full">
@@ -553,6 +554,10 @@ export default function Step3() {
                                   <linearGradient id="conservativeGradient" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#003366" stopOpacity={0.1}/>
                                     <stop offset="95%" stopColor="#003366" stopOpacity={0}/>
+                                  </linearGradient>
+                                  <linearGradient id="marketTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#FF9800" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#FF9800" stopOpacity={0}/>
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -578,6 +583,14 @@ export default function Step3() {
                                   fill="url(#conservativeGradient)"
                                   strokeWidth={2}
                                   name="Консервативна"
+                                />
+                                <Area
+                                  type="monotone"
+                                  dataKey="marketTrend"
+                                  stroke="#FF9800"
+                                  fill="url(#marketTrendGradient)"
+                                  strokeWidth={2}
+                                  name="Пазарен тренд"
                                 />
                               </AreaChart>
                             </ResponsiveContainer>
