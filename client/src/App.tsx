@@ -18,9 +18,9 @@ import NotFound from "@/pages/not-found";
 function Header() {
   return (
     <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
         <Logo />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-2">
           <VoiceCommands />
           <Link href="/dashboard">
             <Button variant="outline" size="icon">
