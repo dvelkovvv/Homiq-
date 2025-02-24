@@ -3,11 +3,13 @@ import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
+import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
-  onScanComplete: (text: string) => void;
+  onScanComplete: (text: string, extractedData?: any) => void;
 }
 
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
@@ -23,8 +25,6 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
 
       try {
         const file = acceptedFiles[0];
-
-        // Създаваме URL от файла
         const imageUrl = URL.createObjectURL(file);
 
         toast({
@@ -32,41 +32,47 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
           description: "Моля, изчакайте докато анализираме документа.",
         });
 
-        // Създаваме нов worker с подобрени настройки за български
         const worker = await createWorker();
-
-        // Задаваме български език
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
 
-        // Задаваме специфични настройки за по-добро разпознаване
         await worker.setParameters({
-          tessedit_ocr_engine_mode: '1', // Legacy engine, по-добър за кирилица
-          tessedit_pageseg_mode: '1', // Автоматична сегментация
+          tessedit_ocr_engine_mode: '1',
+          tessedit_pageseg_mode: '1',
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1'
         });
 
-        // Разпознаваме текста
         const { data: { text } } = await worker.recognize(imageUrl);
 
-        // Освобождаваме ресурсите
         await worker.terminate();
         URL.revokeObjectURL(imageUrl);
 
         if (text && text.trim().length > 0) {
-          // Обработваме текста за по-добър резултат
           const processedText = text
             .trim()
-            .replace(/\s+/g, ' ') // Премахваме множество интервали
-            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '') // Премахваме специални символи
+            .replace(/\s+/g, ' ')
+            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          onScanComplete(processedText);
+          // Анализираме извлечения текст
+          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
+          const warnings = DocumentAnalyzer.validateData(analysisResult.extractedData);
+
+          // Показваме предупреждения, ако има такива
+          if (warnings.length > 0) {
+            toast({
+              title: "Внимание при анализа",
+              description: warnings.join(". "),
+              variant: "warning",
+            });
+          }
+
+          onScanComplete(processedText, analysisResult.extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: "Текстът е успешно извлечен от документа.",
+            description: `Текстът е успешно извлечен. Точност на анализа: ${Math.round(analysisResult.confidence)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -123,6 +129,11 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
                 <p className="text-sm text-muted-foreground">
                   Поддържани формати: PNG, JPG (ясни снимки на документи)
                 </p>
+                <div className="flex gap-2 justify-center mt-2">
+                  <Badge variant="outline">Нотариален акт</Badge>
+                  <Badge variant="outline">Скица</Badge>
+                  <Badge variant="outline">Данъчна оценка</Badge>
+                </div>
               </div>
             </div>
           )}
