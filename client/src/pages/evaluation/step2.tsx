@@ -11,7 +11,7 @@ import { Upload } from "lucide-react";
 export default function Step2() {
   const [, navigate] = useLocation();
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  
+
   const onSubmit = () => {
     // In a real app, we would upload files here
     navigate("/evaluation/step3");
@@ -37,12 +37,12 @@ export default function Step2() {
       <main className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle>Step 2: Upload Documents & Photos</CardTitle>
+            <CardTitle>Стъпка 2: Качване на документи и снимки</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               <div>
-                <Label>Property Photos</Label>
+                <Label>Снимки на имота</Label>
                 <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
                   <div className="text-center">
                     <Upload className="mx-auto h-12 w-12 text-gray-300" />
@@ -51,7 +51,7 @@ export default function Step2() {
                         htmlFor="photos"
                         className="relative cursor-pointer rounded-md bg-white font-semibold text-primary"
                       >
-                        <span>Upload photos</span>
+                        <span>Качете снимки</span>
                         <Input
                           id="photos"
                           name="photos"
@@ -63,12 +63,15 @@ export default function Step2() {
                         />
                       </label>
                     </div>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG до 10MB
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <Label>Property Documents</Label>
+                <Label>Документи за имота</Label>
                 <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
                   <div className="text-center">
                     <Upload className="mx-auto h-12 w-12 text-gray-300" />
@@ -77,7 +80,7 @@ export default function Step2() {
                         htmlFor="documents"
                         className="relative cursor-pointer rounded-md bg-white font-semibold text-primary"
                       >
-                        <span>Upload documents</span>
+                        <span>Качете документи</span>
                         <Input
                           id="documents"
                           name="documents"
@@ -89,13 +92,16 @@ export default function Step2() {
                         />
                       </label>
                     </div>
+                    <p className="text-xs text-gray-500">
+                      PDF, DOC до 10MB
+                    </p>
                   </div>
                 </div>
               </div>
 
               {uploadedFiles.length > 0 && (
                 <div>
-                  <h3 className="font-medium mb-2">Uploaded Files:</h3>
+                  <h3 className="font-medium mb-2">Качени файлове:</h3>
                   <ul className="list-disc pl-5">
                     {uploadedFiles.map((file, i) => (
                       <li key={i} className="text-sm text-gray-600">{file}</li>
@@ -107,10 +113,10 @@ export default function Step2() {
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
-              Back
+              Назад
             </Button>
             <Button onClick={onSubmit}>
-              Continue to Results
+              Продължи към резултати
             </Button>
           </CardFooter>
         </Card>

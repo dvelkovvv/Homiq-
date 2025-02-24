@@ -16,16 +16,16 @@ export default function Home() {
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl font-bold tracking-tight text-[#003366] sm:text-6xl">
-            Smart Property Evaluation
+            Умна оценка на имоти
           </h1>
           <p className="mt-6 text-lg leading-8 text-gray-600">
-            Get an instant, accurate evaluation of your property using our
-            advanced AI-powered platform with just a few simple steps.
+            Получете незабавна и точна оценка на вашия имот използвайки нашата
+            модерна AI платформа само в няколко прости стъпки.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link href="/evaluation/step1">
               <Button size="lg" className="bg-[#003366] hover:bg-[#002244]">
-                Evaluate My Property
+                Оцени моя имот
               </Button>
             </Link>
           </div>

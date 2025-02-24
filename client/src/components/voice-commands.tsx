@@ -15,12 +15,12 @@ export function VoiceCommands() {
 
     const recognition = new (window as any).webkitSpeechRecognition();
     recognition.continuous = true;
-    recognition.lang = 'en-US';
+    recognition.lang = 'bg-BG';
 
     recognition.onresult = (event: any) => {
       const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
-      
-      if (command.includes('evaluate') || command.includes('start')) {
+
+      if (command.includes('оцени') || command.includes('започни')) {
         navigate('/evaluation/step1');
       }
     };
@@ -28,8 +28,8 @@ export function VoiceCommands() {
     if (isListening) {
       recognition.start();
       toast({
-        title: "Voice commands activated",
-        description: "Try saying 'start evaluation' or 'evaluate property'",
+        title: "Гласови команди активирани",
+        description: "Опитайте да кажете 'започни оценка' или 'оцени имот'",
       });
     }
 
@@ -44,6 +44,7 @@ export function VoiceCommands() {
       size="icon"
       onClick={() => setIsListening(!isListening)}
       className={isListening ? "bg-primary text-primary-foreground" : ""}
+      title={isListening ? "Изключи гласови команди" : "Включи гласови команди"}
     >
       {isListening ? (
         <Mic className="h-4 w-4" />

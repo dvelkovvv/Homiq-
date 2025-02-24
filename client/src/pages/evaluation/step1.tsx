@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo";
 
 export default function Step1() {
   const [, navigate] = useLocation();
-  
+
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
     defaultValues: {
@@ -50,7 +50,7 @@ export default function Step1() {
       <main className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle>Step 1: Property Details</CardTitle>
+            <CardTitle>Стъпка 1: Данни за имота</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -60,9 +60,9 @@ export default function Step1() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Address</FormLabel>
+                      <FormLabel>Адрес</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Въведете адрес" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -74,17 +74,17 @@ export default function Step1() {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Property Type</FormLabel>
+                      <FormLabel>Тип имот</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select property type" />
+                            <SelectValue placeholder="Изберете тип имот" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="apartment">Apartment</SelectItem>
-                          <SelectItem value="house">House</SelectItem>
-                          <SelectItem value="villa">Villa</SelectItem>
+                          <SelectItem value="apartment">Апартамент</SelectItem>
+                          <SelectItem value="house">Къща</SelectItem>
+                          <SelectItem value="villa">Вила</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -97,10 +97,11 @@ export default function Step1() {
                   name="squareMeters"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Size (m²)</FormLabel>
+                      <FormLabel>Площ (кв.м)</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
+                          placeholder="Въведете площ"
                           {...field} 
                           onChange={e => field.onChange(Number(e.target.value))}
                         />
@@ -115,10 +116,11 @@ export default function Step1() {
                   name="yearBuilt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Year Built</FormLabel>
+                      <FormLabel>Година на строеж</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
+                          placeholder="Въведете година"
                           {...field}
                           onChange={e => field.onChange(Number(e.target.value))}
                         />
@@ -133,7 +135,7 @@ export default function Step1() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>Местоположение</FormLabel>
                       <FormControl>
                         <GoogleMaps 
                           onLocationSelect={(location) => field.onChange(location)}
@@ -146,7 +148,7 @@ export default function Step1() {
                 />
 
                 <CardFooter className="px-0 pt-6">
-                  <Button type="submit" className="w-full">Continue to Step 2</Button>
+                  <Button type="submit" className="w-full">Продължи към стъпка 2</Button>
                 </CardFooter>
               </form>
             </Form>
