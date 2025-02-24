@@ -28,13 +28,6 @@ export default function Step1() {
       squareMeters: 1,
       yearBuilt: undefined,
       location: null,
-      rooms: undefined,
-      floor: undefined,
-      totalFloors: undefined,
-      heating: undefined,
-      parking: false,
-      photos: [],
-      documents: []
     }
   });
 
@@ -57,11 +50,11 @@ export default function Step1() {
 
       const property = await response.json();
       navigate(`/evaluation/step2?propertyId=${property.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при създаването на имота. Моля, опитайте отново.",
+        description: error.message || "Възникна проблем при създаването на имота. Моля, опитайте отново.",
         variant: "destructive"
       });
     }
@@ -151,7 +144,7 @@ export default function Step1() {
               name="yearBuilt"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Дата на строеж</FormLabel>
+                  <FormLabel>Година на строеж</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -163,9 +156,9 @@ export default function Step1() {
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "dd MMMM yyyy", { locale: bg })
+                            format(field.value, "yyyy", { locale: bg })
                           ) : (
-                            "Изберете дата"
+                            "Изберете година"
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -181,6 +174,9 @@ export default function Step1() {
                         }
                         initialFocus
                         locale={bg}
+                        captionLayout="dropdown-buttons"
+                        fromYear={1800}
+                        toYear={new Date().getFullYear()}
                       />
                     </PopoverContent>
                   </Popover>
@@ -195,7 +191,7 @@ export default function Step1() {
             name="location"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Местоположение на имота</FormLabel>
+                <FormLabel>Местоположение на имота (по избор)</FormLabel>
                 <FormControl>
                   <GoogleMaps 
                     onLocationSelect={(location) => field.onChange(location)}
