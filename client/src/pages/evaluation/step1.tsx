@@ -26,7 +26,7 @@ export default function Step1() {
       address: "",
       type: "",
       squareMeters: 1,
-      yearBuilt: new Date().getFullYear(),
+      yearBuilt: undefined,
       location: undefined,
       photos: [],
       documents: []
@@ -146,7 +146,7 @@ export default function Step1() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? format(new Date(field.value), 'dd MMMM yyyy', { locale: bg }) : "Изберете дата"}
+                              {field.value ? format(field.value, 'dd MMMM yyyy', { locale: bg }) : "Изберете дата"}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -154,8 +154,8 @@ export default function Step1() {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => date && field.onChange(date)}
+                            selected={field.value}
+                            onSelect={field.onChange}
                             disabled={(date) =>
                               date > new Date() || date < new Date(1800, 0, 1)
                             }
@@ -167,7 +167,7 @@ export default function Step1() {
                             ISOWeek
                             fixedWeeks
                             formatters={{
-                              formatCaption: (date, options) => {
+                              formatCaption: (date) => {
                                 return format(date, 'MMMM yyyy', { locale: bg });
                               }
                             }}

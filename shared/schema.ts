@@ -7,7 +7,7 @@ export const properties = pgTable("properties", {
   address: text("address").notNull(),
   location: jsonb("location").$type<{lat: number, lng: number}>(),
   squareMeters: integer("square_meters").notNull(),
-  yearBuilt: integer("year_built"),
+  yearBuilt: timestamp("year_built").notNull(),
   type: text("type").notNull(), // apartment, house, etc
   photos: text("photos").array(),
   documents: text("documents").array(),
@@ -40,7 +40,10 @@ export const userAchievements = pgTable("user_achievements", {
 export const insertPropertySchema = createInsertSchema(properties)
   .extend({
     squareMeters: z.number().min(1, "Площта трябва да бъде поне 1 кв.м"),
-    yearBuilt: z.number().min(1800, "Годината трябва да бъде след 1800").max(new Date().getFullYear(), "Годината не може да бъде в бъдещето"),
+    yearBuilt: z.date({
+      required_error: "Моля изберете дата",
+      invalid_type_error: "Невалидна дата"
+    }),
     address: z.string().min(5, "Адресът трябва да бъде поне 5 символа"),
     type: z.enum(["apartment", "house", "villa", "agricultural"], {
       errorMap: () => ({ message: "Моля изберете валиден тип имот" })
