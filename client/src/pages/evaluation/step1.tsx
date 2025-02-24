@@ -27,7 +27,7 @@ export default function Step1() {
       type: undefined,
       squareMeters: 1,
       yearBuilt: undefined,
-      location: null,
+      location: undefined, // Променено от null на undefined
     }
   });
 
@@ -39,7 +39,12 @@ export default function Step1() {
         body: JSON.stringify({
           ...data,
           yearBuilt: data.yearBuilt,
-          location: data.location || null
+          location: data.location || null,
+          rooms: 1,
+          floor: 0,
+          totalFloors: 1,
+          heating: "electric",
+          parking: false
         })
       });
 
@@ -195,7 +200,7 @@ export default function Step1() {
                 <FormControl>
                   <GoogleMaps 
                     onLocationSelect={(location) => field.onChange(location)}
-                    initialLocation={field.value}
+                    initialLocation={field.value || undefined}
                   />
                 </FormControl>
                 <FormMessage />
