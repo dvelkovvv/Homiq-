@@ -34,15 +34,21 @@ export default function Step1() {
   });
 
   const onSubmit = async (data: any) => {
-    const response = await fetch("/api/properties", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
+    try {
+      const response = await fetch("/api/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
 
-    if (response.ok) {
+      if (!response.ok) {
+        throw new Error('Failed to create property');
+      }
+
       const property = await response.json();
       navigate(`/evaluation/step2?propertyId=${property.id}`);
+    } catch (error) {
+      console.error('Error creating property:', error);
     }
   };
 

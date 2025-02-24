@@ -28,20 +28,53 @@ ChartJS.register(
 );
 
 export default function Step3() {
+  // Извличаме propertyId от URL
+  const propertyId = new URLSearchParams(window.location.search).get('propertyId');
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState(true);
   const [score, setScore] = useState(0);
   const chartRef = useRef<any>(null);
 
   useEffect(() => {
-    // Simulate evaluation calculation
-    const timer = setTimeout(() => {
-      setScore(85);
-      setLoading(false);
-    }, 1500);
+    if (!propertyId) {
+      navigate('/evaluation/step1');
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    // Симулираме изчисление на оценката
+    const calculateEvaluation = async () => {
+      try {
+        const evaluation = {
+          propertyId: parseInt(propertyId),
+          score: 85,
+          estimatedValue: 250000,
+          recommendations: [
+            'Обмислете малки ремонти за увеличаване на стойността',
+            'Локацията на имота е много търсена',
+            'Подходящ момент за продажба според пазарните тенденции'
+          ]
+        };
+
+        const response = await fetch('/api/evaluations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(evaluation)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create evaluation');
+        }
+
+        setScore(85);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error creating evaluation:', error);
+        setLoading(false);
+      }
+    };
+
+    calculateEvaluation();
+  }, [propertyId, navigate]);
 
   const chartData = {
     labels: ['Вашият имот', 'Среден за района'],
@@ -56,8 +89,6 @@ export default function Step3() {
 
   const generatePDF = () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
 
     // Заглавие
     pdf.setFontSize(20);
@@ -160,8 +191,8 @@ export default function Step3() {
                   </ul>
                 </div>
 
-                <Button 
-                  onClick={generatePDF} 
+                <Button
+                  onClick={generatePDF}
                   className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#45a049]"
                 >
                   <Download className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,18 @@ export default function Step2() {
   const [, navigate] = useLocation();
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
+  // Извличаме propertyId от URL
+  const propertyId = new URLSearchParams(window.location.search).get('propertyId');
+
+  useEffect(() => {
+    if (!propertyId) {
+      navigate('/evaluation/step1');
+    }
+  }, [propertyId, navigate]);
+
   const onSubmit = () => {
-    // In a real app, we would upload files here
-    navigate("/evaluation/step3");
+    // В реално приложение, тук ще качваме файловете
+    navigate(`/evaluation/step3?propertyId=${propertyId}`);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +124,7 @@ export default function Step2() {
             <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
               Назад
             </Button>
-            <Button onClick={onSubmit}>
+            <Button onClick={onSubmit} className="bg-[#003366] hover:bg-[#002244]">
               Продължи към резултати
             </Button>
           </CardFooter>
