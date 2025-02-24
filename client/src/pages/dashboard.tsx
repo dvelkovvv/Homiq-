@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { bg } from "date-fns/locale";
 
 export default function Dashboard() {
-  const { data: evaluations } = useQuery<(Evaluation & { property: Property })[]>({
+  const { data: evaluations, isLoading } = useQuery<(Evaluation & { property: Property })[]>({
     queryKey: ["/api/evaluations/history"],
   });
 
@@ -34,7 +34,11 @@ export default function Dashboard() {
               <CardTitle>История на оценките</CardTitle>
             </CardHeader>
             <CardContent>
-              {evaluations ? (
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Зареждане на историята...
+                </div>
+              ) : evaluations && evaluations.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -73,7 +77,7 @@ export default function Dashboard() {
                 </Table>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  Зареждане на историята...
+                  Все още няма направени оценки
                 </div>
               )}
             </CardContent>

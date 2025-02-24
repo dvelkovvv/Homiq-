@@ -42,7 +42,7 @@ export async function registerRoutes(app: Express) {
 
   app.get("/api/evaluations/history", async (_req, res) => {
     const history = await storage.getEvaluationHistory();
-    res.json(history);
+    res.json(history || []); 
   });
 
   app.get("/api/achievements", async (_req, res) => {
