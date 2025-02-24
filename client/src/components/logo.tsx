@@ -1,17 +1,23 @@
 import { Link } from "wouter";
-import { HomeIcon } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 export function Logo() {
   return (
     <Link href="/">
       <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
         <div className="relative group">
-          <HomeIcon className="h-8 w-8 text-[#003366] transform transition-transform group-hover:scale-110" />
-          <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-[#4CAF50] border-2 border-white shadow-sm" />
+          <div className="bg-primary rounded-lg p-2 transform transition-transform group-hover:scale-110">
+            <Building2 className="h-8 w-8 text-white" />
+            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#4CAF50] border-2 border-white" />
+          </div>
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold text-[#003366] leading-tight">Homiq</span>
-          <span className="text-xs text-[#4CAF50] font-medium -mt-1">Smart Property Evaluation</span>
+          <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#4CAF50] leading-tight">
+            PropValue
+          </span>
+          <span className="text-xs text-muted-foreground font-medium -mt-1">
+            Smart Property Evaluation
+          </span>
         </div>
       </div>
     </Link>

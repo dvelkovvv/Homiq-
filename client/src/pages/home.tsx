@@ -194,7 +194,7 @@ export default function Home() {
       <footer className="bg-gray-50 py-12">
         <div className="container mx-auto px-4">
           <div className="text-center text-gray-600">
-            <p>© 2024 Homiq. Всички права запазени.</p>
+            <p>© 2024 PropValue. Всички права запазени.</p>
           </div>
         </div>
       </footer>
