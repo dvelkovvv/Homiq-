@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { Info, HelpCircle } from "lucide-react";
+import { Info, HelpCircle, FileText, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { motion, AnimatePresence } from "framer-motion";
@@ -162,7 +162,7 @@ export default function Step2() {
                                   size="icon"
                                   variant="ghost"
                                 >
-                                  <HelpCircle className="h-4 w-4 text-white" />
+                                  <X className="h-4 w-4 text-white" />
                                 </Button>
                               </motion.div>
                             ))}
@@ -201,7 +201,7 @@ export default function Step2() {
                                 size="icon"
                                 variant="ghost"
                               >
-                                <HelpCircle className="h-4 w-4 text-gray-500" />
+                                <X className="h-4 w-4 text-gray-500" />
                               </Button>
                             </div>
                           ))}
