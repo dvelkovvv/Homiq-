@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,31 +14,34 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const scanDocument = async (file: File) => {
+  const processFile = async (file: File) => {
     try {
       setScanning(true);
       setProgress(0);
 
-      const worker = await createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            setProgress(m.progress * 100);
-          }
-        },
-      });
-
+      // Create a new worker for each scan
+      const worker = await createWorker();
       await worker.loadLanguage('bul');
       await worker.initialize('bul');
 
-      const { data: { text } } = await worker.recognize(file);
+      // Convert file to image URL
+      const imageUrl = URL.createObjectURL(file);
 
+      // Recognize text
+      const result = await worker.recognize(imageUrl);
+
+      // Cleanup
+      URL.revokeObjectURL(imageUrl);
       await worker.terminate();
 
-      onScanComplete(text);
-      toast({
-        title: "Документът е сканиран успешно",
-        description: "Текстът е извлечен и анализиран.",
-      });
+      // Return result
+      if (result.data.text) {
+        onScanComplete(result.data.text);
+        toast({
+          title: "Документът е сканиран успешно",
+          description: "Текстът е извлечен от документа.",
+        });
+      }
     } catch (error) {
       console.error('OCR Error:', error);
       toast({
@@ -52,15 +55,13 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
     }
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      scanDocument(file);
-    }
-  }, []);
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: async (acceptedFiles) => {
+      const file = acceptedFiles[0];
+      if (file) {
+        await processFile(file);
+      }
+    },
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp'],
       'application/pdf': ['.pdf']
