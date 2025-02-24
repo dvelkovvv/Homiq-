@@ -97,10 +97,6 @@ export default function Step1() {
   const saveFormData = useCallback(
     debounce((data: any) => {
       localStorage.setItem('propertyFormData', JSON.stringify(data));
-      toast({
-        title: "Запазено",
-        description: "Данните са запазени автоматично",
-      });
     }, 1000),
     []
   );

@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { motion, AnimatePresence } from "framer-motion";
 import { InstructionCard } from "@/components/instruction-card";
 
-
 interface EvaluationScore {
   locationScore: number;
   conditionScore: number;
@@ -272,12 +271,10 @@ export default function Step3() {
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Сподели оценката</DialogTitle>
-                              <DialogDescription>
-                                Изберете как искате да споделите оценката
-                              </DialogDescription>
-                            </DialogHeader>
+                            <DialogTitle>Сподели оценката</DialogTitle>
+                            <DialogDescription>
+                              Изберете как искате да споделите оценката
+                            </DialogDescription>
                             <div className="grid gap-4 py-4">
                               <Button onClick={shareEvaluation} className="w-full">
                                 Сподели чрез системата за споделяне
@@ -339,13 +336,11 @@ export default function Step3() {
           </Button>
         </DialogTrigger>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Как да разчетете оценката?</DialogTitle>
-            <DialogDescription>
-              Анализът включва оценка на локацията, състоянието на имота и текущите пазарни условия.
-              Можете да изтеглите подробен отчет или да споделите резултатите с други.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogTitle>Как да разчетете оценката?</DialogTitle>
+          <DialogDescription>
+            Анализът включва оценка на локацията, състоянието на имота и текущите пазарни условия.
+            Можете да изтеглите подробен отчет или да споделите резултатите с други.
+          </DialogDescription>
         </DialogContent>
       </Dialog>
     </div>
