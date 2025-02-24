@@ -36,10 +36,9 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      // Ensure yearBuilt is a proper Date object
       const formattedData = {
         ...data,
-        yearBuilt: data.yearBuilt instanceof Date ? data.yearBuilt : new Date(data.yearBuilt),
+        yearBuilt: data.yearBuilt,
         location: data.location || null,
         photos: [],
         documents: []
@@ -188,11 +187,6 @@ export default function Step1() {
                             toYear={new Date().getFullYear()}
                             ISOWeek
                             fixedWeeks
-                            formatters={{
-                              formatCaption: (date) => {
-                                return format(date, 'MMMM yyyy', { locale: bg });
-                              }
-                            }}
                           />
                         </PopoverContent>
                       </Popover>
@@ -206,7 +200,7 @@ export default function Step1() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Местоположение</FormLabel>
+                      <FormLabel>Местоположение (по избор)</FormLabel>
                       <FormControl>
                         <GoogleMaps 
                           onLocationSelect={(location) => field.onChange(location)}
