@@ -20,6 +20,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Progress } from "@/components/ui/progress";
 import { Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight, Banknote, Calendar } from "lucide-react";
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -38,24 +39,80 @@ interface PropertyAnalysis {
     potential: number;
   };
   priceHistory: { date: string; value: number }[];
-  similarProperties: { price: number; distance: number; features: string[] }[];
-  forecast: { date: string; optimistic: number; conservative: number }[];
+  similarProperties: { 
+    price: number;
+    distance: number;
+    features: string[];
+    prediction: {
+      oneYear: number;
+      threeYears: number;
+      fiveYears: number;
+    };
+  }[];
+  forecast: { 
+    date: string; 
+    optimistic: number; 
+    conservative: number;
+    marketTrend: number;
+  }[];
   riskAssessment: {
     score: number;
     factors: { name: string; impact: number }[];
+    marketVolatility: number;
+    economicFactors: {
+      interestRates: number;
+      economicGrowth: number;
+      inflation: number;
+    };
   };
   investmentMetrics: {
     roi: number;
     breakeven: number;
     appreciation: number;
+    rentalYield: number;
+    cashFlow: {
+      monthly: number;
+      annual: number;
+    };
+    investmentScenarios: {
+      conservative: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+      moderate: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+      aggressive: {
+        returnRate: number;
+        totalReturn: number;
+        timeline: number;
+      };
+    };
+  };
+  neighborhoodAnalysis: {
+    score: number;
+    amenities: {
+      type: string;
+      distance: number;
+      impact: number;
+    }[];
+    development: {
+      planned: string[];
+      impact: number;
+    };
+    demographics: {
+      population: number;
+      growth: number;
+      income: number;
+    };
   };
 }
 
 function calculatePropertyValue(property: any): PropertyAnalysis {
-  // Базова цена според квадратура
   const basePrice = property.squareMeters * 1000;
-
-  // Фактори за корекция
   const locationFactor = 0.9;
   const yearFactor = Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
   const typeFactor = {
@@ -68,40 +125,84 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
 
   const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
 
-  // История на цените (12 месеца)
-  const priceHistory = Array.from({ length: 12 }).map((_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - (11 - i));
-    const variation = 0.95 + Math.random() * 0.1;
-    return {
-      date: format(date, 'MMM yyyy', { locale: bg }),
-      value: Math.round(estimatedValue * variation)
-    };
-  });
+  const neighborhoodAnalysis = {
+    score: Math.round(Math.random() * 20 + 80),
+    amenities: [
+      { type: "Транспорт", distance: 0.3, impact: 85 },
+      { type: "Училища", distance: 0.5, impact: 90 },
+      { type: "Магазини", distance: 0.2, impact: 88 },
+      { type: "Паркове", distance: 0.8, impact: 75 }
+    ],
+    development: {
+      planned: [
+        "Нова метро станция (2026)",
+        "Търговски център (2025)",
+        "Обновяване на инфраструктура"
+      ],
+      impact: 15
+    },
+    demographics: {
+      population: 25000,
+      growth: 2.5,
+      income: 75000
+    }
+  };
 
-  // Прогноза за следващите 24 месеца
+  const investmentMetrics = {
+    roi: 5.5 + Math.random() * 2,
+    breakeven: Math.round(48 + Math.random() * 24),
+    appreciation: 3.5 + Math.random() * 1.5,
+    rentalYield: 4.5 + Math.random() * 1.5,
+    cashFlow: {
+      monthly: Math.round(estimatedValue * 0.004),
+      annual: Math.round(estimatedValue * 0.048)
+    },
+    investmentScenarios: {
+      conservative: {
+        returnRate: 4 + Math.random() * 2,
+        totalReturn: Math.round(estimatedValue * 1.2),
+        timeline: 5
+      },
+      moderate: {
+        returnRate: 6 + Math.random() * 2,
+        totalReturn: Math.round(estimatedValue * 1.35),
+        timeline: 5
+      },
+      aggressive: {
+        returnRate: 8 + Math.random() * 2,
+        totalReturn: Math.round(estimatedValue * 1.5),
+        timeline: 5
+      }
+    }
+  };
+
+  const riskAssessment = {
+    score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
+    factors: [
+      { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
+      { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
+      { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) },
+      { name: 'Регулаторни промени', impact: Math.round(Math.random() * 25 + 35) }
+    ],
+    marketVolatility: Math.round(Math.random() * 20 + 10),
+    economicFactors: {
+      interestRates: 3.5,
+      economicGrowth: 2.8,
+      inflation: 3.2
+    }
+  };
+
   const forecast = Array.from({ length: 24 }).map((_, i) => {
     const date = new Date();
     date.setMonth(date.getMonth() + i);
-    const trend = 1 + (i * 0.005); // 0.5% месечен ръст
+    const trend = 1 + (i * 0.005);
     return {
       date: format(date, 'MMM yyyy', { locale: bg }),
       optimistic: Math.round(estimatedValue * trend * 1.1),
-      conservative: Math.round(estimatedValue * trend * 0.9)
+      conservative: Math.round(estimatedValue * trend * 0.9),
+      marketTrend: Math.round(estimatedValue * trend)
     };
   });
-
-  // Подобни имоти
-  const similarProperties = Array.from({ length: 5 }).map(() => ({
-    price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
-    distance: Math.round(1 + Math.random() * 4),
-    features: [
-      'Сходна квадратура',
-      'Близка локация',
-      'Подобно състояние',
-      'Сходна година на строеж'
-    ].sort(() => Math.random() - 0.5).slice(0, 2)
-  }));
 
   return {
     estimatedValue: Math.round(estimatedValue),
@@ -111,24 +212,110 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
       market: Math.round(typeFactor * 70),
       potential: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100)
     },
-    priceHistory,
-    similarProperties,
+    priceHistory: Array.from({ length: 12 }).map((_, i) => ({
+      date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
+      value: Math.round(estimatedValue * (0.95 + Math.random() * 0.1))
+    })),
+    similarProperties: Array.from({ length: 5 }).map(() => ({
+      price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
+      distance: Math.round(1 + Math.random() * 4),
+      features: [
+        'Сходна квадратура',
+        'Близка локация',
+        'Подобно състояние',
+        'Сходна година на строеж'
+      ].sort(() => Math.random() - 0.5).slice(0, 2),
+      prediction: {
+        oneYear: Math.round(estimatedValue * 1.05),
+        threeYears: Math.round(estimatedValue * 1.15),
+        fiveYears: Math.round(estimatedValue * 1.25)
+      }
+    })),
     forecast,
-    riskAssessment: {
-      score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
-      factors: [
-        { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
-        { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
-        { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) }
-      ]
-    },
-    investmentMetrics: {
-      roi: 5.5 + Math.random() * 2,
-      breakeven: Math.round(48 + Math.random() * 24),
-      appreciation: 3.5 + Math.random() * 1.5
-    }
+    riskAssessment,
+    investmentMetrics,
+    neighborhoodAnalysis
   };
 }
+
+async function generateProfessionalReport(analysis: PropertyAnalysis) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  doc.setFontSize(24);
+  doc.setTextColor(0, 51, 102);
+  doc.text('Професионален анализ на имот', 20, 30);
+
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Изготвено от Homiq', 20, 45);
+  doc.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 55);
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Оценка на стойността', 20, 20);
+  doc.setFontSize(16);
+  doc.text(`€${analysis.estimatedValue.toLocaleString()}`, 20, 35);
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Инвестиционен анализ', 20, 20);
+  doc.setFontSize(12);
+  const investmentData = [
+    { metric: 'Очаквана възвръщаемост', value: `${analysis.investmentMetrics.roi.toFixed(1)}%` },
+    { metric: 'Наем (месечно)', value: `€${analysis.investmentMetrics.cashFlow.monthly}` },
+    { metric: 'Наем (годишно)', value: `€${analysis.investmentMetrics.cashFlow.annual}` },
+    { metric: 'Период на изплащане', value: `${analysis.investmentMetrics.breakeven} месеца` },
+    { metric: 'Очаквано поскъпване', value: `${analysis.investmentMetrics.appreciation.toFixed(1)}%` },
+    { metric: 'Доход от наем', value: `${analysis.investmentMetrics.rentalYield.toFixed(1)}%` },
+  ];
+  autoTable(doc, {
+    head: [['Метрика', 'Стойност']],
+    body: investmentData.map(item => [item.metric, item.value]),
+    startY: 40
+  });
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Оценка на риска', 20, 20);
+  doc.setFontSize(12);
+  const riskData = [
+    { factor: 'Обща оценка на риска', value: `${analysis.riskAssessment.score}/100` },
+    ...analysis.riskAssessment.factors.map(factor => ({ factor: factor.name, value: `${factor.impact}%` })),
+    { factor: 'Пазарна волатилност', value: `${analysis.riskAssessment.marketVolatility}%` },
+    { factor: 'Лихвени проценти', value: `${analysis.riskAssessment.economicFactors.interestRates}%` },
+    { factor: 'Икономически растеж', value: `${analysis.riskAssessment.economicFactors.economicGrowth}%` },
+    { factor: 'Инфлация', value: `${analysis.riskAssessment.economicFactors.inflation}%` },
+  ];
+
+  autoTable(doc, {
+    head: [['Фактор', 'Стойност']],
+    body: riskData.map(item => [item.factor, item.value]),
+    startY: 40
+  });
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Анализ на района', 20, 20);
+  doc.setFontSize(12);
+  const neighborhoodData = [
+    { item: 'Оценка на района', value: `${analysis.neighborhoodAnalysis.score}/100` },
+    ...analysis.neighborhoodAnalysis.amenities.map(amenity => ({ item: amenity.type, value: `${amenity.distance}км (Влияние: ${amenity.impact}%)` })),
+    { item: 'Планирано развитие', value: analysis.neighborhoodAnalysis.development.planned.join(', ') },
+    { item: 'Влияние на развитието', value: `${analysis.neighborhoodAnalysis.development.impact}%` },
+    { item: 'Население', value: analysis.neighborhoodAnalysis.demographics.population },
+    { item: 'Растеж на населението', value: `${analysis.neighborhoodAnalysis.demographics.growth}%` },
+    { item: 'Доходи', value: analysis.neighborhoodAnalysis.demographics.income },
+  ];
+  autoTable(doc, {
+    head: [['Фактор', 'Стойност']],
+    body: neighborhoodData.map(item => [item.item, item.value]),
+    startY: 40
+  });
+
+
+  doc.save('homiq-оценка.pdf');
+}
+
 
 export default function Step3() {
   const [loading, setLoading] = useState(true);
@@ -158,64 +345,22 @@ export default function Step3() {
     return () => clearTimeout(timer);
   }, [propertyId, navigate]);
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-
-      // Заглавна страница
-      pdf.setFontSize(24);
-      pdf.setTextColor(0, 51, 102);
-      pdf.text('Детайлна оценка на имот', 20, 30);
-
-      pdf.setFontSize(14);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('Изготвено от Homiq', 20, 40);
-      pdf.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 50);
-
-      // Основна информация
-      pdf.addPage();
-      pdf.setFontSize(20);
-      pdf.setTextColor(0, 51, 102);
-      pdf.text('Оценка на стойността', 20, 20);
-
-      pdf.setFontSize(16);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`€${analysis?.estimatedValue.toLocaleString() || 0}`, 20, 35);
-
-      // Фактори
-      pdf.setFontSize(14);
-      pdf.text('Фактори за оценката:', 20, 50);
-      pdf.text(`• Локация: ${analysis?.factors.location || 0}/100`, 25, 60);
-      pdf.text(`• Състояние: ${analysis?.factors.condition || 0}/100`, 25, 70);
-      pdf.text(`• Пазарни условия: ${analysis?.factors.market || 0}/100`, 25, 80);
-      pdf.text(`• Потенциал за развитие: ${analysis?.factors.potential || 0}/100`, 25, 90);
-
-      // Инвестиционни метрики
-      pdf.text('Инвестиционен анализ:', 20, 110);
-      pdf.text(`• Очаквана възвръщаемост: ${analysis?.investmentMetrics.roi.toFixed(1)}% годишно`, 25, 120);
-      pdf.text(`• Период на изплащане: ${analysis?.investmentMetrics.breakeven} месеца`, 25, 130);
-      pdf.text(`• Очаквано поскъпване: ${analysis?.investmentMetrics.appreciation.toFixed(1)}% годишно`, 25, 140);
-
-      // Рискова оценка
-      pdf.addPage();
-      pdf.setFontSize(20);
-      pdf.setTextColor(0, 51, 102);
-      pdf.text('Оценка на риска', 20, 20);
-
-      pdf.setFontSize(14);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`Обща оценка на риска: ${analysis?.riskAssessment.score || 0}/100`, 20, 35);
-
-      analysis?.riskAssessment.factors.forEach((factor, index) => {
-        pdf.text(`• ${factor.name}: ${factor.impact}%`, 25, 50 + index * 10);
-      });
-
-      pdf.save('homiq-оценка.pdf');
-
-      toast({
-        title: "PDF генериран успешно",
-        description: "Можете да изтеглите оценката във формат PDF.",
-      });
+      if (analysis) {
+        const pdf = await generateProfessionalReport(analysis);
+        pdf.save('homiq-оценка.pdf');
+        toast({
+          title: "PDF генериран успешно",
+          description: "Можете да изтеглите оценката във формат PDF.",
+        });
+      } else {
+        toast({
+          title: "Грешка",
+          description: "Няма данни за генериране на PDF.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       toast({
         title: "Грешка при генериране на PDF",
@@ -426,6 +571,13 @@ export default function Step3() {
                                 <span>Очаквано поскъпване</span>
                               </div>
                               <span className="font-medium">{analysis.investmentMetrics.appreciation.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-purple-500" />
+                                <span>Доход от наем</span>
+                              </div>
+                              <span className="font-medium">{analysis.investmentMetrics.rentalYield.toFixed(1)}%</span>
                             </div>
                           </div>
                         </Card>
