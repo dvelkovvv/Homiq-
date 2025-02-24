@@ -69,43 +69,27 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          // Анализираме извлечения текст
-          const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
-          const warnings = DocumentAnalyzer.validateData(analysisResult.extractedData);
-
           // Определяме типа на документа
           const documentType = detectDocumentType(processedText);
 
-          // Създаваме анализ на документа
-          const documentAnalysis: DocumentAnalysis = {
-            type: documentType,
-            confidence: analysisResult.confidence,
-            extractedData: {
-              ...analysisResult.extractedData,
-              // Добавяме допълнителни данни в зависимост от типа документ
-              cadastralNumber: documentType === 'sketch' ? 
-                extractCadastralNumber(processedText) : undefined,
-              buildingRights: documentType === 'sketch' ? 
-                extractBuildingRights(processedText) : undefined,
-              taxAssessment: documentType === 'tax_assessment' ? 
-                extractTaxAssessment(processedText) : undefined
-            }
-          };
+          // Използваме AI анализатора за по-прецизно извличане на данни
+          const aiAnalyzer = PropertyAIAnalyzer.getInstance();
+          const documentAnalysis = await aiAnalyzer.analyzeDocument(processedText, documentType);
 
-          // Показваме предупреждения, ако има такива
-          if (warnings.length > 0) {
+          // Показваме предупреждения, ако анализът не е достатъчно уверен
+          if (documentAnalysis.confidence < 0.7) {
             toast({
               title: "Внимание при анализа",
-              description: warnings.join(". "),
+              description: "Някои данни може да не са извлечени с достатъчна точност.",
               variant: "warning",
             });
           }
 
-          onScanComplete(processedText, analysisResult.extractedData, documentAnalysis);
+          onScanComplete(processedText, documentAnalysis.extractedData, documentAnalysis);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence)}%`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(documentAnalysis.confidence * 100)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -137,21 +121,6 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       'other': 'Друг документ'
     };
     return types[type];
-  };
-
-  const extractCadastralNumber = (text: string): string | undefined => {
-    const match = text.match(/(?:кадастрален номер|идентификатор)[\s:]+([0-9.]+)/i);
-    return match?.[1];
-  };
-
-  const extractBuildingRights = (text: string): string | undefined => {
-    const match = text.match(/(?:застрояване|плътност)[\s:]+([^\n]+)/i);
-    return match?.[1];
-  };
-
-  const extractTaxAssessment = (text: string): number | undefined => {
-    const match = text.match(/(?:данъчна оценка|стойност)[\s:]+(\d+(?:\s*\d+)*(?:\.\d+)?)/i);
-    return match ? parseFloat(match[1].replace(/\s/g, '')) : undefined;
   };
 
   return (

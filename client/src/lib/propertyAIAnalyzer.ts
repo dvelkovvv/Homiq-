@@ -2,6 +2,9 @@ import { Property } from "@shared/schema";
 import { format } from "date-fns";
 import { bg } from "date-fns/locale";
 
+const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
+const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+
 export interface DocumentAnalysis {
   type: 'notary_act' | 'sketch' | 'tax_assessment' | 'other';
   confidence: number;
@@ -19,6 +22,20 @@ export interface DocumentAnalysis {
     parkingSpots?: number;
     buildingEntrance?: string;
     cadastralNumber?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+    // Допълнителни данни за скици
+    buildingFootprint?: number; // Застроена площ
+    buildingHeight?: number; // Височина на сградата
+    allowedUsage?: string[]; // Допустимо предназначение
+    developmentDensity?: number; // Плътност на застрояване
+    floorAreaRatio?: number; // Коефициент на интензивност
+    neighboringProperties?: Array<{
+      cadastralNumber: string;
+      type: string;
+    }>;
   };
 }
 
@@ -147,6 +164,214 @@ export class PropertyAIAnalyzer {
     return PropertyAIAnalyzer.instance;
   }
 
+  private async callDeepSeekAPI(prompt: string): Promise<any> {
+    try {
+      const response = await fetch(DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: "You are a specialized real estate document analyzer. Extract specific information from the document and return it in JSON format. Pay special attention to numbers, measurements, and technical specifications."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return JSON.parse(data.choices[0].message.content);
+    } catch (error) {
+      console.error('Error calling DeepSeek API:', error);
+      throw error;
+    }
+  }
+
+  private async extractDataFromText(text: string, documentType: DocumentAnalysis['type']): Promise<DocumentAnalysis['extractedData']> {
+    try {
+      const prompt = this.generatePromptForDocumentType(text, documentType);
+      const result = await this.callDeepSeekAPI(prompt);
+      return this.validateAndCleanData(result, documentType);
+    } catch (error) {
+      console.error('Error analyzing document with AI:', error);
+      return this.fallbackExtraction(text, documentType);
+    }
+  }
+
+  private generatePromptForDocumentType(text: string, documentType: DocumentAnalysis['type']): string {
+    switch (documentType) {
+      case 'sketch':
+        return `Analyze this cadastral sketch and extract the following information in JSON format:
+          - cadastralNumber (string): The cadastral identifier
+          - buildingFootprint (number): Built-up area in square meters
+          - landArea (number): Total land area in square meters
+          - buildingHeight (number): Building height in meters
+          - allowedUsage (array): Allowed usage types
+          - developmentDensity (number): Development density percentage
+          - floorAreaRatio (number): Floor area ratio
+          - neighboringProperties (array): Array of neighboring properties with their cadastral numbers and types
+
+          Document text:
+          ${text}`;
+
+      case 'notary_act':
+        return `Analyze this notary act and extract the following information in JSON format:
+          - address (string): Full property address
+          - propertyType (string): Type of property
+          - squareMeters (number): Total area in square meters
+          - constructionYear (number): Year of construction
+          - constructionType (string): Type of construction
+          - floorNumber (number): Floor number
+          - totalFloors (number): Total floors in building
+
+          Document text:
+          ${text}`;
+
+      case 'tax_assessment':
+        return `Analyze this tax assessment document and extract the following information in JSON format:
+          - taxAssessment (number): Tax assessment value
+          - cadastralNumber (string): Cadastral identifier
+          - squareMeters (number): Property area
+          - constructionYear (number): Year of construction
+
+          Document text:
+          ${text}`;
+
+      default:
+        return `Analyze this real estate document and extract any relevant property information in JSON format.
+          Document text:
+          ${text}`;
+    }
+  }
+
+  private validateAndCleanData(data: any, documentType: DocumentAnalysis['type']): DocumentAnalysis['extractedData'] {
+    const cleanData: DocumentAnalysis['extractedData'] = {};
+
+    // Обща валидация
+    if (typeof data.squareMeters === 'number' && data.squareMeters > 0) {
+      cleanData.squareMeters = data.squareMeters;
+    }
+    if (typeof data.constructionYear === 'number' && data.constructionYear > 1800) {
+      cleanData.constructionYear = data.constructionYear;
+    }
+    if (typeof data.address === 'string' && data.address.length > 5) {
+      cleanData.address = data.address;
+    }
+
+    // Специфична валидация според типа документ
+    switch (documentType) {
+      case 'sketch':
+        if (typeof data.buildingFootprint === 'number' && data.buildingFootprint > 0) {
+          cleanData.buildingFootprint = data.buildingFootprint;
+        }
+        if (typeof data.landArea === 'number' && data.landArea > 0) {
+          cleanData.landArea = data.landArea;
+        }
+        if (Array.isArray(data.allowedUsage)) {
+          cleanData.allowedUsage = data.allowedUsage;
+        }
+        if (typeof data.developmentDensity === 'number' && data.developmentDensity > 0) {
+          cleanData.developmentDensity = data.developmentDensity;
+        }
+        if (typeof data.cadastralNumber === 'string' && data.cadastralNumber.length > 0) {
+          cleanData.cadastralNumber = data.cadastralNumber;
+        }
+        break;
+
+      case 'notary_act':
+        if (typeof data.propertyType === 'string') {
+          cleanData.propertyType = data.propertyType;
+        }
+        if (typeof data.constructionType === 'string') {
+          cleanData.constructionType = data.constructionType;
+        }
+        if (typeof data.floorNumber === 'number') {
+          cleanData.floorNumber = data.floorNumber;
+        }
+        if (typeof data.totalFloors === 'number') {
+          cleanData.totalFloors = data.totalFloors;
+        }
+        break;
+
+      case 'tax_assessment':
+        if (typeof data.taxAssessment === 'number' && data.taxAssessment > 0) {
+          cleanData.taxAssessment = data.taxAssessment;
+        }
+        break;
+    }
+
+    return cleanData;
+  }
+
+  private fallbackExtraction(text: string, documentType: DocumentAnalysis['type']): DocumentAnalysis['extractedData'] {
+    const data: DocumentAnalysis['extractedData'] = {};
+
+    // Базово извличане на данни с регулярни изрази
+    const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
+    if (areaMatch) {
+      data.squareMeters = parseFloat(areaMatch[1]);
+    }
+
+    const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
+    if (yearMatch) {
+      data.constructionYear = parseInt(yearMatch[1]);
+    }
+
+    const cadastralMatch = text.match(/(?:кадастрален номер|идентификатор)[:\s]+([0-9.]+)/i);
+    if (cadastralMatch) {
+      data.cadastralNumber = cadastralMatch[1];
+    }
+
+    if (documentType === 'tax_assessment') {
+      const taxMatch = text.match(/данъчна\s*оценка[:\s]*(\d+(?:\s*\d+)*(?:\.\d+)?)/i);
+      if (taxMatch) {
+        data.taxAssessment = parseFloat(taxMatch[1].replace(/\s/g, ''));
+      }
+    }
+
+    return data;
+  }
+
+  public async analyzeDocument(text: string, documentType: DocumentAnalysis['type'] = 'other'): Promise<DocumentAnalysis> {
+    try {
+      const extractedData = await this.extractDataFromText(text, documentType);
+
+      // Изчисляваме увереността на базата на количеството извлечени данни
+      const totalFields = Object.keys(extractedData).length;
+      const expectedFields = documentType === 'sketch' ? 8 :
+                           documentType === 'notary_act' ? 7 :
+                           documentType === 'tax_assessment' ? 4 : 3;
+
+      const confidence = Math.min(totalFields / expectedFields, 1);
+
+      return {
+        type: documentType,
+        confidence,
+        extractedData
+      };
+    } catch (error) {
+      console.error('Error in document analysis:', error);
+      return {
+        type: documentType,
+        confidence: 0,
+        extractedData: {}
+      };
+    }
+  }
+
   public async analyzeProperty(
     property: Property,
     documents: DocumentAnalysis[]
@@ -234,7 +459,7 @@ export class PropertyAIAnalyzer {
   ) {
     // Базова цена според локацията
     const basePrice = this.getLocationBasePrice(property.location);
-    
+
     // Корекция според типа конструкция
     const constructionFactor = this.getConstructionFactor(
       consolidatedData.constructionType
@@ -295,10 +520,10 @@ export class PropertyAIAnalyzer {
     // Анализ на локацията със специфични фактори за българския пазар
     const premiumLocations = ['витоша', 'лозенец', 'иван вазов', 'докторски паметник'];
     const goodLocations = ['младост', 'студентски град', 'център'];
-    
+
     const lowerLocation = location.toLowerCase();
     let score = 0.75; // База оценка
-    
+
     if (premiumLocations.some(loc => lowerLocation.includes(loc))) {
       score = 0.95;
     } else if (goodLocations.some(loc => lowerLocation.includes(loc))) {
@@ -329,7 +554,7 @@ export class PropertyAIAnalyzer {
   ) {
     const constructionYear = consolidatedData.constructionYear || property.yearBuilt;
     const constructionType = consolidatedData.constructionType;
-    
+
     const age = constructionYear ? new Date().getFullYear() - constructionYear : 20;
     const buildingQuality = this.calculateBuildingQuality(constructionType, age);
 
@@ -483,7 +708,7 @@ export class PropertyAIAnalyzer {
 
   private calculateDocumentScores(documents: DocumentAnalysis[]): Record<string, any> {
     const scores: Record<string, any> = {};
-    
+
     for (const doc of documents) {
       scores[doc.type] = {
         relevance: this.calculateDocumentRelevance(doc),
