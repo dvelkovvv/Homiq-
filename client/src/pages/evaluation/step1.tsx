@@ -135,7 +135,7 @@ export default function Step1() {
                   name="yearBuilt"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Година на строеж</FormLabel>
+                      <FormLabel>Дата на строеж</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -146,7 +146,7 @@ export default function Step1() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value || "Изберете година"}
+                              {field.value ? format(new Date(field.value), 'dd MMMM yyyy', { locale: bg }) : "Изберете дата"}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -154,18 +154,23 @@ export default function Step1() {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={new Date(field.value, 0)}
-                            onSelect={(date) => field.onChange(date?.getFullYear())}
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => date && field.onChange(date)}
                             disabled={(date) =>
-                              date > new Date() || date < new Date(1800, 0)
+                              date > new Date() || date < new Date(1800, 0, 1)
                             }
                             initialFocus
                             locale={bg}
                             captionLayout="dropdown-buttons"
                             fromYear={1800}
                             toYear={new Date().getFullYear()}
-                            showYearDropdown
-                            yearDropdownItemNumber={200}
+                            ISOWeek
+                            fixedWeeks
+                            formatters={{
+                              formatCaption: (date, options) => {
+                                return format(date, 'MMMM yyyy', { locale: bg });
+                              }
+                            }}
                           />
                         </PopoverContent>
                       </Popover>
