@@ -37,6 +37,7 @@ export default function Step2() {
   const [images, setImages] = useState<FileWithPreview[]>([]);
   const [documents, setDocuments] = useState<File[]>([]);
   const [scannedText, setScannedText] = useState<string>("");
+  const [extractedData, setExtractedData] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -70,8 +71,9 @@ export default function Step2() {
     });
   };
 
-  const handleScanComplete = (text: string) => {
+  const handleScanComplete = (text: string, data: any) => {
     setScannedText(text);
+    setExtractedData(data);
     toast({
       title: "Документът е сканиран успешно",
       description: "Текстът е извлечен от документа.",
@@ -95,6 +97,15 @@ export default function Step2() {
       newDocs.splice(index, 1);
       return newDocs;
     });
+  };
+
+  const handleContinue = () => {
+    const params = new URLSearchParams();
+    params.set('propertyId', propertyId!);
+    if (extractedData) {
+      params.set('extractedData', JSON.stringify(extractedData));
+    }
+    navigate(`/evaluation/step3?${params.toString()}`);
   };
 
   return (
@@ -188,8 +199,24 @@ export default function Step2() {
 
                     {scannedText && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">Извлечен текст:</h4>
+                        <h4 className="font-medium mb-2">Извлечен текст и данни:</h4>
                         <p className="text-sm text-gray-600 whitespace-pre-wrap">{scannedText}</p>
+                        {extractedData && (
+                          <div className="mt-4 space-y-2">
+                            {extractedData.squareMeters && (
+                              <p className="text-sm">Квадратура: {extractedData.squareMeters} кв.м</p>
+                            )}
+                            {extractedData.constructionYear && (
+                              <p className="text-sm">Година на строителство: {extractedData.constructionYear}</p>
+                            )}
+                            {extractedData.constructionType && (
+                              <p className="text-sm">Тип конструкция: {extractedData.constructionType}</p>
+                            )}
+                            {extractedData.address && (
+                              <p className="text-sm">Адрес: {extractedData.address}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -237,7 +264,7 @@ export default function Step2() {
                   Назад
                 </Button>
                 <Button
-                  onClick={() => navigate(`/evaluation/step3?propertyId=${propertyId}`)}
+                  onClick={handleContinue}
                   className="bg-[#003366] hover:bg-[#002244]"
                   disabled={images.length === 0}
                 >
@@ -251,12 +278,12 @@ export default function Step2() {
             <InstructionCard
               icon={<Info className="h-5 w-5 text-blue-500" />}
               title="Как да качите файлове?"
-              description="Изберете качествени снимки на имота и сканирани копия на необходимите документи. Системата автоматично ще анализира текста в документите."
+              description="Изберете качествени снимки на имота и сканирани копии на необходимите документи. Системата автоматично ще анализира текста в документите."
             />
             <InstructionCard
               icon={<HelpCircle className="h-5 w-5 text-green-500" />}
               title="Какви документи са необходими?"
-              description="Качете сканирани копия на документите за собственост, скици, данъчни оценки и други релевантни документи. Системата ще извлече важната информация автоматично."
+              description="Качете сканирани копии на документите за собственост, скици, данъчни оценки и други релевантни документи. Системата ще извлече важната информация автоматично."
             />
           </div>
         </div>
@@ -274,7 +301,7 @@ export default function Step2() {
         <DialogContent>
           <DialogTitle>Как да качите файлове?</DialogTitle>
           <DialogDescription>
-            Изберете качествени снимки на имота и сканирани копия на необходимите документи.
+            Изберете качествени снимки на имота и сканирани копии на необходимите документи.
             Системата поддържа автоматично разпознаване на текст от документи и ще извлече важната информация.
           </DialogDescription>
         </DialogContent>

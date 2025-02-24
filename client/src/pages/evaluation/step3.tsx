@@ -17,6 +17,14 @@ import { bg } from 'date-fns/locale';
 import { InvestmentScenarios } from "@/components/property-analysis/investment-scenarios";
 import { NeighborhoodAnalysis } from "@/components/property-analysis/neighborhood-analysis";
 
+interface ExtractedPropertyData {
+  squareMeters?: number;
+  constructionYear?: number;
+  address?: string;
+  taxAssessment?: number;
+  constructionType?: string;
+}
+
 const STEPS = [
   {
     title: "Основна информация",
@@ -50,33 +58,103 @@ class PropertyDataProvider {
   }
 }
 
-function calculatePropertyValue(property: any): PropertyAnalysis {
+function calculatePropertyValue(property: any, extractedData?: ExtractedPropertyData): Promise<PropertyAnalysis> {
   const getMarketData = async () => {
     const dataProvider = PropertyDataProvider.getInstance();
     return await dataProvider.getMarketData(
       property.location,
       property.type,
-      property.squareMeters
+      extractedData?.squareMeters || property.squareMeters
     );
   };
 
   const marketDataPromise = getMarketData();
-
   const basePricePromise = marketDataPromise.then(data => data.averagePrice);
 
+  // Коефициенти за оценка базирани на реални данни
+  const getLocationFactor = (address?: string) => {
+    if (!address) return 0.9;
+    // Прецизна оценка базирана на адреса
+    const premiumLocations = ['витоша', 'лозенец', 'докторски паметник', 'иван вазов'];
+    const normalLocations = ['младост', 'люлин', 'дружба', 'надежда'];
 
-  const locationFactor = 0.9;
-  const yearFactor = Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
-  const typeFactor = {
-    apartment: 1,
-    house: 1.2,
-    villa: 1.3,
-    agricultural: 0.5,
-    industrial: 1.5
-  }[property.type] || 1;
+    const lowerAddress = address.toLowerCase();
+    if (premiumLocations.some(loc => lowerAddress.includes(loc))) return 1.2;
+    if (normalLocations.some(loc => lowerAddress.includes(loc))) return 1.0;
+    return 0.9;
+  };
+
+  const getYearFactor = (year?: number) => {
+    if (!year) return Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
+    const age = new Date().getFullYear() - year;
+    // По-прецизна оценка на състоянието според годината
+    if (age < 5) return 1.3; // Нова сграда
+    if (age < 15) return 1.1; // Относително нова
+    if (age < 30) return 0.9; // Средна възраст
+    if (age < 50) return 0.7; // По-стара сграда
+    return 0.5; // Много стара сграда
+  };
+
+  const getConstructionTypeFactor = (type?: string) => {
+    if (!type) return 1;
+    const factors: Record<string, number> = {
+      'тухла': 1.2,
+      'стоманобетон': 1.15,
+      'панел': 0.9,
+      'ЕПК': 0.95,
+      'гредоред': 0.85
+    };
+    return factors[type.toLowerCase()] || 1;
+  };
 
   return basePricePromise.then(basePrice => {
-    const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
+    const locationFactor = getLocationFactor(extractedData?.address);
+    const yearFactor = getYearFactor(extractedData?.constructionYear);
+    const constructionTypeFactor = getConstructionTypeFactor(extractedData?.constructionType);
+
+    const estimatedValue = basePrice * locationFactor * yearFactor * constructionTypeFactor;
+
+    // Останалата част от кода остава същата, само добавяме нови данни
+    const riskAssessment = {
+      score: Math.round((locationFactor + yearFactor + constructionTypeFactor) / 3 * 100),
+      factors: [
+        { 
+          name: 'Локация', 
+          impact: Math.round(locationFactor * 100),
+          details: extractedData?.address ? `Базирано на адрес: ${extractedData.address}` : undefined
+        },
+        { 
+          name: 'Година на строителство', 
+          impact: Math.round(yearFactor * 100),
+          details: extractedData?.constructionYear ? 
+            `Построена през ${extractedData.constructionYear}` : undefined
+        },
+        { 
+          name: 'Конструкция', 
+          impact: Math.round(constructionTypeFactor * 100),
+          details: extractedData?.constructionType ? 
+            `Тип конструкция: ${extractedData.constructionType}` : undefined
+        }
+      ],
+      marketVolatility: Math.round(Math.random() * 20 + 10),
+      economicFactors: {
+        interestRates: 3.5,
+        economicGrowth: 2.8,
+        inflation: 3.2
+      }
+    };
+
+    const forecast = Array.from({ length: 24 }).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + i);
+      const trend = 1 + (i * 0.005);
+      return {
+        date: format(date, 'MMM yyyy', { locale: bg }),
+        optimistic: Math.round(estimatedValue * trend * 1.1),
+        conservative: Math.round(estimatedValue * trend * 0.9),
+        marketTrend: Math.round(estimatedValue * trend)
+      };
+    });
 
     const neighborhoodAnalysis = {
       score: Math.round(Math.random() * 20 + 80),
@@ -129,41 +207,14 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
       }
     };
 
-    const riskAssessment = {
-      score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
-      factors: [
-        { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
-        { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
-        { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) },
-        { name: 'Регулаторни промени', impact: Math.round(Math.random() * 25 + 35) }
-      ],
-      marketVolatility: Math.round(Math.random() * 20 + 10),
-      economicFactors: {
-        interestRates: 3.5,
-        economicGrowth: 2.8,
-        inflation: 3.2
-      }
-    };
-
-    const forecast = Array.from({ length: 24 }).map((_, i) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() + i);
-      const trend = 1 + (i * 0.005);
-      return {
-        date: format(date, 'MMM yyyy', { locale: bg }),
-        optimistic: Math.round(estimatedValue * trend * 1.1),
-        conservative: Math.round(estimatedValue * trend * 0.9),
-        marketTrend: Math.round(estimatedValue * trend)
-      };
-    });
 
     return {
       estimatedValue: Math.round(estimatedValue),
       factors: {
         location: Math.round(locationFactor * 100),
         condition: Math.round(yearFactor * 100),
-        market: Math.round(typeFactor * 70),
-        potential: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100)
+        market: Math.round(constructionTypeFactor * 70),
+        potential: Math.round((locationFactor + yearFactor + constructionTypeFactor) / 3 * 100)
       },
       priceHistory: Array.from({ length: 12 }).map((_, i) => ({
         date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
@@ -192,85 +243,6 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
   });
 }
 
-async function generateProfessionalReport(analysis: PropertyAnalysis) {
-  const doc = new jsPDF('p', 'mm', 'a4');
-
-  doc.setFontSize(24);
-  doc.setTextColor(0, 51, 102);
-  doc.text('Професионален анализ на имот', 20, 30);
-
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.text('Изготвено от Homiq', 20, 45);
-  doc.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 55);
-
-  doc.addPage();
-  doc.setFontSize(20);
-  doc.text('Оценка на стойността', 20, 20);
-  doc.setFontSize(16);
-  doc.text(`€${analysis.estimatedValue.toLocaleString()}`, 20, 35);
-
-  doc.addPage();
-  doc.setFontSize(20);
-  doc.text('Инвестиционен анализ', 20, 20);
-  doc.setFontSize(12);
-  const investmentData = [
-    { metric: 'Очаквана възвръщаемост', value: `${analysis.investmentMetrics.roi.toFixed(1)}%` },
-    { metric: 'Наем (месечно)', value: `€${analysis.investmentMetrics.cashFlow.monthly}` },
-    { metric: 'Наем (годишно)', value: `€${analysis.investmentMetrics.cashFlow.annual}` },
-    { metric: 'Период на изплащане', value: `${analysis.investmentMetrics.breakeven} месеца` },
-    { metric: 'Очаквано поскъпване', value: `${analysis.investmentMetrics.appreciation.toFixed(1)}%` },
-    { metric: 'Доход от наем', value: `${analysis.investmentMetrics.rentalYield.toFixed(1)}%` },
-  ];
-  autoTable(doc, {
-    head: [['Метрика', 'Стойност']],
-    body: investmentData.map(item => [item.metric, item.value]),
-    startY: 40
-  });
-
-  doc.addPage();
-  doc.setFontSize(20);
-  doc.text('Оценка на риска', 20, 20);
-  doc.setFontSize(12);
-  const riskData = [
-    { factor: 'Обща оценка на риска', value: `${analysis.riskAssessment.score}/100` },
-    ...analysis.riskAssessment.factors.map(factor => ({ factor: factor.name, value: `${factor.impact}%` })),
-    { factor: 'Пазарна волатилност', value: `${analysis.riskAssessment.marketVolatility}%` },
-    { factor: 'Лихвени проценти', value: `${analysis.riskAssessment.economicFactors.interestRates}%` },
-    { factor: 'Икономически растеж', value: `${analysis.riskAssessment.economicFactors.economicGrowth}%` },
-    { factor: 'Инфлация', value: `${analysis.riskAssessment.economicFactors.inflation}%` },
-  ];
-
-  autoTable(doc, {
-    head: [['Фактор', 'Стойност']],
-    body: riskData.map(item => [item.factor, item.value]),
-    startY: 40
-  });
-
-  doc.addPage();
-  doc.setFontSize(20);
-  doc.text('Анализ на района', 20, 20);
-  doc.setFontSize(12);
-  const neighborhoodData = [
-    { item: 'Оценка на района', value: `${analysis.neighborhoodAnalysis.score}/100` },
-    ...analysis.neighborhoodAnalysis.amenities.map(amenity => ({ item: amenity.type, value: `${amenity.distance}км (Влияние: ${amenity.impact}%)` })),
-    { item: 'Планирано развитие', value: analysis.neighborhoodAnalysis.development.planned.join(', ') },
-    { item: 'Влияние на развитието', value: `${analysis.neighborhoodAnalysis.development.impact}%` },
-    { item: 'Население', value: analysis.neighborhoodAnalysis.demographics.population },
-    { item: 'Растеж на населението', value: `${analysis.neighborhoodAnalysis.demographics.growth}%` },
-    { item: 'Доходи', value: analysis.neighborhoodAnalysis.demographics.income },
-  ];
-  autoTable(doc, {
-    head: [['Фактор', 'Стойност']],
-    body: neighborhoodData.map(item => [item.item, item.value]),
-    startY: 40
-  });
-
-
-  doc.save('homiq-оценка.pdf');
-}
-
-
 interface PropertyAnalysis {
   estimatedValue: number;
   factors: {
@@ -298,7 +270,7 @@ interface PropertyAnalysis {
   }[];
   riskAssessment: {
     score: number;
-    factors: { name: string; impact: number }[];
+    factors: { name: string; impact: number; details?: string }[];
     marketVolatility: number;
     economicFactors: {
       interestRates: number;
@@ -352,6 +324,85 @@ interface PropertyAnalysis {
   };
 }
 
+async function generateProfessionalReport(analysis: PropertyAnalysis) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  doc.setFontSize(24);
+  doc.setTextColor(0, 51, 102);
+  doc.text('Професионален анализ на имот', 20, 30);
+
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Изготвено от Homiq', 20, 45);
+  doc.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 55);
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Оценка на стойността', 20, 20);
+  doc.setFontSize(16);
+  doc.text(`€${analysis.estimatedValue.toLocaleString()}`, 20, 35);
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Инвестиционен анализ', 20, 20);
+  doc.setFontSize(12);
+  const investmentData = [
+    { metric: 'Очаквана възвръщаемост', value: `${analysis.investmentMetrics.roi.toFixed(1)}%` },
+    { metric: 'Наем (месечно)', value: `€${analysis.investmentMetrics.cashFlow.monthly}` },
+    { metric: 'Наем (годишно)', value: `€${analysis.investmentMetrics.cashFlow.annual}` },
+    { metric: 'Период на изплащане', value: `${analysis.investmentMetrics.breakeven} месеца` },
+    { metric: 'Очаквано поскъпване', value: `${analysis.investmentMetrics.appreciation.toFixed(1)}%` },
+    { metric: 'Доход от наем', value: `${analysis.investmentMetrics.rentalYield.toFixed(1)}%` },
+  ];
+  autoTable(doc, {
+    head: [['Метрика', 'Стойност']],
+    body: investmentData.map(item => [item.metric, item.value]),
+    startY: 40
+  });
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Оценка на риска', 20, 20);
+  doc.setFontSize(12);
+  const riskData = [
+    { factor: 'Обща оценка на риска', value: `${analysis.riskAssessment.score}/100` },
+    ...analysis.riskAssessment.factors.map(factor => ({ factor: factor.name, value: `${factor.impact}% ${factor.details ? `(${factor.details})` : ''}` })),
+    { factor: 'Пазарна волатилност', value: `${analysis.riskAssessment.marketVolatility}%` },
+    { factor: 'Лихвени проценти', value: `${analysis.riskAssessment.economicFactors.interestRates}%` },
+    { factor: 'Икономически растеж', value: `${analysis.riskAssessment.economicFactors.economicGrowth}%` },
+    { factor: 'Инфлация', value: `${analysis.riskAssessment.economicFactors.inflation}%` },
+  ];
+
+  autoTable(doc, {
+    head: [['Фактор', 'Стойност']],
+    body: riskData.map(item => [item.factor, item.value]),
+    startY: 40
+  });
+
+  doc.addPage();
+  doc.setFontSize(20);
+  doc.text('Анализ на района', 20, 20);
+  doc.setFontSize(12);
+  const neighborhoodData = [
+    { item: 'Оценка на района', value: `${analysis.neighborhoodAnalysis.score}/100` },
+    ...analysis.neighborhoodAnalysis.amenities.map(amenity => ({ item: amenity.type, value: `${amenity.distance}км (Влияние: ${amenity.impact}%)` })),
+    { item: 'Планирано развитие', value: analysis.neighborhoodAnalysis.development.planned.join(', ') },
+    { item: 'Влияние на развитието', value: `${analysis.neighborhoodAnalysis.development.impact}%` },
+    { item: 'Население', value: analysis.neighborhoodAnalysis.demographics.population },
+    { item: 'Растеж на населението', value: `${analysis.neighborhoodAnalysis.demographics.growth}%` },
+    { item: 'Доходи', value: analysis.neighborhoodAnalysis.demographics.income },
+  ];
+  autoTable(doc, {
+    head: [['Фактор', 'Стойност']],
+    body: neighborhoodData.map(item => [item.item, item.value]),
+    startY: 40
+  });
+
+
+  doc.save('homiq-оценка.pdf');
+}
+
+
 export default function Step3() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
@@ -371,9 +422,14 @@ export default function Step3() {
         yearBuilt: 2010,
         location: "София"
       };
+      const mockExtractedData: ExtractedPropertyData = {
+        address: "ул. Витоша 123",
+        constructionYear: 2021,
+        constructionType: 'Тухла'
+      };
 
       try {
-        const result = await calculatePropertyValue(mockProperty);
+        const result = await calculatePropertyValue(mockProperty, mockExtractedData);
         setAnalysis(result);
       } catch (error) {
         console.error('Error calculating property value:', error);
@@ -659,7 +715,7 @@ export default function Step3() {
                               <div key={index} className="space-y-2">
                                 <div className="flex justify-between text-sm">
                                   <span>{factor.name}</span>
-                                  <span className="font-medium">{factor.impact}%</span>
+                                  <span className="font-medium">{factor.impact}% {factor.details ? `(${factor.details})` : ''}</span>
                                 </div>
                                 <Progress value={factor.impact} className="h-2" />
                               </div>
