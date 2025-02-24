@@ -39,7 +39,7 @@ interface PropertyAnalysis {
     potential: number;
   };
   priceHistory: { date: string; value: number }[];
-  similarProperties: { 
+  similarProperties: {
     price: number;
     distance: number;
     features: string[];
@@ -49,9 +49,9 @@ interface PropertyAnalysis {
       fiveYears: number;
     };
   }[];
-  forecast: { 
-    date: string; 
-    optimistic: number; 
+  forecast: {
+    date: string;
+    optimistic: number;
     conservative: number;
     marketTrend: number;
   }[];
@@ -111,8 +111,39 @@ interface PropertyAnalysis {
   };
 }
 
+//This is a placeholder.  Replace with your actual data provider.
+class PropertyDataProvider {
+  private static instance: PropertyDataProvider;
+  private constructor() {}
+  public static getInstance(): PropertyDataProvider {
+    if (!PropertyDataProvider.instance) {
+      PropertyDataProvider.instance = new PropertyDataProvider();
+    }
+    return PropertyDataProvider.instance;
+  }
+  public async getMarketData(location: string, type: string, squareMeters: number): Promise<{averagePrice: number}> {
+    // Replace this with your actual data fetching logic.  This is a stub.
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    const averagePrice = squareMeters * 1200 + (location === "София" ? 50000 : 0); //Example calculation
+    return { averagePrice };
+  }
+}
+
 function calculatePropertyValue(property: any): PropertyAnalysis {
-  const basePrice = property.squareMeters * 1000;
+  const getMarketData = async () => {
+    const dataProvider = PropertyDataProvider.getInstance();
+    return await dataProvider.getMarketData(
+      property.location,
+      property.type,
+      property.squareMeters
+    );
+  };
+
+  const marketDataPromise = getMarketData();
+
+  const basePricePromise = marketDataPromise.then(data => data.averagePrice);
+
+
   const locationFactor = 0.9;
   const yearFactor = Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
   const typeFactor = {
@@ -123,119 +154,121 @@ function calculatePropertyValue(property: any): PropertyAnalysis {
     industrial: 1.5
   }[property.type] || 1;
 
-  const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
+  return basePricePromise.then(basePrice => {
+    const estimatedValue = basePrice * locationFactor * yearFactor * typeFactor;
 
-  const neighborhoodAnalysis = {
-    score: Math.round(Math.random() * 20 + 80),
-    amenities: [
-      { type: "Транспорт", distance: 0.3, impact: 85 },
-      { type: "Училища", distance: 0.5, impact: 90 },
-      { type: "Магазини", distance: 0.2, impact: 88 },
-      { type: "Паркове", distance: 0.8, impact: 75 }
-    ],
-    development: {
-      planned: [
-        "Нова метро станция (2026)",
-        "Търговски център (2025)",
-        "Обновяване на инфраструктура"
+    const neighborhoodAnalysis = {
+      score: Math.round(Math.random() * 20 + 80),
+      amenities: [
+        { type: "Транспорт", distance: 0.3, impact: 85 },
+        { type: "Училища", distance: 0.5, impact: 90 },
+        { type: "Магазини", distance: 0.2, impact: 88 },
+        { type: "Паркове", distance: 0.8, impact: 75 }
       ],
-      impact: 15
-    },
-    demographics: {
-      population: 25000,
-      growth: 2.5,
-      income: 75000
-    }
-  };
-
-  const investmentMetrics = {
-    roi: 5.5 + Math.random() * 2,
-    breakeven: Math.round(48 + Math.random() * 24),
-    appreciation: 3.5 + Math.random() * 1.5,
-    rentalYield: 4.5 + Math.random() * 1.5,
-    cashFlow: {
-      monthly: Math.round(estimatedValue * 0.004),
-      annual: Math.round(estimatedValue * 0.048)
-    },
-    investmentScenarios: {
-      conservative: {
-        returnRate: 4 + Math.random() * 2,
-        totalReturn: Math.round(estimatedValue * 1.2),
-        timeline: 5
+      development: {
+        planned: [
+          "Нова метро станция (2026)",
+          "Търговски център (2025)",
+          "Обновяване на инфраструктура"
+        ],
+        impact: 15
       },
-      moderate: {
-        returnRate: 6 + Math.random() * 2,
-        totalReturn: Math.round(estimatedValue * 1.35),
-        timeline: 5
-      },
-      aggressive: {
-        returnRate: 8 + Math.random() * 2,
-        totalReturn: Math.round(estimatedValue * 1.5),
-        timeline: 5
+      demographics: {
+        population: 25000,
+        growth: 2.5,
+        income: 75000
       }
-    }
-  };
+    };
 
-  const riskAssessment = {
-    score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
-    factors: [
-      { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
-      { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
-      { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) },
-      { name: 'Регулаторни промени', impact: Math.round(Math.random() * 25 + 35) }
-    ],
-    marketVolatility: Math.round(Math.random() * 20 + 10),
-    economicFactors: {
-      interestRates: 3.5,
-      economicGrowth: 2.8,
-      inflation: 3.2
-    }
-  };
+    const investmentMetrics = {
+      roi: 5.5 + Math.random() * 2,
+      breakeven: Math.round(48 + Math.random() * 24),
+      appreciation: 3.5 + Math.random() * 1.5,
+      rentalYield: 4.5 + Math.random() * 1.5,
+      cashFlow: {
+        monthly: Math.round(estimatedValue * 0.004),
+        annual: Math.round(estimatedValue * 0.048)
+      },
+      investmentScenarios: {
+        conservative: {
+          returnRate: 4 + Math.random() * 2,
+          totalReturn: Math.round(estimatedValue * 1.2),
+          timeline: 5
+        },
+        moderate: {
+          returnRate: 6 + Math.random() * 2,
+          totalReturn: Math.round(estimatedValue * 1.35),
+          timeline: 5
+        },
+        aggressive: {
+          returnRate: 8 + Math.random() * 2,
+          totalReturn: Math.round(estimatedValue * 1.5),
+          timeline: 5
+        }
+      }
+    };
 
-  const forecast = Array.from({ length: 24 }).map((_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() + i);
-    const trend = 1 + (i * 0.005);
+    const riskAssessment = {
+      score: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100),
+      factors: [
+        { name: 'Пазарна волатилност', impact: Math.round(Math.random() * 30 + 20) },
+        { name: 'Инфраструктурно развитие', impact: Math.round(Math.random() * 30 + 40) },
+        { name: 'Демографски тенденции', impact: Math.round(Math.random() * 20 + 60) },
+        { name: 'Регулаторни промени', impact: Math.round(Math.random() * 25 + 35) }
+      ],
+      marketVolatility: Math.round(Math.random() * 20 + 10),
+      economicFactors: {
+        interestRates: 3.5,
+        economicGrowth: 2.8,
+        inflation: 3.2
+      }
+    };
+
+    const forecast = Array.from({ length: 24 }).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + i);
+      const trend = 1 + (i * 0.005);
+      return {
+        date: format(date, 'MMM yyyy', { locale: bg }),
+        optimistic: Math.round(estimatedValue * trend * 1.1),
+        conservative: Math.round(estimatedValue * trend * 0.9),
+        marketTrend: Math.round(estimatedValue * trend)
+      };
+    });
+
     return {
-      date: format(date, 'MMM yyyy', { locale: bg }),
-      optimistic: Math.round(estimatedValue * trend * 1.1),
-      conservative: Math.round(estimatedValue * trend * 0.9),
-      marketTrend: Math.round(estimatedValue * trend)
+      estimatedValue: Math.round(estimatedValue),
+      factors: {
+        location: Math.round(locationFactor * 100),
+        condition: Math.round(yearFactor * 100),
+        market: Math.round(typeFactor * 70),
+        potential: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100)
+      },
+      priceHistory: Array.from({ length: 12 }).map((_, i) => ({
+        date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
+        value: Math.round(estimatedValue * (0.95 + Math.random() * 0.1))
+      })),
+      similarProperties: Array.from({ length: 5 }).map(() => ({
+        price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
+        distance: Math.round(1 + Math.random() * 4),
+        features: [
+          'Сходна квадратура',
+          'Близка локация',
+          'Подобно състояние',
+          'Сходна година на строеж'
+        ].sort(() => Math.random() - 0.5).slice(0, 2),
+        prediction: {
+          oneYear: Math.round(estimatedValue * 1.05),
+          threeYears: Math.round(estimatedValue * 1.15),
+          fiveYears: Math.round(estimatedValue * 1.25)
+        }
+      })),
+      forecast,
+      riskAssessment,
+      investmentMetrics,
+      neighborhoodAnalysis
     };
   });
-
-  return {
-    estimatedValue: Math.round(estimatedValue),
-    factors: {
-      location: Math.round(locationFactor * 100),
-      condition: Math.round(yearFactor * 100),
-      market: Math.round(typeFactor * 70),
-      potential: Math.round((locationFactor + yearFactor + typeFactor) / 3 * 100)
-    },
-    priceHistory: Array.from({ length: 12 }).map((_, i) => ({
-      date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
-      value: Math.round(estimatedValue * (0.95 + Math.random() * 0.1))
-    })),
-    similarProperties: Array.from({ length: 5 }).map(() => ({
-      price: Math.round(estimatedValue * (0.9 + Math.random() * 0.2)),
-      distance: Math.round(1 + Math.random() * 4),
-      features: [
-        'Сходна квадратура',
-        'Близка локация',
-        'Подобно състояние',
-        'Сходна година на строеж'
-      ].sort(() => Math.random() - 0.5).slice(0, 2),
-      prediction: {
-        oneYear: Math.round(estimatedValue * 1.05),
-        threeYears: Math.round(estimatedValue * 1.15),
-        fiveYears: Math.round(estimatedValue * 1.25)
-      }
-    })),
-    forecast,
-    riskAssessment,
-    investmentMetrics,
-    neighborhoodAnalysis
-  };
 }
 
 async function generateProfessionalReport(analysis: PropertyAnalysis) {
@@ -329,17 +362,27 @@ export default function Step3() {
       return;
     }
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const mockProperty = {
         type: "apartment",
         squareMeters: 85,
         yearBuilt: 2010,
-        location: { lat: 42.6977, lng: 23.3219 }
+        location: "София"
       };
 
-      const result = calculatePropertyValue(mockProperty);
-      setAnalysis(result);
-      setLoading(false);
+      try {
+        const result = await calculatePropertyValue(mockProperty);
+        setAnalysis(result);
+      } catch (error) {
+        console.error('Error calculating property value:', error);
+        toast({
+          title: "Грешка при изчисляване",
+          description: "Моля, опитайте отново по-късно.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -348,8 +391,7 @@ export default function Step3() {
   const generatePDF = async () => {
     try {
       if (analysis) {
-        const pdf = await generateProfessionalReport(analysis);
-        pdf.save('homiq-оценка.pdf');
+        await generateProfessionalReport(analysis);
         toast({
           title: "PDF генериран успешно",
           description: "Можете да изтеглите оценката във формат PDF.",
@@ -514,8 +556,8 @@ export default function Step3() {
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                  dataKey="date" 
+                                <XAxis
+                                  dataKey="date"
                                   tick={{ fontSize: 12 }}
                                   interval={2}
                                 />
