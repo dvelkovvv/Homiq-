@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { bg } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
+import { toast } from "@/hooks/use-toast";
 
 export default function Step1() {
   const [, navigate] = useLocation();
@@ -24,10 +25,10 @@ export default function Step1() {
     resolver: zodResolver(insertPropertySchema),
     defaultValues: {
       address: "",
-      type: "",
+      type: undefined,
       squareMeters: 1,
       yearBuilt: undefined,
-      location: undefined,
+      location: null,
       photos: [],
       documents: []
     }
@@ -35,20 +36,35 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
+      // Ensure yearBuilt is a proper Date object
+      const formattedData = {
+        ...data,
+        yearBuilt: data.yearBuilt instanceof Date ? data.yearBuilt : new Date(data.yearBuilt),
+        location: data.location || null,
+        photos: [],
+        documents: []
+      };
+
       const response = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(formattedData)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create property');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create property');
       }
 
       const property = await response.json();
       navigate(`/evaluation/step2?propertyId=${property.id}`);
     } catch (error) {
       console.error('Error creating property:', error);
+      toast({
+        title: "Грешка",
+        description: "Възникна проблем при създаването на имота. Моля, опитайте отново.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -81,7 +97,7 @@ export default function Step1() {
                           className="bg-white"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -92,7 +108,7 @@ export default function Step1() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Тип имот</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Изберете тип имот" />
@@ -105,7 +121,7 @@ export default function Step1() {
                           <SelectItem value="agricultural">Земеделска земя</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage className="text-red-500" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -121,7 +137,7 @@ export default function Step1() {
                           customInput={Input}
                           value={field.value}
                           onValueChange={(values) => {
-                            field.onChange(Math.max(1, values.floatValue || 1));
+                            field.onChange(values.floatValue || 1);
                           }}
                           thousandSeparator=" "
                           decimalScale={2}
@@ -131,7 +147,7 @@ export default function Step1() {
                           className="bg-white"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -180,7 +196,7 @@ export default function Step1() {
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormMessage className="text-red-500" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -197,7 +213,7 @@ export default function Step1() {
                           initialLocation={field.value}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
