@@ -5,8 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 import { Badge } from "@/components/ui/badge";
+import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
@@ -15,6 +15,16 @@ interface DocumentScannerProps {
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const getDocumentTypeName = (type: string): string => {
+    const types: Record<string, string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка',
+      'other': 'Друг документ'
+    };
+    return types[type] || types.other;
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
@@ -54,11 +64,14 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .trim();
 
           const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
+
           onScanComplete(processedText, analysisResult.extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: "Документът е анализиран успешно.",
+            description: analysisResult.extractedData.documentType 
+              ? `Документът е разпознат като ${getDocumentTypeName(analysisResult.extractedData.documentType)}`
+              : "Документът е сканиран успешно",
           });
         } else {
           throw new Error("Не беше открит текст в документа");

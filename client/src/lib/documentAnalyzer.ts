@@ -4,6 +4,7 @@ interface ExtractedPropertyData {
   squareMeters?: number;
   constructionYear?: number;
   address?: string;
+  documentType?: string;
 }
 
 interface AnalysisResult {
@@ -14,36 +15,43 @@ interface AnalysisResult {
 export class DocumentAnalyzer {
   static async analyzeDocument(text: string): Promise<AnalysisResult> {
     const result: ExtractedPropertyData = {};
-    let confidenceScore = 0;
-    let totalChecks = 0;
+    let foundFields = 0;
+    let totalFields = 3; // базови полета които търсим
+
+    // Определяме типа на документа
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('нотариален акт')) {
+      result.documentType = 'notary_act';
+    } else if (lowerText.includes('скица')) {
+      result.documentType = 'sketch';
+    } else if (lowerText.includes('данъчна оценка')) {
+      result.documentType = 'tax_assessment';
+    }
 
     // Търсим квадратура
     const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
     if (areaMatch) {
       result.squareMeters = parseFloat(areaMatch[1]);
-      confidenceScore += 1;
+      foundFields++;
     }
-    totalChecks++;
 
     // Търсим година на строителство
     const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
     if (yearMatch) {
       result.constructionYear = parseInt(yearMatch[1]);
-      confidenceScore += 1;
+      foundFields++;
     }
-    totalChecks++;
 
     // Търсим адрес
     const addressMatch = text.match(/(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i);
     if (addressMatch) {
       result.address = addressMatch[1].trim();
-      confidenceScore += 1;
+      foundFields++;
     }
-    totalChecks++;
 
     return {
       extractedData: result,
-      confidence: (confidenceScore / totalChecks)
+      confidence: foundFields / totalFields
     };
   }
 }
