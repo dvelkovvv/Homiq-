@@ -45,7 +45,7 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       <main>
         {/* Hero Section */}
-        <section className="relative pt-20 pb-32 overflow-hidden">
+        <section className="relative pt-16 pb-32 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 -z-10" />
           <div 
             className="absolute inset-0 -z-10 opacity-30"
@@ -92,7 +92,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white rounded-xl p-6 shadow-lg border border-gray-100"
+                  className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
                 >
                   <div className="p-3 bg-gray-50 rounded-lg w-fit mb-4">
                     {feature.icon}
@@ -127,7 +127,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   className="relative"
                 >
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="text-4xl font-bold text-blue-100 mb-4">
                       {step.number}
                     </div>

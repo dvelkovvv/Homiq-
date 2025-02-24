@@ -14,27 +14,21 @@ import Step3 from "@/pages/evaluation/step3";
 import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 
-function Header() {
-  return (
-    <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-50">
-      <div className="container mx-auto px-4 h-14 flex items-center justify-end">
-        <div className="flex items-center space-x-2">
-          <VoiceCommands />
-          <Link href="/dashboard">
-            <Button variant="outline" size="icon">
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function Router() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-50">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-end">
+          <div className="flex items-center space-x-2">
+            <VoiceCommands />
+            <Link href="/dashboard">
+              <Button variant="outline" size="icon" title="История на оценките">
+                <LayoutDashboard className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/evaluation/step1" component={Step1} />
