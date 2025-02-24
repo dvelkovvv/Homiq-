@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { Info, HelpCircle, FileText, X } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,7 +38,6 @@ export default function Step2() {
   const [documents, setDocuments] = useState<File[]>([]);
   const [scannedText, setScannedText] = useState<string>("");
   const [extractedData, setExtractedData] = useState<any>(null);
-  const [documentAnalysis, setDocumentAnalysis] = useState<any>(null);
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
 
   useEffect(() => {
@@ -72,10 +71,9 @@ export default function Step2() {
     });
   };
 
-  const handleScanComplete = (text: string, data: any, analysis: any) => {
+  const handleScanComplete = (text: string, data: any) => {
     setScannedText(text);
     setExtractedData(data);
-    setDocumentAnalysis(analysis);
     toast({
       title: "Документът е сканиран успешно",
       description: "Текстът е извлечен от документа.",
@@ -106,9 +104,6 @@ export default function Step2() {
     params.set('propertyId', propertyId!);
     if (extractedData) {
       params.set('extractedData', JSON.stringify(extractedData));
-    }
-    if (documentAnalysis) {
-      params.set('documentAnalysis', JSON.stringify(documentAnalysis));
     }
     navigate(`/evaluation/step3?${params.toString()}`);
   };
@@ -288,7 +283,7 @@ export default function Step2() {
             <InstructionCard
               icon={<HelpCircle className="h-5 w-5 text-green-500" />}
               title="Какви документи са необходими?"
-              description="Качете сканирани копии на документите за собственост, скици, данъчни оценки и други релевантни документи. Системата ще извлече важната информация автоматично."
+              description="Качете сканирани копия на документите за собственост, скици, данъчни оценки и други релевантни документи. Системата ще извлече важната информация автоматично."
             />
           </div>
         </div>

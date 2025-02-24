@@ -3,14 +3,13 @@ import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, AlertTriangle } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
-import { PropertyAIAnalyzer } from "@/lib/propertyAIAnalyzer";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
-  onScanComplete: (text: string, extractedData?: any, documentAnalysis?: any) => void;
+  onScanComplete: (text: string, extractedData?: any) => void;
 }
 
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
@@ -79,37 +78,14 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
-          // Базов анализ на документа
           const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
+          const documentType = detectDocumentType(processedText);
 
-          let documentAnalysis = null;
-          try {
-            // Опитваме се да използваме AI анализатора, но имаме fallback
-            const aiAnalyzer = PropertyAIAnalyzer.getInstance();
-            const documentType = detectDocumentType(processedText);
-            documentAnalysis = await aiAnalyzer.analyzeDocument(processedText, documentType);
-
-            if (documentAnalysis.confidence < 0.7) {
-              toast({
-                title: "Внимание при анализа",
-                description: "Някои данни може да не са извлечени с достатъчна точност.",
-                variant: "warning",
-              });
-            }
-          } catch (error) {
-            console.warn('AI analysis failed, using basic analysis:', error);
-            documentAnalysis = {
-              type: detectDocumentType(processedText),
-              confidence: analysisResult.confidence,
-              extractedData: analysisResult.extractedData
-            };
-          }
-
-          onScanComplete(processedText, analysisResult.extractedData, documentAnalysis);
+          onScanComplete(processedText, analysisResult.extractedData);
 
           toast({
             title: "Успешно сканиране",
-            description: `Документът е разпознат като ${getDocumentTypeName(documentAnalysis.type)}. Точност на анализа: ${Math.round(documentAnalysis.confidence * 100)}%`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence * 100)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
