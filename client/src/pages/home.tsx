@@ -1,8 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { VoiceCommands } from "@/components/voice-commands";
 import { Logo } from "@/components/logo";
-import { LayoutDashboard, ArrowRight, Building2, Clock, ChartBar, CheckCircle2, ArrowDownToLine } from "lucide-react";
+import { ArrowRight, Building2, Clock, ChartBar, CheckCircle2, ArrowDownToLine } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
@@ -44,21 +43,6 @@ const steps = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Logo />
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="outline" className="flex items-center gap-2">
-                <LayoutDashboard className="h-4 w-4" />
-                История
-              </Button>
-            </Link>
-            <VoiceCommands />
-          </div>
-        </div>
-      </header>
-
       <main>
         {/* Hero Section */}
         <section className="relative pt-20 pb-32 overflow-hidden">
@@ -76,12 +60,13 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
+                <Logo className="mx-auto mb-8" />
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-[#003366] mb-6">
                   Умна оценка на имоти
                 </h1>
                 <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
                   Получете незабавна и точна оценка на вашия имот използвайки нашата
-                  модерна AI платформа само в няколко прости стъпки.
+                  модерна платформа само в няколко прости стъпки.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Link href="/evaluation/step1">
