@@ -11,7 +11,7 @@ import { GoogleMaps } from "@/components/google-maps";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
 import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
-import { Home, Building2, Warehouse, Trees, Info, HelpCircle } from "lucide-react";
+import { Home, Building2, Warehouse, Trees, Factory, Info, HelpCircle } from "lucide-react";
 import { ProgressSteps } from "@/components/progress-steps";
 import { useCallback, useEffect, useMemo } from "react";
 import { debounce } from "lodash";
@@ -26,6 +26,7 @@ const propertyTypeIcons = {
   house: Home,
   villa: Warehouse,
   agricultural: Trees,
+  industrial: Factory,
 };
 
 const propertyTypeLabels = {
@@ -33,6 +34,7 @@ const propertyTypeLabels = {
   house: "Къща",
   villa: "Вила",
   agricultural: "Земеделска земя",
+  industrial: "Индустриален имот",
 };
 
 const STEPS = [
@@ -68,13 +70,17 @@ export default function Step1() {
       floor: 0,
       totalFloors: 1,
       heating: "electric",
-      parking: false
+      parking: false,
+      productionArea: 0,
+      storageArea: 0,
+      ceilingHeight: 0,
+      loadingDock: false,
+      threePhasePower: false
     }
   });
 
   const propertyType = form.watch("type");
 
-  // Определяме кои полета да покажем според типа имот
   const showFields = useMemo(() => {
     switch (propertyType) {
       case "apartment":
@@ -84,7 +90,8 @@ export default function Step1() {
           totalFloors: true,
           heating: true,
           parking: true,
-          yearBuilt: true
+          yearBuilt: true,
+          industrial: false
         };
       case "house":
         return {
@@ -92,14 +99,16 @@ export default function Step1() {
           totalFloors: true,
           heating: true,
           parking: true,
-          yearBuilt: true
+          yearBuilt: true,
+          industrial: false
         };
       case "villa":
         return {
           rooms: true,
           heating: true,
           parking: true,
-          yearBuilt: true
+          yearBuilt: true,
+          industrial: false
         };
       case "agricultural":
         return {
@@ -108,7 +117,18 @@ export default function Step1() {
           totalFloors: false,
           heating: false,
           parking: false,
-          yearBuilt: false
+          yearBuilt: false,
+          industrial: false
+        };
+      case "industrial":
+        return {
+          rooms: false,
+          floor: false,
+          totalFloors: true,
+          heating: true,
+          parking: true,
+          yearBuilt: true,
+          industrial: true
         };
       default:
         return {
@@ -117,7 +137,8 @@ export default function Step1() {
           totalFloors: false,
           heating: false,
           parking: false,
-          yearBuilt: false
+          yearBuilt: false,
+          industrial: false
         };
     }
   }, [propertyType]);
@@ -428,6 +449,115 @@ export default function Step1() {
                   </Card>
                 )}
 
+                {showFields.industrial && (
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Индустриални характеристики</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="productionArea"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Производствена площ (кв.м)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="Въведете площ"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="bg-white"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="storageArea"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Складова площ (кв.м)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="Въведете площ"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="bg-white"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="ceilingHeight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Височина на помещенията (м)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                placeholder="Въведете височина"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="bg-white"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="loadingDock"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Товарен достъп</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="threePhasePower"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Трифазен ток</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
                 <Card className="p-6">
                   <FormField
                     control={form.control}
@@ -451,8 +581,8 @@ export default function Step1() {
                   <Button variant="outline" onClick={() => navigate("/")}>
                     Назад
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="bg-[#003366] hover:bg-[#002244]"
                     disabled={form.formState.isSubmitting}
                   >
