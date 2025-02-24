@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMaps } from "@/components/google-maps";
 import { Logo } from "@/components/logo";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { bg } from "date-fns/locale";
+import { NumericFormat } from "react-number-format";
 
 export default function Step1() {
   const [, navigate] = useLocation();
@@ -62,7 +69,11 @@ export default function Step1() {
                     <FormItem>
                       <FormLabel>Адрес</FormLabel>
                       <FormControl>
-                        <Input placeholder="Въведете адрес" {...field} />
+                        <Input 
+                          placeholder="Въведете адрес" 
+                          {...field}
+                          className="bg-white"
+                        />
                       </FormControl>
                       <FormMessage className="text-red-500" />
                     </FormItem>
@@ -77,7 +88,7 @@ export default function Step1() {
                       <FormLabel>Тип имот</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Изберете тип имот" />
                           </SelectTrigger>
                         </FormControl>
@@ -100,15 +111,18 @@ export default function Step1() {
                     <FormItem>
                       <FormLabel>Площ (кв.м)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1"
-                          placeholder="Въведете площ"
-                          {...field} 
-                          onChange={e => {
-                            const value = parseInt(e.target.value);
-                            field.onChange(value < 1 ? 1 : value);
+                        <NumericFormat
+                          customInput={Input}
+                          value={field.value}
+                          onValueChange={(values) => {
+                            field.onChange(Math.max(1, values.floatValue || 1));
                           }}
+                          thousandSeparator=" "
+                          decimalScale={2}
+                          allowNegative={false}
+                          min={1}
+                          placeholder="Въведете площ"
+                          className="bg-white"
                         />
                       </FormControl>
                       <FormMessage className="text-red-500" />
@@ -120,21 +134,39 @@ export default function Step1() {
                   control={form.control}
                   name="yearBuilt"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Година на строеж</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number"
-                          min="1800"
-                          max={new Date().getFullYear()}
-                          placeholder="Въведете година"
-                          {...field}
-                          onChange={e => {
-                            const value = parseInt(e.target.value);
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal bg-white",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value || "Изберете година"}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={new Date(field.value, 0)}
+                            onSelect={(date) => field.onChange(date?.getFullYear())}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date(1800, 0)
+                            }
+                            initialFocus
+                            locale={bg}
+                            captionLayout="dropdown-buttons"
+                            fromYear={1800}
+                            toYear={new Date().getFullYear()}
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
