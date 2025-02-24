@@ -1,10 +1,15 @@
 import { Link } from "wouter";
 import { Home, Building } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function Logo() {
+interface LogoProps {
+  className?: string;
+}
+
+export function Logo({ className }: LogoProps) {
   return (
     <Link href="/">
-      <div className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
+      <div className={cn("flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity", className)}>
         <div className="relative group">
           <div className="bg-primary rounded-lg p-1.5 transform transition-transform group-hover:scale-110">
             <Building className="h-6 w-6 text-white" />
