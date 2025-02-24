@@ -41,9 +41,7 @@ export function VoiceCommands() {
     };
 
     recognition.onend = () => {
-      if (isListening) {
-        recognition.start();
-      }
+      setIsListening(false);
     };
 
     recognition.onresult = (event: any) => {
@@ -88,8 +86,10 @@ export function VoiceCommands() {
           }
         }}
         className={`
-          ${isListening ? "bg-primary text-primary-foreground" : ""}
+          relative
+          ${isListening ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" : ""}
           ${error ? "cursor-not-allowed opacity-50" : ""}
+          transition-all duration-200 ease-in-out
         `}
         title={error || (isListening ? "Изключи гласови команди" : "Включи гласови команди")}
       >
@@ -97,6 +97,9 @@ export function VoiceCommands() {
           <Mic className="h-4 w-4 animate-pulse" />
         ) : (
           <MicOff className="h-4 w-4" />
+        )}
+        {isListening && (
+          <span className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-ping" />
         )}
       </Button>
       {error && (

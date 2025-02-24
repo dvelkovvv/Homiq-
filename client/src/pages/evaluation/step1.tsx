@@ -142,7 +142,7 @@ export default function Step1() {
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal bg-white",
+                                "w-full pl-3 text-left font-normal bg-white hover:bg-gray-50",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -164,6 +164,8 @@ export default function Step1() {
                             captionLayout="dropdown-buttons"
                             fromYear={1800}
                             toYear={new Date().getFullYear()}
+                            showYearDropdown
+                            yearDropdownItemNumber={200}
                           />
                         </PopoverContent>
                       </Popover>
