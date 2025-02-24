@@ -167,7 +167,7 @@ export default function Step1() {
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "yyyy", { locale: bg })
+                            format(field.value, "LLLL yyyy", { locale: bg })
                           ) : (
                             "Изберете година"
                           )}
@@ -188,6 +188,8 @@ export default function Step1() {
                         captionLayout="dropdown-buttons"
                         fromYear={1800}
                         toYear={new Date().getFullYear()}
+                        ISOWeek
+                        showMonthYearPicker
                       />
                     </PopoverContent>
                   </Popover>
