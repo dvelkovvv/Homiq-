@@ -6,15 +6,30 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
+import { PropertyAIAnalyzer, DocumentAnalysis } from "@/lib/propertyAIAnalyzer";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentScannerProps {
-  onScanComplete: (text: string, extractedData?: any) => void;
+  onScanComplete: (text: string, extractedData?: any, documentAnalysis?: DocumentAnalysis) => void;
 }
 
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const detectDocumentType = (text: string): DocumentAnalysis['type'] => {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('нотариален акт') || lowerText.includes('нотариус')) {
+      return 'notary_act';
+    }
+    if (lowerText.includes('скица') || lowerText.includes('кадастрална')) {
+      return 'sketch';
+    }
+    if (lowerText.includes('данъчна оценка') || lowerText.includes('удостоверение за данъчна')) {
+      return 'tax_assessment';
+    }
+    return 'other';
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
@@ -37,10 +52,9 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
         await worker.initialize('bul');
 
         await worker.setParameters({
-          tessedit_ocr_engine_mode: '1',
-          tessedit_pageseg_mode: '1',
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
-          preserve_interword_spaces: '1'
+          preserve_interword_spaces: '1',
+          tessedit_pageseg_mode: '1'
         });
 
         const { data: { text } } = await worker.recognize(imageUrl);
@@ -59,6 +73,25 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
           const analysisResult = await DocumentAnalyzer.analyzeDocument(processedText);
           const warnings = DocumentAnalyzer.validateData(analysisResult.extractedData);
 
+          // Определяме типа на документа
+          const documentType = detectDocumentType(processedText);
+
+          // Създаваме анализ на документа
+          const documentAnalysis: DocumentAnalysis = {
+            type: documentType,
+            confidence: analysisResult.confidence,
+            extractedData: {
+              ...analysisResult.extractedData,
+              // Добавяме допълнителни данни в зависимост от типа документ
+              cadastralNumber: documentType === 'sketch' ? 
+                extractCadastralNumber(processedText) : undefined,
+              buildingRights: documentType === 'sketch' ? 
+                extractBuildingRights(processedText) : undefined,
+              taxAssessment: documentType === 'tax_assessment' ? 
+                extractTaxAssessment(processedText) : undefined
+            }
+          };
+
           // Показваме предупреждения, ако има такива
           if (warnings.length > 0) {
             toast({
@@ -68,11 +101,11 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             });
           }
 
-          onScanComplete(processedText, analysisResult.extractedData);
+          onScanComplete(processedText, analysisResult.extractedData, documentAnalysis);
 
           toast({
             title: "Успешно сканиране",
-            description: `Текстът е успешно извлечен. Точност на анализа: ${Math.round(analysisResult.confidence)}%`,
+            description: `Документът е разпознат като ${getDocumentTypeName(documentType)}. Точност на анализа: ${Math.round(analysisResult.confidence)}%`,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -95,6 +128,31 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
     maxFiles: 1,
     multiple: false
   });
+
+  const getDocumentTypeName = (type: DocumentAnalysis['type']): string => {
+    const types: Record<DocumentAnalysis['type'], string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка',
+      'other': 'Друг документ'
+    };
+    return types[type];
+  };
+
+  const extractCadastralNumber = (text: string): string | undefined => {
+    const match = text.match(/(?:кадастрален номер|идентификатор)[\s:]+([0-9.]+)/i);
+    return match?.[1];
+  };
+
+  const extractBuildingRights = (text: string): string | undefined => {
+    const match = text.match(/(?:застрояване|плътност)[\s:]+([^\n]+)/i);
+    return match?.[1];
+  };
+
+  const extractTaxAssessment = (text: string): number | undefined => {
+    const match = text.match(/(?:данъчна оценка|стойност)[\s:]+(\d+(?:\s*\d+)*(?:\.\d+)?)/i);
+    return match ? parseFloat(match[1].replace(/\s/g, '')) : undefined;
+  };
 
   return (
     <Card>
