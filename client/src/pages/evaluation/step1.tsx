@@ -27,25 +27,31 @@ export default function Step1() {
       type: undefined,
       squareMeters: 1,
       yearBuilt: undefined,
-      location: undefined, // Променено от null на undefined
+      location: {
+        lat: 42.6977,
+        lng: 23.3219
+      }, // София по подразбиране
     }
   });
 
   const onSubmit = async (data: any) => {
     try {
+      // Форматиране на данните преди изпращане
+      const formattedData = {
+        ...data,
+        yearBuilt: data.yearBuilt ? new Date(data.yearBuilt) : new Date(),
+        location: data.location || { lat: 42.6977, lng: 23.3219 }, // София по подразбиране ако няма избрана локация
+        rooms: 1,
+        floor: 0,
+        totalFloors: 1,
+        heating: "electric",
+        parking: false
+      };
+
       const response = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          yearBuilt: data.yearBuilt,
-          location: data.location || null,
-          rooms: 1,
-          floor: 0,
-          totalFloors: 1,
-          heating: "electric",
-          parking: false
-        })
+        body: JSON.stringify(formattedData)
       });
 
       if (!response.ok) {
@@ -196,11 +202,11 @@ export default function Step1() {
             name="location"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Местоположение на имота (по избор)</FormLabel>
+                <FormLabel>Местоположение на имота</FormLabel>
                 <FormControl>
                   <GoogleMaps 
                     onLocationSelect={(location) => field.onChange(location)}
-                    initialLocation={field.value || undefined}
+                    initialLocation={field.value}
                   />
                 </FormControl>
                 <FormMessage />
