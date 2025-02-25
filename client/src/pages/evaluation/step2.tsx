@@ -67,6 +67,7 @@ export default function Step2() {
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Added state for submitting
 
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
   const propertyType = new URLSearchParams(window.location.search).get('type') || 'apartment';
@@ -181,54 +182,56 @@ export default function Step2() {
 
   const handleContinue = async () => {
     try {
-      // Prepare basic query parameters
+      setIsSubmitting(true);
+
+      // Simple params for navigation
       const params = new URLSearchParams();
       params.set('propertyId', propertyId!);
       params.set('evaluationType', evaluationType);
 
-      // Store data in sessionStorage instead of URL params
-      const stepData = {
-        uploadedImages: uploadedImages.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: file.lastModified
-        })),
-        uploadedDocuments: uploadedDocuments.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: file.lastModified
-        })),
-        roomPhotos: roomPhotos.map(room => ({
-          roomType: room.roomType,
-          description: room.description,
-          photos: room.photos.map(photo => ({
-            name: photo.name,
-            size: photo.size,
-            type: photo.type,
-            lastModified: photo.lastModified
-          }))
-        })),
-        extractedData
-      };
+      // Basic validation
+      if (evaluationType === 'licensed' && uploadedDocuments.length === 0) {
+        toast({
+          title: "Внимание",
+          description: "Моля, качете поне един документ за лицензирана оценка.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Store data in sessionStorage
-      sessionStorage.setItem('evaluationStepData', JSON.stringify(stepData));
-
-      // Upload files in background if needed
+      // Upload files
       const formData = new FormData();
       uploadedImages.forEach(file => formData.append('images', file));
       uploadedDocuments.forEach(file => formData.append('documents', file));
 
-      try {
-        await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
+      // Add room photos if any
+      roomPhotos.forEach(room => {
+        room.photos.forEach(photo => {
+          formData.append(`room_${room.roomType}`, photo);
         });
-      } catch (error) {
-        console.error('Upload error:', error);
-        // Continue anyway, as we have the files in sessionStorage
+      });
+
+      // Simple metadata
+      const metadata = {
+        evaluationType,
+        propertyId,
+        extractedData,
+        roomDescriptions: roomPhotos.map(room => ({
+          type: room.roomType,
+          description: room.description
+        }))
+      };
+      formData.append('metadata', JSON.stringify(metadata));
+
+      // Upload to server
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
       }
 
       // Navigate to next step
@@ -237,9 +240,11 @@ export default function Step2() {
       console.error('Navigation error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при преминаването към следващата стъпка.",
+        description: "Възникна проблем при преминаването към следващата стъпка. Моля, опитайте отново.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -573,9 +578,9 @@ export default function Step2() {
               <Button
                 onClick={handleContinue}
                 className="bg-[#003366] hover:bg-[#002244]"
-                disabled={isScanning}
+                disabled={isScanning || isSubmitting} // Disable button while submitting
               >
-                {isScanning ? (
+                {isSubmitting ? (
                   <>
                     <Spinner className="mr-2" />
                     Обработка...
