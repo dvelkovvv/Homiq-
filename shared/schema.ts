@@ -28,9 +28,14 @@ export const properties = pgTable("properties", {
 
   // Media files
   photos: text("photos").array().notNull().default([]),
-  documents: text("documents").array().notNull().default([]),
+  documents: jsonb("documents").$type<Array<{
+    type: 'sketch' | 'notary_act' | 'tax_assessment' | 'other';
+    name: string;
+    url: string;
+    extractedData?: Record<string, any>;
+  }>>().notNull().default([]),
   roomPhotos: jsonb("room_photos").$type<Array<{
-    roomNumber: number;
+    roomType: string;
     description: string;
     photos: string[];
   }>>().notNull().default([]),
@@ -47,15 +52,6 @@ export const evaluations = pgTable("evaluations", {
   evaluationDate: timestamp("evaluation_date").notNull().defaultNow(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Achievements table
-export const achievements = pgTable("achievements", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  points: integer("points").notNull(),
-  icon: text("icon").notNull(),
 });
 
 // Validation schemas
@@ -79,16 +75,23 @@ export const insertPropertySchema = createInsertSchema(properties, {
   loadingDock: z.boolean().optional(),
   ceilingHeight: z.number().min(0).optional(),
   threePhasePower: z.boolean().optional(),
+
+  documents: z.array(z.object({
+    type: z.enum(['sketch', 'notary_act', 'tax_assessment', 'other']),
+    name: z.string(),
+    url: z.string(),
+    extractedData: z.record(z.any()).optional()
+  })).optional(),
+
   roomPhotos: z.array(z.object({
-    roomNumber: z.number(),
+    roomType: z.string(),
     description: z.string(),
     photos: z.array(z.string())
   })).optional()
 }).omit({
   id: true,
   createdAt: true,
-  photos: true,
-  documents: true
+  photos: true
 });
 
 export const insertEvaluationSchema = createInsertSchema(evaluations, {
@@ -106,4 +109,3 @@ export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type Evaluation = typeof evaluations.$inferSelect;
 export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
-export type Achievement = typeof achievements.$inferSelect;
