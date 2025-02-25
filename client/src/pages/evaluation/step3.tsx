@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const RESIDENTIAL_ROOM_TYPES = [
   { id: "entrance", name: "Входна врата", icon: DoorClosed },
@@ -846,7 +848,7 @@ export default function Step3() {
         doc.setFontSize(20);
         doc.text('Оценка на стойността', 20, 20);
         doc.setFontSize(16);
-        doc.text(`€${analysis.estimatedValue.toLocaleString()}`, 20, 35);doc.addPage();
+        doc.text(`€${analysis.estimatedValue.toLocaleString()}`,20, 35);doc.addPage();
         doc.setFontSize(20);
         doc.text('Инвестиционен анализ', 20, 20);
         doc.setFontSize(12);
