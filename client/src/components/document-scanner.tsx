@@ -68,6 +68,10 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1',
+          tessedit_pageseg_mode: '1', // Автоматично определяне на сегментация
+          tessedit_do_invert: '0', // Без инвертиране на цветовете
+          tessedit_enable_doc_dict: '1', // Използване на речник за документи
+          debug_file: '/dev/null', // Изключване на debug файлове
         });
 
         setCurrentStep('Извличане на текст');
@@ -94,9 +98,11 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             : "Документът е сканиран успешно";
 
           const extractedInfo = [];
-          if (extractedData.squareMeters) extractedInfo.push(`${extractedData.squareMeters} кв.м`);
-          if (extractedData.constructionYear) extractedInfo.push(`${extractedData.constructionYear} г.`);
-          if (extractedData.rooms) extractedInfo.push(`${extractedData.rooms} стаи`);
+          if (extractedData.owner) extractedInfo.push(`Собственик: ${extractedData.owner}`);
+          if (extractedData.squareMeters) extractedInfo.push(`Площ: ${extractedData.squareMeters} кв.м`);
+          if (extractedData.identifier) extractedInfo.push(`Идентификатор: ${extractedData.identifier}`);
+          if (extractedData.price) extractedInfo.push(`Цена: ${extractedData.price.toLocaleString()} лв.`);
+          if (extractedData.documentDate) extractedInfo.push(`Дата: ${extractedData.documentDate}`);
 
           toast({
             title: "Успешно сканиране",
@@ -104,8 +110,14 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
               <>
                 {documentType}
                 {extractedInfo.length > 0 && (
-                  <div className="mt-2 text-sm">
-                    Открити данни: {extractedInfo.join(', ')}
+                  <div className="mt-2 text-sm space-y-1">
+                    <p className="font-medium">Извлечени данни:</p>
+                    {extractedInfo.map((info, index) => (
+                      <p key={index} className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        {info}
+                      </p>
+                    ))}
                   </div>
                 )}
               </>
