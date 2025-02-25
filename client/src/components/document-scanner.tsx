@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
@@ -15,6 +15,7 @@ interface DocumentScannerProps {
 export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState<string>('');
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -32,6 +33,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
 
       setScanning(true);
       setProgress(0);
+      setCurrentStep('Подготовка на документа');
 
       try {
         const file = acceptedFiles[0];
@@ -42,16 +44,35 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
           description: "Моля, изчакайте докато анализираме документа.",
         });
 
-        const worker = await createWorker();
-        await worker.loadLanguage('bul');
-        await worker.initialize('bul');
-
-        await worker.setParameters({
-          tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
-          preserve_interword_spaces: '1'
+        const worker = await createWorker({
+          logger: progress => {
+            if (progress.status === 'loading tesseract core') {
+              setCurrentStep('Зареждане на OCR модула');
+              setProgress(20);
+            } else if (progress.status === 'initializing api') {
+              setCurrentStep('Инициализация');
+              setProgress(40);
+            } else if (progress.status === 'recognizing text') {
+              setCurrentStep('Разпознаване на текст');
+              setProgress(60);
+            }
+          }
         });
 
+        setCurrentStep('Зареждане на български език');
+        await worker.loadLanguage('bul');
+        await worker.initialize('bul');
+        setProgress(80);
+
+        setCurrentStep('Оптимизация на разпознаването');
+        await worker.setParameters({
+          tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
+          preserve_interword_spaces: '1',
+        });
+
+        setCurrentStep('Извличане на текст');
         const { data: { text } } = await worker.recognize(imageUrl);
+        setProgress(90);
 
         await worker.terminate();
         URL.revokeObjectURL(imageUrl);
@@ -63,14 +84,32 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
             .trim();
 
+          setCurrentStep('Анализ на данни');
           const extractedData = await DocumentAnalyzer.analyzeDocument(processedText);
+          setProgress(100);
           onScanComplete(processedText, extractedData);
+
+          const documentType = extractedData.documentType 
+            ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
+            : "Документът е сканиран успешно";
+
+          const extractedInfo = [];
+          if (extractedData.squareMeters) extractedInfo.push(`${extractedData.squareMeters} кв.м`);
+          if (extractedData.constructionYear) extractedInfo.push(`${extractedData.constructionYear} г.`);
+          if (extractedData.rooms) extractedInfo.push(`${extractedData.rooms} стаи`);
 
           toast({
             title: "Успешно сканиране",
-            description: extractedData.documentType 
-              ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
-              : "Документът е сканиран успешно",
+            description: (
+              <>
+                {documentType}
+                {extractedInfo.length > 0 && (
+                  <div className="mt-2 text-sm">
+                    Открити данни: {extractedInfo.join(', ')}
+                  </div>
+                )}
+              </>
+            ),
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -85,6 +124,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
       } finally {
         setScanning(false);
         setProgress(100);
+        setCurrentStep('');
       }
     },
     accept: {
@@ -112,7 +152,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
             <div className="space-y-4">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <div>
-                <p className="font-medium">Сканиране на документа...</p>
+                <p className="font-medium">{currentStep}</p>
                 <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
               </div>
               <Progress value={progress} className="h-2" />
@@ -131,6 +171,20 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
                   <Badge variant="outline">Нотариален акт</Badge>
                   <Badge variant="outline">Скица</Badge>
                   <Badge variant="outline">Данъчна оценка</Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Автоматично разпознаване на текст</p>
+                </div>
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Извличане на важни данни</p>
+                </div>
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Попълване на формуляра</p>
                 </div>
               </div>
             </div>
