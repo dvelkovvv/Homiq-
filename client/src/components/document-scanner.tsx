@@ -69,10 +69,8 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: 'PSM_AUTO',
-          tessedit_do_invert: '0',
-          tessedit_enable_doc_dict: '1',
-          debug_file: '/dev/null'
+          tessedit_pageseg_mode: '1',
+          tessedit_enable_doc_dict: '1'
         });
 
         setCurrentStep('Извличане на текст');
