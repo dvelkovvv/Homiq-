@@ -10,9 +10,10 @@ import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
+  expectedType?: 'notary_act' | 'sketch' | 'tax_assessment';
 }
 
-export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
+export function DocumentScanner({ onScanComplete, expectedType }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
@@ -68,10 +69,10 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '1', // Автоматично определяне на сегментация
-          tessedit_do_invert: '0', // Без инвертиране на цветовете
-          tessedit_enable_doc_dict: '1', // Използване на речник за документи
-          debug_file: '/dev/null', // Изключване на debug файлове
+          tessedit_pageseg_mode: 'PSM_AUTO',
+          tessedit_do_invert: '0',
+          tessedit_enable_doc_dict: '1',
+          debug_file: '/dev/null'
         });
 
         setCurrentStep('Извличане на текст');
@@ -90,6 +91,12 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
 
           setCurrentStep('Анализ на данни');
           const extractedData = await DocumentAnalyzer.analyzeDocument(processedText);
+
+          // Verify document type if expected type is provided
+          if (expectedType && extractedData.documentType !== expectedType) {
+            throw new Error(`Очаква се ${getDocumentTypeName(expectedType)}, но документът изглежда като ${getDocumentTypeName(extractedData.documentType || 'other')}`);
+          }
+
           setProgress(100);
           onScanComplete(processedText, extractedData);
 
@@ -130,7 +137,7 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: "Моля, опитайте с друг документ или проверете дали изображението е достатъчно ясно.",
+          description: error instanceof Error ? error.message : "Моля, опитайте с друг документ или проверете дали изображението е достатъчно ясно.",
           variant: "destructive"
         });
       } finally {
@@ -174,16 +181,20 @@ export function DocumentScanner({ onScanComplete }: DocumentScannerProps) {
               <FileText className="h-8 w-8 mx-auto text-primary" />
               <div>
                 <p className="font-medium">
-                  {isDragActive ? "Пуснете документа тук" : "Качете или плъзнете документ"}
+                  {isDragActive ? "Пуснете документа тук" : expectedType 
+                    ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
+                    : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Поддържани формати: PNG, JPG (ясни снимки на документи)
                 </p>
-                <div className="flex gap-2 justify-center mt-2">
-                  <Badge variant="outline">Нотариален акт</Badge>
-                  <Badge variant="outline">Скица</Badge>
-                  <Badge variant="outline">Данъчна оценка</Badge>
-                </div>
+                {!expectedType && (
+                  <div className="flex gap-2 justify-center mt-2">
+                    <Badge variant="outline">Нотариален акт</Badge>
+                    <Badge variant="outline">Скица</Badge>
+                    <Badge variant="outline">Данъчна оценка</Badge>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div className="p-4 border rounded-lg bg-gray-50">

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory } from "lucide-react";
+import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
@@ -13,6 +13,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { FileUploadZone } from "@/components/file-upload-zone";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
+
+interface DocumentStatus {
+  notary_act: boolean;
+  sketch: boolean;
+  tax_assessment: boolean;
+}
+
+type EvaluationType = "quick" | "licensed";
 
 const STEPS = [
   {
@@ -56,8 +64,6 @@ interface RoomPhotos {
   description: string;
 }
 
-type EvaluationType = "quick" | "licensed";
-
 export default function Step2() {
   const [, setLocation] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
@@ -68,6 +74,11 @@ export default function Step2() {
   const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [documentsStatus, setDocumentsStatus] = useState<DocumentStatus>({
+    notary_act: false,
+    sketch: false,
+    tax_assessment: false
+  });
 
   // Get property data from localStorage instead of URL params
   const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
@@ -125,6 +136,14 @@ export default function Step2() {
       text: text,
       scannedAt: new Date().toISOString()
     });
+
+    // Update document status
+    if (data.documentType) {
+      setDocumentsStatus(prev => ({
+        ...prev,
+        [data.documentType]: true
+      }));
+    }
 
     // Save back to localStorage
     localStorage.setItem('propertyData', JSON.stringify({
@@ -388,7 +407,7 @@ export default function Step2() {
                 <Card className="mb-6">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="h-5 w-5" />
+                      <FileText className="h-5 w-5" />
                       Документи за имота
                     </CardTitle>
                     <CardDescription>
@@ -397,33 +416,48 @@ export default function Step2() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="p-4 border rounded-lg bg-gray-50">
-                        <h4 className="font-medium mb-2">Скица на имота</h4>
-                        <p className="text-sm text-gray-600">Официален документ от кадастъра</p>
+                      <div className={`p-4 border rounded-lg ${documentsStatus.notary_act ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Нотариален акт</h4>
+                          {documentsStatus.notary_act && (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">Документ за собственост</p>
+                        <DocumentScanner
+                          onScanComplete={handleScanComplete}
+                          expectedType="notary_act"
+                        />
                       </div>
-                      <div className="p-4 border rounded-lg bg-gray-50">
-                        <h4 className="font-medium mb-2">Нотариален акт</h4>
-                        <p className="text-sm text-gray-600">Документ за собственост</p>
+
+                      <div className={`p-4 border rounded-lg ${documentsStatus.sketch ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Скица</h4>
+                          {documentsStatus.sketch && (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">Официален документ от кадастъра</p>
+                        <DocumentScanner
+                          onScanComplete={handleScanComplete}
+                          expectedType="sketch"
+                        />
                       </div>
-                      <div className="p-4 border rounded-lg bg-gray-50">
-                        <h4 className="font-medium mb-2">Данъчна оценка</h4>
-                        <p className="text-sm text-gray-600">Актуална данъчна оценка</p>
+
+                      <div className={`p-4 border rounded-lg ${documentsStatus.tax_assessment ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Данъчна оценка</h4>
+                          {documentsStatus.tax_assessment && (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">Актуална данъчна оценка</p>
+                        <DocumentScanner
+                          onScanComplete={handleScanComplete}
+                          expectedType="tax_assessment"
+                        />
                       </div>
                     </div>
-
-                    <DocumentScanner
-                      onScanComplete={handleScanComplete}
-                    />
-
-                    <FileUploadZone
-                      accept={{
-                        'application/pdf': ['.pdf'],
-                        'image/*': ['.png', '.jpg', '.jpeg']
-                      }}
-                      maxFiles={5}
-                      onFilesAdded={handleDocumentsAdded}
-                      fileType="document"
-                    />
 
                     {uploadedDocuments.length > 0 && (
                       <div className="mt-4 space-y-2">
