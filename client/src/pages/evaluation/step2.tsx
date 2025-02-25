@@ -59,7 +59,7 @@ interface RoomPhotos {
 type EvaluationType = "quick" | "licensed";
 
 export default function Step2() {
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
   const [scannedText, setScannedText] = useState<string>("");
   const [extractedData, setExtractedData] = useState<any>(null);
@@ -67,11 +67,12 @@ export default function Step2() {
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
-  const [isSubmitting, setIsSubmitting] = useState(false); // Added state for submitting
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const propertyId = new URLSearchParams(window.location.search).get('propertyId');
-  const propertyType = new URLSearchParams(window.location.search).get('type') || 'apartment';
-  const rooms = parseInt(new URLSearchParams(window.location.search).get('rooms') || '0');
+  // Get property data from localStorage instead of URL params
+  const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+  const propertyType = propertyData.type || 'apartment';
+  const rooms = propertyData.rooms || 0;
 
   const getRoomTypes = () => {
     switch (propertyType) {
@@ -89,8 +90,9 @@ export default function Step2() {
   };
 
   useEffect(() => {
-    if (!propertyId) {
-      navigate('/evaluation/step1');
+    // Check if we have property data
+    if (!propertyData || !propertyData.type) {
+      setLocation('/evaluation/step1');
       return;
     }
 
@@ -105,7 +107,7 @@ export default function Step2() {
         }))
       );
     }
-  }, [propertyId, navigate, propertyType]);
+  }, []);
 
   const handleScanComplete = (text: string, data: any) => {
     setIsScanning(false);
@@ -184,63 +186,22 @@ export default function Step2() {
     try {
       setIsSubmitting(true);
 
-      // Simple params for navigation
-      const params = new URLSearchParams();
-      params.set('propertyId', propertyId!);
-      params.set('evaluationType', evaluationType);
+      localStorage.setItem('currentStep', '3');
 
-      // Basic validation
-      if (evaluationType === 'licensed' && uploadedDocuments.length === 0) {
-        toast({
-          title: "Внимание",
-          description: "Моля, качете поне един документ за лицензирана оценка.",
-          variant: "destructive"
-        });
-        setIsSubmitting(false);
-        return;
-      }
+      // Save evaluation type to localStorage
+      localStorage.setItem('evaluationType', evaluationType);
 
-      // Upload files
-      const formData = new FormData();
-      uploadedImages.forEach(file => formData.append('images', file));
-      uploadedDocuments.forEach(file => formData.append('documents', file));
-
-      // Add room photos if any
-      roomPhotos.forEach(room => {
-        room.photos.forEach(photo => {
-          formData.append(`room_${room.roomType}`, photo);
-        });
+      toast({
+        title: "Успешно запазени данни",
+        description: "Продължете към преглед на оценката.",
       });
 
-      // Simple metadata
-      const metadata = {
-        evaluationType,
-        propertyId,
-        extractedData,
-        roomDescriptions: roomPhotos.map(room => ({
-          type: room.roomType,
-          description: room.description
-        }))
-      };
-      formData.append('metadata', JSON.stringify(metadata));
-
-      // Upload to server
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
-      }
-
-      // Navigate to next step
-      navigate(`/evaluation/step3?${params.toString()}`);
+      setLocation('/evaluation/step3');
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error('Error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при преминаването към следващата стъпка. Моля, опитайте отново.",
+        description: "Възникна проблем при запазването на данните. Моля, опитайте отново.",
         variant: "destructive"
       });
     } finally {
@@ -572,13 +533,13 @@ export default function Step2() {
             )}
 
             <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={() => navigate("/evaluation/step1")}>
+              <Button variant="outline" onClick={() => setLocation("/evaluation/step1")}>
                 Назад
               </Button>
               <Button
                 onClick={handleContinue}
                 className="bg-[#003366] hover:bg-[#002244]"
-                disabled={isScanning || isSubmitting} // Disable button while submitting
+                disabled={isScanning || isSubmitting}
               >
                 {isSubmitting ? (
                   <>

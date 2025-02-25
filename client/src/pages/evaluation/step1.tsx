@@ -143,19 +143,22 @@ export default function Step1() {
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
+
       const formData = {
         ...data,
         submittedAt: new Date().toISOString()
       };
 
       localStorage.setItem('propertyData', JSON.stringify(formData));
+      localStorage.setItem('currentStep', '2');
 
       toast({
         title: "Успешно запазени данни",
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      window.location.href = '/evaluation/step2';
+      setLocation('/evaluation/step2');
+
     } catch (error: any) {
       console.error('Error:', error);
       toast({
@@ -191,6 +194,13 @@ export default function Step1() {
     });
     return () => subscription.unsubscribe();
   }, [form.watch, saveFormData]);
+
+  useEffect(() => {
+    const currentStep = localStorage.getItem('currentStep');
+    if (currentStep === '2' || currentStep === '3') {
+      setLocation(`/evaluation/step${currentStep}`);
+    }
+  }, [setLocation]);
 
   useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
 
