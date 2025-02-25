@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Home, Building2, Warehouse, Trees, Factory, Info, HelpCircle } from "lucide-react";
 import { ProgressSteps } from "@/components/progress-steps";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { debounce } from "lodash";
 import { Logo } from "@/components/logo";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
@@ -54,6 +54,15 @@ const STEPS = [
 
 export default function Step1() {
   const [, setLocation] = useLocation();
+  const [showFields, setShowFields] = useState({
+    rooms: false,
+    floor: false,
+    totalFloors: false,
+    heating: false,
+    parking: false,
+    yearBuilt: false,
+    industrial: false
+  });
 
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
@@ -74,6 +83,62 @@ export default function Step1() {
     }
   });
 
+  const propertyType = form.watch("type");
+
+  useEffect(() => {
+    if (propertyType === "apartment") {
+      setShowFields({
+        rooms: true,
+        floor: true,
+        totalFloors: true,
+        heating: true,
+        parking: true,
+        yearBuilt: true,
+        industrial: false
+      });
+    } else if (propertyType === "house") {
+      setShowFields({
+        rooms: true,
+        floor: false,
+        totalFloors: true,
+        heating: true,
+        parking: true,
+        yearBuilt: true,
+        industrial: false
+      });
+    } else if (propertyType === "villa") {
+      setShowFields({
+        rooms: true,
+        floor: false,
+        totalFloors: false,
+        heating: true,
+        parking: true,
+        yearBuilt: true,
+        industrial: false
+      });
+    } else if (propertyType === "agricultural") {
+      setShowFields({
+        rooms: false,
+        floor: false,
+        totalFloors: false,
+        heating: false,
+        parking: false,
+        yearBuilt: false,
+        industrial: false
+      });
+    } else if (propertyType === "industrial") {
+      setShowFields({
+        rooms: false,
+        floor: false,
+        totalFloors: true,
+        heating: true,
+        parking: true,
+        yearBuilt: true,
+        industrial: true
+      });
+    }
+  }, [propertyType]);
+
   const onSubmit = async (data: any) => {
     try {
       // Store form data in localStorage
@@ -89,21 +154,13 @@ export default function Step1() {
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      // Use wouter's navigation
+      // Navigate to step 2
       setLocation('/evaluation/step2');
-
-      // Add a fallback navigation after a short delay if the first attempt fails
-      setTimeout(() => {
-        if (window.location.pathname !== '/evaluation/step2') {
-          console.log('Fallback navigation triggered');
-          window.location.href = '/evaluation/step2';
-        }
-      }, 100);
     } catch (error: any) {
-      console.error('Navigation error:', error);
+      console.error('Error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при навигацията. Моля, опитайте отново.",
+        description: "Възникна проблем при запазването на данните. Моля, опитайте отново.",
         variant: "destructive"
       });
     }
@@ -134,70 +191,6 @@ export default function Step1() {
   }, [form.watch, saveFormData]);
 
   useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
-
-  const propertyType = form.watch("type");
-
-  const showFields = useMemo(() => {
-    switch (propertyType) {
-      case "apartment":
-        return {
-          rooms: true,
-          floor: true,
-          totalFloors: true,
-          heating: true,
-          parking: true,
-          yearBuilt: true,
-          industrial: false
-        };
-      case "house":
-        return {
-          rooms: true,
-          totalFloors: true,
-          heating: true,
-          parking: true,
-          yearBuilt: true,
-          industrial: false
-        };
-      case "villa":
-        return {
-          rooms: true,
-          heating: true,
-          parking: true,
-          yearBuilt: true,
-          industrial: false
-        };
-      case "agricultural":
-        return {
-          rooms: false,
-          floor: false,
-          totalFloors: false,
-          heating: false,
-          parking: false,
-          yearBuilt: false,
-          industrial: false
-        };
-      case "industrial":
-        return {
-          rooms: false,
-          floor: false,
-          totalFloors: true,
-          heating: true,
-          parking: true,
-          yearBuilt: true,
-          industrial: true
-        };
-      default:
-        return {
-          rooms: false,
-          floor: false,
-          totalFloors: false,
-          heating: false,
-          parking: false,
-          yearBuilt: false,
-          industrial: false
-        };
-    }
-  }, [propertyType]);
 
   return (
     <div className="min-h-screen bg-background">
