@@ -6,7 +6,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, TrendingUp, MapPin, ChartBar, AlertTriangle, Download, Share2 } from "lucide-react";
+import { Building2, TrendingUp, MapPin, ChartBar, AlertTriangle, Download, Share2, Home } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -18,6 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
+import { toast } from "@/hooks/use-toast";
 
 const STEPS = [
   {
@@ -34,48 +35,25 @@ const STEPS = [
   }
 ];
 
-// Mock data for charts
-const priceHistoryData = [
-  { month: "Яну", value: 180000 },
-  { month: "Фев", value: 185000 },
-  { month: "Мар", value: 187000 },
-  { month: "Апр", value: 190000 },
-  { month: "Май", value: 195000 },
-  { month: "Юни", value: 200000 },
-];
-
-const similarPropertiesData = [
-  { type: "Текущ имот", value: 200000 },
-  { type: "Среден за района", value: 190000 },
-  { type: "Най-висок", value: 250000 },
-  { type: "Най-нисък", value: 150000 },
-];
-
-const riskFactors = [
-  { factor: "Локация", score: 85 },
-  { factor: "Състояние", score: 75 },
-  { factor: "Ликвидност", score: 90 },
-  { factor: "Пазарна стабилност", score: 80 },
-];
-
 export default function Step3() {
   const [, navigate] = useLocation();
-  const params = new URLSearchParams(window.location.search);
-  const propertyId = params.get('propertyId');
-  const evaluationType = params.get('evaluationType') || 'quick';
 
-  // Mock evaluation data with more detailed analysis
+  // Get property data from localStorage
+  const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+
+  // Mock data based on property type and characteristics
   const mockEvaluation = {
     estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
     confidence: Math.random() * (0.95 - 0.75) + 0.75,
     currency: "EUR",
-    evaluationType: evaluationType,
     status: "completed",
     marketTrend: "rising",
     locationScore: 8.5,
     investmentRating: "A",
     yearlyAppreciation: 5.2,
-    comparableProperties: 12
+    comparableProperties: 12,
+    propertyType: propertyData.type || "apartment",
+    area: propertyData.squareMeters || 0
   };
 
   const formatCurrency = (value: number) => {
@@ -85,6 +63,30 @@ export default function Step3() {
       maximumFractionDigits: 0
     });
   };
+
+  // Price history data - could be based on real market data later
+  const priceHistoryData = [
+    { month: "Яну", value: mockEvaluation.estimatedValue * 0.9 },
+    { month: "Фев", value: mockEvaluation.estimatedValue * 0.92 },
+    { month: "Мар", value: mockEvaluation.estimatedValue * 0.95 },
+    { month: "Апр", value: mockEvaluation.estimatedValue * 0.97 },
+    { month: "Май", value: mockEvaluation.estimatedValue * 0.98 },
+    { month: "Юни", value: mockEvaluation.estimatedValue }
+  ];
+
+  const similarPropertiesData = [
+    { type: "Текущ имот", value: mockEvaluation.estimatedValue },
+    { type: "Среден за района", value: mockEvaluation.estimatedValue * 0.95 },
+    { type: "Най-висок", value: mockEvaluation.estimatedValue * 1.25 },
+    { type: "Най-нисък", value: mockEvaluation.estimatedValue * 0.75 }
+  ];
+
+  const riskFactors = [
+    { factor: "Локация", score: 85 },
+    { factor: "Състояние", score: 75 },
+    { factor: "Ликвидност", score: 90 },
+    { factor: "Пазарна стабилност", score: 80 },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8">
@@ -98,9 +100,12 @@ export default function Step3() {
 
           <div className="grid gap-6">
             {/* Main Evaluation Card */}
-            <Card className="bg-gradient-to-br from-[#003366] to-[#002244] text-white">
+            <Card className="bg-gradient-to-br from-[#003366] to-[#002244] text-white overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-2xl">Оценка на имота</CardTitle>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Home className="h-6 w-6" />
+                  Оценка на имота
+                </CardTitle>
                 <CardDescription className="text-gray-200">
                   Генерирана на {new Date().toLocaleDateString('bg-BG')}
                 </CardDescription>
@@ -113,7 +118,7 @@ export default function Step3() {
                   <p className="text-xl text-gray-200 mt-2">
                     Приблизителна пазарна стойност
                   </p>
-                  <div className="mt-6 grid grid-cols-2 gap-4 text-center">
+                  <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
                     <div>
                       <p className="text-4xl font-bold">
                         {Math.round(mockEvaluation.confidence * 100)}%
@@ -123,6 +128,14 @@ export default function Step3() {
                     <div>
                       <p className="text-4xl font-bold">{mockEvaluation.investmentRating}</p>
                       <p className="text-sm text-gray-200">Инвестиционен рейтинг</p>
+                    </div>
+                    <div>
+                      <p className="text-4xl font-bold">{mockEvaluation.area}м²</p>
+                      <p className="text-sm text-gray-200">Площ</p>
+                    </div>
+                    <div>
+                      <p className="text-4xl font-bold">{mockEvaluation.locationScore}</p>
+                      <p className="text-sm text-gray-200">Локация (от 10)</p>
                     </div>
                   </div>
                 </div>
@@ -326,7 +339,13 @@ export default function Step3() {
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  // Here we could generate a PDF report
+                  toast({
+                    title: "Изтегляне на оценка",
+                    description: "Започна изтеглянето на оценката във формат PDF.",
+                  });
+                }}
               >
                 <Download className="h-4 w-4" />
                 Изтегли оценка
@@ -334,6 +353,13 @@ export default function Step3() {
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
+                onClick={() => {
+                  // Here we could implement sharing functionality
+                  toast({
+                    title: "Споделяне",
+                    description: "Копиран линк за споделяне.",
+                  });
+                }}
               >
                 <Share2 className="h-4 w-4" />
                 Сподели

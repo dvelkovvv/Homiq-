@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useLocation } from "wouter";
+import { useLocation, useNavigate } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPropertySchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -146,28 +146,19 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      const response = await fetch("/api/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+      localStorage.setItem('propertyData', JSON.stringify(data));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Грешка при създаване на имота');
-      }
-
-      const property = await response.json();
       toast({
-        title: "Успешно създаден имот",
+        title: "Успешно запазени данни",
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
-      navigate(`/evaluation/step2?propertyId=${property.id}&rooms=${data.rooms || 0}&type=${data.type}`);
+
+      navigate(`/evaluation/step2?type=${data.type}&rooms=${data.rooms || 0}`);
     } catch (error: any) {
       console.error('Error:', error);
       toast({
         title: "Грешка",
-        description: error.message || "Възникна проблем при създаването на имота. Моля, опитайте отново.",
+        description: error.message || "Възникна проблем при запазването на данните. Моля, опитайте отново.",
         variant: "destructive"
       });
     }
