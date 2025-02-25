@@ -221,139 +221,187 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
     }
   });
 
-  const onSubmit = (data: any) => {
-    onEdit(data);
-    setEditMode(false);
-    toast({
-      title: "Данните са обновени",
-      description: "Оценката ще бъде преизчислена с новите данни.",
-    });
-  };
-
   return (
-    <Card className="mb-6 relative">
-      <CardHeader>
+    <Card className="mb-8 relative overflow-hidden border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+      <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
+          <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
+            <FileText className="h-6 w-6 text-primary" />
             Анализ на документите
           </CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setEditMode(!editMode)}
-            className="absolute top-4 right-4"
+            className="absolute top-4 right-4 hover:bg-primary/10"
           >
             <Edit2 className="h-4 w-4 mr-2" />
             {editMode ? "Отказ" : "Редактирай"}
           </Button>
         </div>
-        <CardDescription>
+        <CardDescription className="text-base text-gray-600">
           Детайлна информация извлечена от предоставените документи
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-6">
         {editMode ? (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="area"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Площ (кв.м.)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.area?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="rooms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Брой стаи</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.rooms?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="constructionYear"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Година на строителство</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.constructionYear?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="constructionType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Тип конструкция</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.constructionType?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="heating"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Отопление</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.heating?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Адрес</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        {form.formState.errors.address?.message}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+            <form onSubmit={form.handleSubmit(onEdit)} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="area"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Площ (кв.м.)</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            className="h-11 text-lg"
+                            placeholder="Въведете площ"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.area?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="rooms"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Брой стаи</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            className="h-11 text-lg"
+                            placeholder="Въведете брой стаи"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.rooms?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="constructionYear"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Година на строителство</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            className="h-11 text-lg"
+                            placeholder="Въведете година"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.constructionYear?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="constructionType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Тип конструкция</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="h-11 text-lg"
+                            placeholder="Въведете тип конструкция"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.constructionType?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="heating"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Отопление</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="h-11 text-lg"
+                            placeholder="Въведете тип отопление"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.heating?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-base font-medium">Адрес</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="h-11 text-lg"
+                            placeholder="Въведете адрес"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-red-500">
+                          {form.formState.errors.address?.message}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
               </div>
-
               <div className="flex justify-end gap-4">
                 <Button
                   type="button"
@@ -369,78 +417,94 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
             </form>
           </Form>
         ) : (
-          <Tabs defaultValue="property">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="property" className="data-[state=active]:bg-primary/10">
-                <Building2 className="h-4 w-4 mr-2" />
+          <Tabs defaultValue="property" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 gap-2 bg-gray-50/50 p-1 rounded-lg">
+              <TabsTrigger
+                value="property"
+                className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <Building2 className="h-5 w-5 mr-2" />
                 Имот
               </TabsTrigger>
-              <TabsTrigger value="legal" className="data-[state=active]:bg-primary/10">
-                <FileSignature className="h-4 w-4 mr-2" />
+              <TabsTrigger
+                value="legal"
+                className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <FileSignature className="h-5 w-5 mr-2" />
                 Правен статус
               </TabsTrigger>
-              <TabsTrigger value="location" className="data-[state=active]:bg-primary/10">
-                <MapPin className="h-4 w-4 mr-2" />
+              <TabsTrigger
+                value="location"
+                className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <MapPin className="h-5 w-5 mr-2" />
                 Локация
               </TabsTrigger>
-              <TabsTrigger value="market" className="data-[state=active]:bg-primary/10">
-                <BarChart3 className="h-4 w-4 mr-2" />
+              <TabsTrigger
+                value="market"
+                className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <BarChart3 className="h-5 w-5 mr-2" />
                 Пазар
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="property" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-primary/10 shadow-sm">
+            <TabsContent value="property" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Основни характеристики</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Основни характеристики
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <dl className="space-y-2">
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Площ</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.area} м²</dd>
+                    <dl className="space-y-4">
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Площ</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.area} м²</dd>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Брой стаи</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.rooms}</dd>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Брой стаи</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.rooms}</dd>
                       </div>
-                      <div className="flex justify-between items-center py-2">
-                        <dt className="text-gray-600">Етаж</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.floor} от {analysis.propertyDetails.totalFloors}</dd>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Етаж</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.floor} от {analysis.propertyDetails.totalFloors}</dd>
                       </div>
                     </dl>
                   </CardContent>
                 </Card>
-
-                <Card className="border-primary/10 shadow-sm">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Строителство</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Строителство
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <dl className="space-y-2">
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Година</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.constructionYear}</dd>
+                    <dl className="space-y-4">
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Година</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.constructionYear}</dd>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Конструкция</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.constructionType}</dd>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Конструкция</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.constructionType}</dd>
                       </div>
-                      <div className="flex justify-between items-center py-2">
-                        <dt className="text-gray-600">Отопление</dt>
-                        <dd className="font-medium">{analysis.propertyDetails.heating}</dd>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Отопление</dt>
+                        <dd className="text-lg font-semibold">{analysis.propertyDetails.heating}</dd>
                       </div>
                     </dl>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
-
-            <TabsContent value="legal">
-              <Card className="border-primary/10 shadow-sm">
+            <TabsContent value="legal" className="space-y-6">
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
-                  <CardTitle className="text-lg text-primary">Правен статус</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-primary">
+                    Правен статус
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <dl className="space-y-4">
@@ -476,12 +540,13 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="location">
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-primary/10 shadow-sm">
+            <TabsContent value="location" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Адрес и локация</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Адрес и локация
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-lg font-medium mb-4">{analysis.locationInfo.address}</p>
@@ -500,10 +565,11 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
                     )}
                   </CardContent>
                 </Card>
-
-                <Card className="border-primary/10 shadow-sm">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Инфраструктура</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Инфраструктура
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -526,48 +592,50 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
                 </Card>
               </div>
             </TabsContent>
-
-            <TabsContent value="market">
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-primary/10 shadow-sm">
+            <TabsContent value="market" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Пазарни данни</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Пазарни данни
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <dl className="space-y-2">
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Текуща стойност</dt>
-                        <dd className="font-medium text-lg">€{analysis.marketAnalysis.currentValue.toLocaleString()}</dd>
+                    <dl className="space-y-4">
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Текуща стойност</dt>
+                        <dd className="text-lg font-semibold">€{analysis.marketAnalysis.currentValue.toLocaleString()}</dd>
                       </div>
-                      <div className="flex justify-between items-center py-2">
-                        <dt className="text-gray-600">Цена на кв.м.</dt>
-                        <dd className="font-medium text-lg">€{analysis.marketAnalysis.pricePerSqm.toLocaleString()}</dd>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Цена на кв.м.</dt>
+                        <dd className="text-lg font-semibold">€{analysis.marketAnalysis.pricePerSqm.toLocaleString()}</dd>
                       </div>
                     </dl>
                   </CardContent>
                 </Card>
-
-                <Card className="border-primary/10 shadow-sm">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Тенденции</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-primary">
+                      Тенденции
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <dl className="space-y-2">
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Годишно изменение</dt>
-                        <dd className={`font-medium ${analysis.marketAnalysis.marketTrends.yearly >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    <dl className="space-y-4">
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Годишно изменение</dt>
+                        <dd className={`text-lg font-semibold ${analysis.marketAnalysis.marketTrends.yearly >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {analysis.marketAnalysis.marketTrends.yearly}%
                         </dd>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <dt className="text-gray-600">Тримесечно изменение</dt>
-                        <dd className={`font-medium ${analysis.marketAnalysis.marketTrends.quarterly >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Тримесечно изменение</dt>
+                        <dd className={`text-lg font-semibold ${analysis.marketAnalysis.marketTrends.quarterly >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {analysis.marketAnalysis.marketTrends.quarterly}%
                         </dd>
                       </div>
-                      <div className="flex justify-between items-center py-2">
-                        <dt className="text-gray-600">Месечно изменение</dt>
-                        <dd className={`font-medium ${analysis.marketAnalysis.marketTrends.monthly >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                        <dt className="text-gray-600 font-medium">Месечно изменение</dt>
+                        <dd className={`text-lg font-semibold ${analysis.marketAnalysis.marketTrends.monthly >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {analysis.marketAnalysis.marketTrends.monthly}%
                         </dd>
                       </div>
@@ -575,10 +643,11 @@ const DocumentAnalysisSection = ({ analysis, documents, onEdit }: {
                   </CardContent>
                 </Card>
               </div>
-
-              <Card className="mt-4 border-primary/10 shadow-sm">
+              <Card className="mt-4 border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
-                  <CardTitle className="text-lg text-primary">Сравними имоти в района</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-primary">
+                    Сравними имоти в района
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -671,17 +740,7 @@ export default function Step3() {
     const updatedAnalysis = { ...analysis };
     updatedAnalysis.propertyDetails = { ...updatedAnalysis.propertyDetails, ...data };
     setAnalysis(updatedAnalysis);
-    //Re-calculate estimatedValue here based on updated data
-    //Example:
-    const updatedEstimatedValue = calculatePropertyValue({ location: data.address }, {
-      squareMeters: data.area,
-      constructionYear: data.constructionYear,
-      constructionType: data.constructionType,
-    }).then(result => {
-        setAnalysis(prevAnalysis => ({...prevAnalysis, estimatedValue: result.estimatedValue}))
-    });
   };
-
 
   useEffect(() => {
     if (!propertyId) {
@@ -730,7 +789,7 @@ export default function Step3() {
           toast({
             title: "Грешка при обработка на данните",
             description: "Моля, опитайте отново",
-            variant: "destructive"
+            variant: "destructive",
           });
         }
       }
@@ -748,11 +807,11 @@ export default function Step3() {
           },
           priceHistory: Array.from({ length: 12 }).map((_, i) => ({
             date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
-            value: 250000
+            value: 250000 
           })),
           similarProperties: Array.from({ length: 5 }).map(() => ({
             price: 230000,
-            distance: 2,
+            distance: 2,    
             features: ['feature1', 'feature2'],
             prediction: {
               oneYear: 260000,
@@ -791,8 +850,8 @@ export default function Step3() {
             },
             investmentScenarios: {
               conservative: { returnRate: 4, totalReturn: 300000, timeline: 5 },
-              moderate: { returnRate: 6, totalReturn: 337500, timeline: 5 },
-              aggressive: { returnRate: 8, totalReturn: 375000, timeline: 5 }
+              moderate: { returnRate: 6, totalReturn: 350000, timeline: 5 },
+              aggressive: { returnRate: 8, totalReturn: 400000, timeline: 5 }
             }
           },
           neighborhoodAnalysis: {
@@ -800,158 +859,56 @@ export default function Step3() {
             amenities: [
               { type: 'Транспорт', distance: 0.5, impact: 80 },
               { type: 'Училища', distance: 1.0, impact: 90 },
-              { type: 'Магазини', distance: 0.2, impact: 85 },
-              { type: 'Паркове', distance: 0.8, impact: 75 }
+              { type: 'Магазини', distance: 0.3, impact: 85 }
             ],
-            development: { planned: ['Метро', 'Парк'], impact: 10 },
-            demographics: { population: 20000, growth: 2.0, income: 65000 }
+            development: {
+              planned: ['Нова метростанция', 'Търговски център'],
+              impact: 15
+            },
+            demographics: {
+              population: 25000,
+              growth: 3.5,
+              income: 65000
+            }
           }
         });
+
         setLoading(false);
       }, 1500);
 
     } catch (error) {
-      console.error('Error in Step3:', error);
-      setError('Възникна грешка при зареждане на данните');
+      console.error('Error loading data:', error);
+      setError('Грешка при зареждане на данните');
       setLoading(false);
     }
-  }, [propertyId, navigate, propertyType, params]);
+  }, [navigate, propertyId]);
 
-  const getRoomTypes = () => {
-    switch (propertyType) {
-      case 'apartment':
-      case 'house':
-      case 'villa':
-        return RESIDENTIAL_ROOM_TYPES;
-      case 'industrial':
-        return INDUSTRIAL_ROOM_TYPES;
-      case 'agricultural':
-        return AGRICULTURAL_ROOM_TYPES;
-      default:
-        return [];
-    }
-  };
-
-  const generatePDF = async () => {
-    try {
-      if (analysis) {
-        const doc = new jsPDF('p', 'mm', 'a4');
-        doc.setFontSize(24);
-        doc.setTextColor(0, 51, 102);
-        doc.text('Професионален анализ на имот', 20, 30);
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Изготвено от Homiq', 20, 45);
-        doc.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 55);
-
-        doc.addPage();
-        doc.setFontSize(20);
-        doc.text('Оценка на стойността', 20, 20);
-        doc.setFontSize(16);
-        doc.text(`€${analysis.estimatedValue.toLocaleString()}`,20, 35);doc.addPage();
-        doc.setFontSize(20);
-        doc.text('Инвестиционен анализ', 20, 20);
-        doc.setFontSize(12);
-        const investmentData = [
-          { metric: 'Очаквана възвръщаемост', value: `${analysis.investmentMetrics.roi.toFixed(1)}%` },
-          { metric: 'Наем (месечно)', value: `€${analysis.investmentMetrics.cashFlow.monthly}` },
-          { metric: 'Наем (годишно)', value: `€${analysis.investmentMetrics.cashFlow.annual}` },
-          { metric: 'Период на изплащане', value: `${analysis.investmentMetrics.breakeven} месеца` },
-          { metric: 'Очаквано поскъпване', value: `${analysis.investmentMetrics.appreciation.toFixed(1)}%` },
-          { metric: 'Доход от наем', value: `${analysis.investmentMetrics.rentalYield.toFixed(1)}%` },
-        ];
-        autoTable(doc, {
-          head: [['Метрика', 'Стойност']],
-          body: investmentData.map(item => [item.metric, item.value]),
-          startY: 40
-        });
-
-        doc.addPage();
-        doc.setFontSize(20);
-        doc.text('Оценка на риска', 20, 20);
-        doc.setFontSize(12);
-        const riskData = [
-          { factor: 'Обща оценка на риска', value: `${analysis.riskAssessment.score}/100` },
-          ...analysis.riskAssessment.factors.map(factor => ({ factor: factor.name, value: `${factor.impact}% ${factor.details ? `(${factor.details})` : ''}` })),
-          { factor: 'Пазарна волатилност', value: `${analysis.riskAssessment.marketVolatility}%` },
-          { factor: 'Лихвени проценти', value: `${analysis.riskAssessment.economicFactors.interestRates}%` },
-          { factor: 'Икономически растеж', value: `${analysis.riskAssessment.economicFactors.economicGrowth}%` },
-          { factor: 'Инфлация', value: `${analysis.riskAssessment.economicFactors.inflation}%` },
-        ];
-
-        autoTable(doc, {
-          head: [['Фактор', 'Стойност']],
-          body: riskData.map(item => [item.factor, item.value]),
-          startY: 40
-        });
-
-        doc.addPage();
-        doc.setFontSize(20);
-        doc.text('Анализ на района', 20, 20);
-        doc.setFontSize(12);
-        const neighborhoodData = [
-          { item: 'Оценка на района', value: `${analysis.neighborhoodAnalysis.score}/100` },
-          ...analysis.neighborhoodAnalysis.amenities.map(amenity => ({ item: amenity.type, value: `${amenity.distance}км (Влияние: ${amenity.impact}%)` })),
-          { item: 'Планирано развитие', value: analysis.neighborhoodAnalysis.development.planned.join(', ') },
-          { item: 'Влияние на развитието', value: `${analysis.neighborhoodAnalysis.development.impact}%` },
-          { item: 'Население', value: analysis.neighborhoodAnalysis.demographics.population },
-          { item: 'Растеж на населението', value: `${analysis.neighborhoodAnalysis.demographics.growth}%` },
-          { item: 'Доходи', value: analysis.neighborhoodAnalysis.demographics.income },
-        ];
-        autoTable(doc, {
-          head: [['Фактор', 'Стойност']],
-          body: neighborhoodData.map(item => [item.item, item.value]),
-          startY: 40
-        });
-
-
-        doc.save('homiq-оценка.pdf');
-        toast({
-          title: "PDF генериран успешно",
-          description: "Можете да изтеглите оценката във формат PDF.",
-        });
-      } else {
-        toast({
-          title: "Грешка",
-          description: "Няма данни за генериране на PDF.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Грешка при генериране на PDF",
-        description: "Моля, опитайте отново.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const shareEvaluation = async () => {
-    try {
-      await navigator.share({
-        title: 'Оценка на имот',
-        text: `Оценена стойност на имота: €${analysis?.estimatedValue.toLocaleString() || 0}`,
-        url: window.location.href
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Progress value={30} className="w-60 h-2 mb-4" />
+          <p className="text-muted-foreground">Зареждане на данни...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-[400px] text-center">
           <CardHeader>
             <CardTitle className="text-red-500">Грешка</CardTitle>
           </CardHeader>
           <CardContent>
             <p>{error}</p>
             <Button
-              className="mt-4"
+              variant="outline"
               onClick={() => navigate('/evaluation/step1')}
+              className="mt-4"
             >
-              Започнете отначало
+              Към начало
             </Button>
           </CardContent>
         </Card>
@@ -959,390 +916,307 @@ export default function Step3() {
     );
   }
 
+  if (!analysis) {
+    return null;
+  }
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+
+    // Title page
+    doc.setFontSize(20);
+    doc.text('Оценка на стойността', 20, 20);
+    doc.setFontSize(16);
+    doc.text(`€${analysis.estimatedValue.toLocaleString()}`, 20, 35);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Изготвено от Homiq', 20, 45);
+    doc.text(`Дата: ${format(new Date(), 'dd.MM.yyyy')}`, 20, 55);
+
+    doc.addPage();
+    doc.setFontSize(20);
+    doc.text('Инвестиционен анализ', 20, 20);
+    doc.setFontSize(12);
+    doc.text('ROI: ' + analysis.investmentMetrics.roi + '%', 20, 40);
+    doc.text('Период на изплащане: ' + analysis.investmentMetrics.breakeven + ' месеца', 20, 50);
+    doc.text('Очаквана годишна възвръщаемост: ' + analysis.investmentMetrics.appreciation + '%', 20, 60);
+
+    doc.addPage();
+    doc.setFontSize(20);
+    doc.text('Рискова оценка', 20, 20);
+    doc.setFontSize(12);
+
+    // Risk factors table
+    const riskData = analysis.riskAssessment.factors.map(factor => [
+      factor.name,
+      factor.impact + '%',
+      factor.details || ''
+    ]);
+
+    (doc as any).autoTable({
+      startY: 30,
+      head: [['Фактор', 'Влияние', 'Детайли']],
+      body: riskData
+    });
+
+    doc.addPage();
+    doc.setFontSize(20);
+    doc.text('Пазарен анализ', 20, 20);
+    doc.setFontSize(12);
+    doc.text('Текуща пазарна стойност: €' + analysis.estimatedValue.toLocaleString(), 20, 40);
+    doc.text('Пазарна волатилност: ' + analysis.riskAssessment.marketVolatility + '%', 20, 50);
+    doc.text('Лихвени проценти: ' + analysis.riskAssessment.economicFactors.interestRates + '%', 20, 60);
+    doc.text('Икономически растеж: ' + analysis.riskAssessment.economicFactors.economicGrowth + '%', 20, 70);
+    doc.text('Инфлация: ' + analysis.riskAssessment.economicFactors.inflation + '%', 20, 80);
+
+    // Market trends table
+    const marketData = [
+      ['1 година', `€${analysis.similarProperties[0].prediction.oneYear.toLocaleString()}`],
+      ['3 години', `€${analysis.similarProperties[0].prediction.threeYears.toLocaleString()}`],
+      ['5 години', `€${analysis.similarProperties[0].prediction.fiveYears.toLocaleString()}`]
+    ];
+
+    (doc as any).autoTable({
+      startY: 90,
+      head: [['Период', 'Прогнозна стойност']],
+      body: marketData
+    });
+
+    doc.save('property-analysis.pdf');
+  };
+
+  const getRoomTypes = () => {
+    switch (propertyType) {
+      case 'industrial':
+        return INDUSTRIAL_ROOM_TYPES;
+      case 'agricultural':
+        return AGRICULTURAL_ROOM_TYPES;
+      default:
+        return RESIDENTIAL_ROOM_TYPES;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <ProgressSteps currentStep={3} steps={STEPS} />
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-8"
+        >
+          <header className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Оценка на имота
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Подробен анализ и оценка базирани на предоставените данни и пазарни тенденции
+            </p>
+          </header>
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div
-            className="lg:col-span-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {propertyData && (
-              <DocumentAnalysisSection
-                analysis={mockDocumentAnalysis}
-                documents={propertyData.documents || []}
-                onEdit={handleEdit}
-              />
-            )}
+          <ProgressSteps steps={STEPS} currentStep={2} className="mb-12" />
 
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              {propertyData && (
+                <DocumentAnalysisSection
+                  analysis={mockDocumentAnalysis}
+                  documents={propertyData.documents || []}
+                  onEdit={handleEdit}
+                />
+              )}
 
-            {propertyData?.roomPhotos && propertyData.roomPhotos.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Снимки по помещения</CardTitle>
-                  <CardDescription>
-                    {propertyType === 'industrial' ? 'Снимки на производствените зони' :
-                      propertyType === 'agricultural' ? 'Снимки на земеделските площи' :
-                        'Снимки на помещенията'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {propertyData.roomPhotos.map((room: any) => {
-                      const roomType = getRoomTypes().find(rt => rt.id === room.roomType);
-                      if (!roomType) return null;
+              {propertyData?.roomPhotos && propertyData.roomPhotos.length > 0 && (
+                <Card className="overflow-hidden border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                    <CardTitle className="flex items-center gap-2">
+                      <Images className="h-5 w-5 text-primary" />
+                      Снимки по помещения
+                    </CardTitle>
+                    <CardDescription>
+                      {propertyType === 'industrial' ? 'Снимки на производствените зони' :
+                        propertyType === 'agricultural' ? 'Снимки на земеделските площи' :
+                          'Снимки на помещенията'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {propertyData.roomPhotos.map((room: any) => {
+                        const roomType = getRoomTypes().find(rt => rt.id === room.roomType);
+                        if (!roomType) return null;
 
-                      const Icon = roomType.icon;
+                        const Icon = roomType.icon;
 
-                      return (
-                        <div key={room.roomType} className="border rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Icon className="h-5 w-5" />
-                            <h3 className="font-medium">{roomType.name}</h3>
-                          </div>
-                          {room.description && (
-                            <p className="text-sm text-gray-600 mb-2">{room.description}</p>
-                          )}
-                          <div className="grid grid-cols-2 gap-2">
-                            {room.photos.map((photo: string, index: number) => (
-                              <img
-                                key={index}
-                                src={photo}
-                                alt={`${roomType.name} ${index + 1}`}
-                                className="w-full h-32 object-cover rounded"
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="max-w-3xl mx-auto">
-              <CardHeader>
-                <CardTitle>Резултат от оценката</CardTitle>
-                <CardDescription>
-                  {evaluationType === 'quick'
-                    ? 'Бърза оценка базирана на локация и основна информация'
-                    : 'Професионален анализ базиран на всички предоставени документи'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AnimatePresence mode="wait">
-                  {loading ? (
-                    <motion.div
-                      key="loading"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="space-y-4 text-center py-8"
-                    >
-                      <Progress value={45} className="w-full h-2" />
-                      <p>Изчисляваме стойността на имота...</p>
-                      <p className="text-sm text-gray-500">
-                        Анализираме всички фактори за точна оценка
-                      </p>
-                    </motion.div>
-                  ) : analysis ? (
-                    <motion.div
-                      key="results"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="space-y-8"
-                    >
-                      <motion.div
-                        initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
-                        className="text-center"
-                      >
-                        <h3 className="text-3xl font-bold text-[#003366]">
-                          €{analysis.estimatedValue.toLocaleString()}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Оценена пазарна стойност
-                        </p>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="grid grid-cols-2 gap-4"
-                      >
-                        <Card className="p-4">
-                          <div className="flex items-center gap-3">
-                            <MapPin className="h-5 w-5 text-blue-500" />
-                            <div className="flex-1">
-                              <p className="font-medium">Локация</p>
-                              <Progress value={analysis.factors.location} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">
-                                {analysis.factors.location}/100
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-
-                        <Card className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Home className="h-5 w-5 text-green-500" />
-                            <div className="flex-1">
-                              <p className="font-medium">Състояние</p>
-                              <Progress value={analysis.factors.condition} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">
-                                {analysis.factors.condition}/100
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-
-                        <Card className="p-4">
-                          <div className="flex items-center gap-3">
-                            <TrendingUp className="h-5 w-5 text-purple-500" />
-                            <div className="flex-1">
-                              <p className="font-medium">Пазар</p>
-                              <Progress value={analysis.factors.market} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">
-                                {analysis.factors.market}/100
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-
-                        <Card className="p-4">
-                          <div className="flex items-center gap-3">
-                            <ArrowUpRight className="h-5 w-5 text-orange-500" />
-                            <div className="flex-1">
-                              <p className="font-medium">Потенциал</p>
-                              <Progress value={analysis.factors.potential} className="h-2 mt-2" />
-                              <p className="text-sm text-gray-500 mt-1">
-                                {analysis.factors.potential}/100
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-                      </motion.div>
-
-                      <InvestmentScenarios scenarios={analysis.investmentMetrics.investmentScenarios} />
-                      <NeighborhoodAnalysis analysis={analysis.neighborhoodAnalysis} />
-
-                      <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                      >
-                        <Card className="p-6">
-                          <h4 className="font-medium mb-4">Прогноза за развитие на цената</h4>
-                          <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={analysis.forecast}>
-                                <defs>
-                                  <linearGradient id="optimisticGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#4CAF50" stopOpacity={0} />
-                                  </linearGradient>
-                                  <linearGradient id="conservativeGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#003366" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#003366" stopOpacity={0} />
-                                  </linearGradient>
-                                  <linearGradient id="marketTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#FF9800" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#FF9800" stopOpacity={0} />
-                                  </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis
-                                  dataKey="date"
-                                  tick={{ fontSize: 12 }}
-                                  interval={2}
-                                />
-                                <YAxis />
-                                <Tooltip />
-                                <Area
-                                  type="monotone"
-                                  dataKey="optimistic"
-                                  stroke="#4CAF50"
-                                  fill="url(#optimisticGradient)"
-                                  strokeWidth={2}
-                                  name="Оптимистична"
-                                />
-                                <Area
-                                  type="monotone"
-                                  dataKey="conservative"
-                                  stroke="#003366"
-                                  fill="url(#conservativeGradient)"
-                                  strokeWidth={2}
-                                  name="Консервативна"
-                                />
-                                <Area
-                                  type="monotone"
-                                  dataKey="marketTrend"
-                                  stroke="#FF9800"
-                                  fill="url(#marketTrendGradient)"
-                                  strokeWidth={2}
-                                  name="Пазарен тренд"
-                                />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </Card>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                      >
-                        <Card className="p-6">
-                          <h4 className="font-medium mb-4">Инвестиционни метрики</h4>
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Banknote className="h-5 w-5 text-green-500" />
-                                <span>Очаквана възвръщаемост</span>
+                        return (
+                          <motion.div
+                            key={room.roomType}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="group relative overflow-hidden rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300"
+                          >
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 rounded-full bg-primary/10">
+                                <Icon className="h-5 w-5 text-primary" />
                               </div>
-                              <span className="font-medium">{analysis.investmentMetrics.roi.toFixed(1)}%</span>
+                              <h3 className="font-medium text-lg">{roomType.name}</h3>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-5 w-5 text-blue-500" />
-                                <span>Период на изплащане</span>
-                              </div>
-                              <span className="font-medium">{analysis.investmentMetrics.breakeven} месеца</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-purple-500" />
-                                <span>Очаквано поскъпване</span>
-                              </div>
-                              <span className="font-medium">{analysis.investmentMetrics.appreciation.toFixed(1)}%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-purple-500" />
-                                <span>Доход от наем</span>
-                              </div>
-                              <span className="font-medium">{analysis.investmentMetrics.rentalYield.toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </Card>
-
-                        <Card className="p-6">
-                          <h4 className="font-medium mb-4">Оценка на риска</h4>
-                          <div className="space-y-4">
-                            {analysis.riskAssessment.factors.map((factor, index) => (
-                              <div key={index} className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                  <span>{factor.name}</span>
-                                  <span className="font-medium">{factor.impact}% {factor.details ? `(${factor.details})` : ''}</span>
+                            {room.description && (
+                              <p className="text-gray-600 mb-4">{room.description}</p>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                              {room.photos.map((photo: any, index: number) => (
+                                <div
+                                  key={index}
+                                  className="aspect-square rounded-lg overflow-hidden border border-gray-100"
+                                >
+                                  <img
+                                    src={photo.url}
+                                    alt={`${roomType.name} снимка ${index + 1}`}
+                                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+                                  />
                                 </div>
-                                <Progress value={factor.impact} className="h-2" />
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="flex flex-col sm:flex-row gap-4"
-                      >
-                        <Button onClick={generatePDF}
-                          className="flex-1 bg-[#4CAF50] hover:bg-[#45a049]"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Изтегли PDF отчет
-                        </Button>
-
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" className="flex-1">
-                              <Share2 className="h-4 w-4 mr-2" />
-                              Сподели оценката
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogTitle>Сподели оценката</DialogTitle>
-                            <DialogDescription>
-                              Изберете как искате да споделите оценката
-                            </DialogDescription>
-                            <div className="grid gap-4 py-4">
-                              <Button onClick={shareEvaluation} className="w-full">
-                                Сподели чрез системата за споделяне
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(window.location.href);
-                                  toast({
-                                    title: "Копирано",
-                                    description: "Линкът е копиран в клипборда",
-                                  });
-                                }}
-                                className="w-full"
-                              >
-                                Копирай линк
-                              </Button>
+                              ))}
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                      </motion.div>
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => navigate("/evaluation/step2")}>
-                  Назад
-                </Button>
-                <Button onClick={() => navigate("/")} className="bg-[#003366] hover:bg-[#002244]">
-                  Завърши
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-          <div className="hidden lg:block space-y-4">
-            <InstructionCard
-              icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="Детайли за оценката"
-              description={
-                evaluationType === 'quick' ?
-                  "Бърза оценка базирана на локация и основна информация за имота" :
-                  "Пълен анализ базиран на всички предоставени документи и снимки"
-              }
-            />
+            <div className="lg:col-span-1">
+              <div className="sticky top-8 space-y-6">
+                <Card className="overflow-hidden border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                    <CardTitle>Резултат от оценката</CardTitle>
+                    <CardDescription>
+                      {evaluationType === 'quick'
+                        ? 'Бърза оценка базирана на локация и основна информация'
+                        : 'Професионален анализ базиран на всички предоставени документи'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <motion.div
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      className="text-center"
+                    >
+                      <h3 className="text-3xl font-bold text-primary mb-2">
+                        €{analysis.estimatedValue.toLocaleString()}
+                      </h3>
+                      <p className="text-gray-600">Пазарна стойност</p>
+                    </motion.div>
+
+                    <div className="mt-8 space-y-6">
+                      {Object.entries(analysis.factors).map(([key, value]) => (
+                        <div key={key} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 capitalize">
+                              {key === 'location' ? 'Локация' :
+                               key === 'condition' ? 'Състояние' :
+                               key === 'market' ? 'Пазар' : 'Потенциал'}
+                            </span>
+                            <span className="font-medium">{value}%</span>
+                          </div>
+                          <Progress value={value} className="h-2" />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                      <Button
+                        onClick={generatePDF}
+                        className="flex-1 bg-primary"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Изтегли PDF отчет
+                      </Button>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Сподели
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogTitle>Сподели оценката</DialogTitle>
+                          <DialogDescription>
+                            Изберете начин за споделяне на оценката
+                          </DialogDescription>
+                          <div className="grid grid-cols-2 gap-4 py-4">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                // Copy link logic
+                                toast({
+                                  title: "Връзката е копирана",
+                                  description: "Можете да я споделите с други",
+                                });
+                              }}
+                            >
+                              Копирай връзка
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                // Email share logic
+                                toast({
+                                  title: "Изпратено по имейл",
+                                  description: "Оценката е споделена успешно",
+                                });
+                              }}
+                            >
+                              Изпрати по имейл
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="overflow-hidden border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                    <CardTitle>Помощ при оценката</CardTitle>
+                    <CardDescription>
+                      Информация за процеса на оценяване
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <InstructionCard
+                        icon={HelpCircle}
+                        title="Как се изчислява оценката?"
+                        description="Оценката се базира на множество фактори, включително локация, състояние, пазарни тенденции и потенциал за развитие."
+                      />
+                      <InstructionCard
+                        icon={Info}
+                        title="Точност на оценката"
+                        description="Точността зависи от предоставените данни и текущите пазарни условия."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-        </div>
-      </main>
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            className="fixed bottom-4 right-4 md:hidden rounded-full h-12 w-12 bg-primary shadow-lg"
-            size="icon"
-          >
-            <HelpCircle className="h-6 w-6" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogTitle>Как да разчетете оценката?</DialogTitle>
-          <DialogDescription>
-            Оценката включва детайлен анализ на множество фактори, прогнози за развитие и инвестиционни метрики.
-            Разгледайте внимателно всички показатели за по-добро разбиране на стойността и потенциала на имота.
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
+        </motion.div>
+      </div>
     </div>
   );
 }
 
 function InvestmentScenarios({ scenarios }: { scenarios: PropertyAnalysis['investmentMetrics']['investmentScenarios'] }) {
   return (
-    <Card className="p-6">
+    <Card className="p-6 border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
       <h4 className="font-medium mb-4">Инвестиционни сценарии</h4>
       <div className="space-y-4">
         {Object.entries(scenarios).map(([scenario, data]) => (
@@ -1360,7 +1234,7 @@ function InvestmentScenarios({ scenarios }: { scenarios: PropertyAnalysis['inves
 
 function NeighborhoodAnalysis({ analysis }: { analysis: PropertyAnalysis['neighborhoodAnalysis'] }) {
   return (
-    <Card className="p-6">
+    <Card className="p-6 border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-gray-50">
       <h4 className="font-medium mb-4">Анализ на квартала</h4>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
