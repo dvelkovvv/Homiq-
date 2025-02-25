@@ -162,7 +162,7 @@ export default function Step1() {
         title: "Успешно създаден имот",
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
-      navigate(`/evaluation/step2?propertyId=${property.id}`);
+      navigate(`/evaluation/step2?propertyId=${property.id}&rooms=${data.rooms || 0}`);
     } catch (error: any) {
       console.error('Error:', error);
       toast({
