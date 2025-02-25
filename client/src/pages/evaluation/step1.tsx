@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useLocation, useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPropertySchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { GoogleMaps } from "@/components/google-maps";
-import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
 import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Home, Building2, Warehouse, Trees, Factory, Info, HelpCircle } from "lucide-react";
@@ -54,7 +53,7 @@ const STEPS = [
 ];
 
 export default function Step1() {
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
 
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
@@ -153,7 +152,7 @@ export default function Step1() {
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      navigate(`/evaluation/step2?type=${data.type}&rooms=${data.rooms || 0}`);
+      setLocation(`/evaluation/step2?type=${data.type}&rooms=${data.rooms || 0}`);
     } catch (error: any) {
       console.error('Error:', error);
       toast({
@@ -570,7 +569,7 @@ export default function Step1() {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => navigate("/")}>
+                  <Button variant="outline" onClick={() => setLocation("/")}>
                     Назад
                   </Button>
                   <Button
