@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -68,6 +68,15 @@ export default function Step3() {
     );
   }
 
+  const formatCurrency = (value: number | string) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    return numValue.toLocaleString('bg-BG', {
+      style: 'currency',
+      currency: evaluation.currency || 'EUR',
+      maximumFractionDigits: 0
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8">
       <div className="container mx-auto px-4 max-w-7xl">
@@ -86,14 +95,14 @@ export default function Step3() {
               <CardContent>
                 <div className="text-center">
                   <p className="text-3xl font-bold text-primary">
-                    €{evaluation.estimatedValue.toLocaleString()}
+                    {formatCurrency(evaluation.estimatedValue)}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Приблизителна пазарна стойност
                   </p>
                   <div className="mt-4">
                     <p className="text-sm text-gray-600">
-                      Точност на оценката: {Math.round(evaluation.confidence * 100)}%
+                      Точност на оценката: {Math.round(Number(evaluation.confidence) * 100)}%
                     </p>
                     <p className="text-sm text-gray-600">
                       Тип оценка: {evaluation.evaluationType === 'quick' ? 'Бърза' : 'Лицензирана'}
