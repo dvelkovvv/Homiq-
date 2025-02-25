@@ -219,9 +219,9 @@ export default function Step3() {
               </Card>
             </motion.div>
 
-            <Tabs defaultValue="overview" className="space-y-6">
-              <div className="sticky top-16 z-10 bg-white/80 backdrop-blur-sm pb-4 border-b">
-                <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-4 p-1 bg-gradient-to-r from-gray-50 to-white rounded-xl">
+            <Tabs defaultValue="overview" className="space-y-8">
+              <div className="bg-gradient-to-r from-gray-50 to-white p-4 rounded-xl border shadow-sm">
+                <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                   <TabsTrigger 
                     value="overview" 
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/10 data-[state=active]:to-primary/5 data-[state=active]:text-primary hover:bg-gray-50 transition-all"
@@ -683,7 +683,7 @@ export default function Step3() {
                                           <p className="text-sm font-medium">Нотариус</p>
                                           <p className="text-sm text-gray-600">{doc.extractedData.notaryName}</p>
                                         </div>
-                                      </div>
+                                      </</div>
                                     )}
 
                                     {doc.extractedData?.boundaries && doc.extractedData.boundaries.length > 0 && (
