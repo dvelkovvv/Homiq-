@@ -1,5 +1,5 @@
-import { type Property, type InsertProperty, type Evaluation, type InsertEvaluation, type Achievement } from "@shared/schema";
-import { properties, evaluations, achievements } from "@shared/schema";
+import { type Property, type InsertProperty, type Evaluation, type InsertEvaluation } from "@shared/schema";
+import { properties, evaluations } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -9,7 +9,6 @@ export interface IStorage {
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
   getEvaluation(id: number): Promise<Evaluation | undefined>;
   getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]>;
-  getAchievements(): Promise<Achievement[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -47,10 +46,6 @@ export class DatabaseStorage implements IStorage {
       ...evaluation,
       property,
     }));
-  }
-
-  async getAchievements(): Promise<Achievement[]> {
-    return db.select().from(achievements);
   }
 }
 
