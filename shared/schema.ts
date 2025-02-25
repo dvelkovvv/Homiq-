@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, jsonb, timestamp, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -16,17 +16,6 @@ export const properties = pgTable("properties", {
   heating: text("heating"),
   parking: boolean("parking"),
   photos: text("photos").array().notNull().default([]),
-  documents: jsonb("documents").$type<Array<{
-    type: 'sketch' | 'notary_act' | 'tax_assessment' | 'other';
-    name: string;
-    url: string;
-    extractedData?: Record<string, any>;
-  }>>().notNull().default([]),
-  roomPhotos: jsonb("room_photos").$type<Array<{
-    roomType: string;
-    description: string;
-    photos: string[];
-  }>>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -34,13 +23,12 @@ export const properties = pgTable("properties", {
 export const evaluations = pgTable("evaluations", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull().references(() => properties.id),
-  estimatedValue: numeric("estimated_value").notNull(),
-  confidence: numeric("confidence").notNull(),
+  estimatedValue: integer("estimated_value").notNull(),
+  confidence: integer("confidence").notNull(),
   currency: text("currency").notNull().default("EUR"),
   evaluationType: text("evaluation_type").notNull(),
   status: text("status").notNull().default("pending"),
   notes: text("notes"),
-  evaluationDate: timestamp("evaluation_date").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -58,13 +46,11 @@ export const insertPropertySchema = createInsertSchema(properties, {
   id: true,
   createdAt: true,
   photos: true,
-  documents: true,
-  roomPhotos: true
 });
 
 export const insertEvaluationSchema = createInsertSchema(evaluations, {
   estimatedValue: z.number().min(0),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(100),
   currency: z.string().default("EUR"),
   evaluationType: z.enum(["quick", "licensed"]),
   status: z.enum(["pending", "completed", "failed"]).default("pending"),
@@ -72,7 +58,6 @@ export const insertEvaluationSchema = createInsertSchema(evaluations, {
 }).omit({
   id: true,
   createdAt: true,
-  evaluationDate: true
 });
 
 // Types for TypeScript

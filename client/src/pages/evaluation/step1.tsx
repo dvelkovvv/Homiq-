@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPropertySchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -54,6 +54,7 @@ const STEPS = [
 
 export default function Step1() {
   const [, setLocation] = useLocation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFields, setShowFields] = useState({
     rooms: false,
     floor: false,
@@ -141,7 +142,7 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      // Store form data in localStorage
+      setIsSubmitting(true);
       const formData = {
         ...data,
         submittedAt: new Date().toISOString()
@@ -154,8 +155,7 @@ export default function Step1() {
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      // Navigate to step 2
-      setLocation('/evaluation/step2');
+      window.location.href = '/evaluation/step2';
     } catch (error: any) {
       console.error('Error:', error);
       toast({
@@ -163,6 +163,8 @@ export default function Step1() {
         description: "Възникна проблем при запазването на данните. Моля, опитайте отново.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -572,15 +574,17 @@ export default function Step1() {
                 </Card>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setLocation("/")}>
-                    Назад
-                  </Button>
+                  <Link href="/">
+                    <Button variant="outline">
+                      Назад
+                    </Button>
+                  </Link>
                   <Button
                     type="submit"
                     className="bg-[#003366] hover:bg-[#002244]"
-                    disabled={form.formState.isSubmitting}
+                    disabled={isSubmitting}
                   >
-                    {form.formState.isSubmitting ? (
+                    {isSubmitting ? (
                       <>
                         <Spinner className="mr-2" />
                         Обработка...
