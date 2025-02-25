@@ -3,7 +3,20 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, FileText } from "lucide-react";
+import { 
+  HelpCircle, 
+  Image as ImageIcon, 
+  Download, 
+  X, 
+  Clock, 
+  CheckCircle, 
+  FileText,
+  Home,
+  Building2,
+  Store,
+  Warehouse,
+  LandPlot
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
@@ -37,24 +50,25 @@ const STEPS = [
   }
 ];
 
+// Обновени типове стаи с новите икони
 const RESIDENTIAL_ROOM_TYPES = [
-  { id: "entrance", name: "Входна врата", icon: DoorClosed },
-  { id: "kitchen", name: "Кухня", icon: Utensils },
-  { id: "living", name: "Хол", icon: Sofa },
-  { id: "bathroom", name: "Баня", icon: Bath },
-  { id: "bedroom", name: "Спалня", icon: Bed }
+  { id: "entrance", name: "Входна врата", icon: Home },
+  { id: "kitchen", name: "Кухня", icon: Store },
+  { id: "living", name: "Хол", icon: Building2 },
+  { id: "bathroom", name: "Баня", icon: Home },
+  { id: "bedroom", name: "Спалня", icon: Building2 }
 ];
 
 const INDUSTRIAL_ROOM_TYPES = [
-  { id: "production", name: "Производствена зона", icon: Factory },
+  { id: "production", name: "Производствена зона", icon: Store },
   { id: "storage", name: "Складова зона", icon: Warehouse },
   { id: "loading", name: "Товаро-разтоварна зона", icon: Warehouse },
-  { id: "office", name: "Офис част", icon: DoorClosed }
+  { id: "office", name: "Офис част", icon: Building2 }
 ];
 
 const AGRICULTURAL_ROOM_TYPES = [
-  { id: "field", name: "Обработваема земя", icon: Trees },
-  { id: "irrigation", name: "Напоителна система", icon: Factory },
+  { id: "field", name: "Обработваема земя", icon: LandPlot },
+  { id: "irrigation", name: "Напоителна система", icon: Store },
   { id: "storage", name: "Складови съоръжения", icon: Warehouse }
 ];
 
@@ -335,7 +349,7 @@ export default function Step2() {
                           Подробен анализ от лицензиран оценител
                         </li>
                         <li className="flex items-center gap-2 text-sm text-green-600">
-                          <DoorClosed className="h-4 w-4" />
+                          <Home className="h-4 w-4" />
                           Оценка на всички помещения
                         </li>
                         <li className="flex items-center gap-2 text-sm text-green-600">
