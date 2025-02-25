@@ -44,8 +44,16 @@ const STEPS = [
 export default function Step3() {
   const [, navigate] = useLocation();
 
-  // Get property data from localStorage
-  const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+  // Get property data from localStorage with safer parsing
+  const propertyData = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('propertyData') || '{}');
+    } catch (e) {
+      console.error('Error parsing propertyData:', e);
+      return {};
+    }
+  })();
+
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
   const propertyType = propertyData.type || "apartment";
 
@@ -59,9 +67,7 @@ export default function Step3() {
     locationScore: 8.5,
     investmentRating: "A",
     yearlyAppreciation: 5.2,
-    comparableProperties: 12,
-    propertyType: propertyData.type || "apartment",
-    area: propertyData.squareMeters || 0
+    comparableProperties: 12
   };
 
   const formatCurrency = (value: number) => {
@@ -116,7 +122,7 @@ export default function Step3() {
             propertyData={{
               ...propertyData,
               ...mockEvaluation,
-              roomPhotos: propertyData.roomPhotos || []
+              roomPhotos: []  // Temporarily disable photos
             }}
             evaluationType={evaluationType}
           />
@@ -205,7 +211,7 @@ export default function Step3() {
                             <Home className="h-6 w-6 text-blue-400" />
                           </div>
                         </div>
-                        <p className="text-4xl font-bold">{mockEvaluation.area}м²</p>
+                        <p className="text-4xl font-bold">{propertyData.squareMeters || 0}м²</p>
                         <p className="text-sm text-gray-200">Площ</p>
                       </motion.div>
 
