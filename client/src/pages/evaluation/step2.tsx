@@ -181,29 +181,63 @@ export default function Step2() {
 
   const handleContinue = async () => {
     try {
+      // Prepare basic query parameters
+      const params = new URLSearchParams();
+      params.set('propertyId', propertyId!);
+      params.set('evaluationType', evaluationType);
+
+      // Store data in sessionStorage instead of URL params
+      const stepData = {
+        uploadedImages: uploadedImages.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        })),
+        uploadedDocuments: uploadedDocuments.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        })),
+        roomPhotos: roomPhotos.map(room => ({
+          roomType: room.roomType,
+          description: room.description,
+          photos: room.photos.map(photo => ({
+            name: photo.name,
+            size: photo.size,
+            type: photo.type,
+            lastModified: photo.lastModified
+          }))
+        })),
+        extractedData
+      };
+
+      // Store data in sessionStorage
+      sessionStorage.setItem('evaluationStepData', JSON.stringify(stepData));
+
+      // Upload files in background if needed
       const formData = new FormData();
       uploadedImages.forEach(file => formData.append('images', file));
       uploadedDocuments.forEach(file => formData.append('documents', file));
 
-      // Prepare room photos data
-      const roomPhotosData = roomPhotos.map(room => ({
-        roomType: room.roomType,
-        description: room.description,
-        photos: room.photos.map(photo => URL.createObjectURL(photo))
-      }));
-
-      const params = new URLSearchParams();
-      params.set('propertyId', propertyId!);
-      params.set('evaluationType', evaluationType);
-      params.set('roomPhotos', JSON.stringify(roomPhotosData));
-      if (extractedData) {
-        params.set('extractedData', JSON.stringify(extractedData));
+      try {
+        await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+      } catch (error) {
+        console.error('Upload error:', error);
+        // Continue anyway, as we have the files in sessionStorage
       }
+
+      // Navigate to next step
       navigate(`/evaluation/step3?${params.toString()}`);
     } catch (error) {
+      console.error('Navigation error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при качването на файловете.",
+        description: "Възникна проблем при преминаването към следващата стъпка.",
         variant: "destructive"
       });
     }

@@ -30,9 +30,11 @@ export default function Step3() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [, navigate] = useLocation();
+  const [evaluationData, setEvaluationData] = useState<any>(null);
 
   const params = new URLSearchParams(window.location.search);
   const propertyId = params.get('propertyId');
+  const evaluationType = params.get('evaluationType');
 
   useEffect(() => {
     if (!propertyId) {
@@ -40,10 +42,22 @@ export default function Step3() {
       return;
     }
 
-    // Симулираме зареждане
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    // Retrieve data from sessionStorage
+    try {
+      const stepData = sessionStorage.getItem('evaluationStepData');
+      if (stepData) {
+        const parsedData = JSON.parse(stepData);
+        setEvaluationData(parsedData);
+      }
+
+      // Simulate API call for evaluation
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+    } catch (error) {
+      console.error('Data retrieval error:', error);
+      setError('Възникна проблем при зареждането на данните.');
+    }
   }, [propertyId, navigate]);
 
   if (loading) {
