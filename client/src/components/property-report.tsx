@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable';
-import { Download, Share2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { FileText, Home, MapPin, Building2, User } from "lucide-react";
 
 interface PropertyReportProps {
   propertyData: any;
@@ -11,150 +8,172 @@ interface PropertyReportProps {
 }
 
 export function PropertyReport({ propertyData, evaluationType }: PropertyReportProps) {
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-
-  const generatePDF = async () => {
-    try {
-      setGeneratingPdf(true);
-      const doc = new jsPDF();
-
-      // Заглавна страница
-      doc.setFontSize(24);
-      doc.text("Доклад за оценка на имот", 105, 20, { align: "center" });
-      
-      doc.setFontSize(12);
-      doc.text(`Дата: ${new Date().toLocaleDateString('bg-BG')}`, 20, 40);
-      doc.text(`Тип оценка: ${evaluationType === 'quick' ? 'Бърза оценка' : 'Лицензирана оценка'}`, 20, 50);
-
-      // Основна информация
-      doc.addPage();
-      doc.setFontSize(16);
-      doc.text("1. Основна информация за имота", 20, 20);
-      
-      const basicInfo = [
-        ["Тип имот", propertyData.type === 'apartment' ? 'Апартамент' : 
-                     propertyData.type === 'house' ? 'Къща' : 
-                     propertyData.type === 'villa' ? 'Вила' : 'Земеделска земя'],
-        ["Площ", `${propertyData.squareMeters} кв.м`],
-        ["Адрес", propertyData.address],
-        ["Година на строителство", propertyData.constructionYear || 'Не е посочена'],
-        ["Етаж", propertyData.floor || 'Не е приложимо'],
-        ["Общо етажи", propertyData.totalFloors || 'Не е приложимо']
-      ];
-
-      autoTable(doc, {
-        startY: 30,
-        head: [["Характеристика", "Стойност"]],
-        body: basicInfo,
-        theme: 'striped',
-        styles: { fontSize: 12, cellPadding: 5 }
-      });
-
-      // Документи
-      if (propertyData.documents && propertyData.documents.length > 0) {
-        doc.addPage();
-        doc.setFontSize(16);
-        doc.text("2. Анализ на документите", 20, 20);
-
-        const documentsInfo = propertyData.documents.map((doc: any) => [
-          doc.type === 'notary_act' ? 'Нотариален акт' :
-          doc.type === 'sketch' ? 'Скица' : 'Данъчна оценка',
-          doc.extractedData?.documentDate || 'Няма дата',
-          doc.extractedData?.squareMeters ? `${doc.extractedData.squareMeters} кв.м` : '-'
-        ]);
-
-        autoTable(doc, {
-          startY: 30,
-          head: [["Тип документ", "Дата", "Площ"]],
-          body: documentsInfo,
-          theme: 'striped',
-          styles: { fontSize: 12, cellPadding: 5 }
-        });
-      }
-
-      // Снимки
-      if (propertyData.roomPhotos && propertyData.roomPhotos.length > 0) {
-        doc.addPage();
-        doc.setFontSize(16);
-        doc.text("3. Фотографии на помещенията", 20, 20);
-
-        const roomsInfo = propertyData.roomPhotos.map((room: any) => [
-          room.roomType === 'entrance' ? 'Входна врата' :
-          room.roomType === 'kitchen' ? 'Кухня' :
-          room.roomType === 'living' ? 'Хол' :
-          room.roomType === 'bathroom' ? 'Баня' : 'Спалня',
-          room.description,
-          `${room.photos.length} бр.`
-        ]);
-
-        autoTable(doc, {
-          startY: 30,
-          head: [["Помещение", "Описание", "Брой снимки"]],
-          body: roomsInfo,
-          theme: 'striped',
-          styles: { fontSize: 12, cellPadding: 5 }
-        });
-      }
-
-      // Оценка
-      doc.addPage();
-      doc.setFontSize(16);
-      doc.text("4. Оценка на имота", 20, 20);
-
-      const evaluationInfo = [
-        ["Приблизителна пазарна стойност", `€${propertyData.estimatedValue?.toLocaleString() || 'Не е изчислена'}`],
-        ["Точност на оценката", `${Math.round((propertyData.confidence || 0) * 100)}%`],
-        ["Инвестиционен рейтинг", propertyData.investmentRating || '-'],
-        ["Локация (от 10)", propertyData.locationScore?.toString() || '-']
-      ];
-
-      autoTable(doc, {
-        startY: 30,
-        head: [["Показател", "Стойност"]],
-        body: evaluationInfo,
-        theme: 'striped',
-        styles: { fontSize: 12, cellPadding: 5 }
-      });
-
-      // Запазване на PDF
-      doc.save(`property-report-${new Date().toISOString().split('T')[0]}.pdf`);
-
-      toast({
-        title: "Докладът е генериран успешно",
-        description: "PDF файлът е запазен на вашето устройство.",
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Грешка при генериране на доклада",
-        description: "Моля, опитайте отново.",
-        variant: "destructive"
-      });
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
-
   return (
-    <div className="flex gap-2">
-      <Button
-        onClick={generatePDF}
-        disabled={generatingPdf}
-        className="bg-[#003366] hover:bg-[#002244]"
-      >
-        {generatingPdf ? (
-          "Генериране..."
-        ) : (
-          <>
-            <Download className="mr-2 h-4 w-4" />
-            Изтегли доклад
-          </>
-        )}
-      </Button>
-      <Button variant="outline">
-        <Share2 className="mr-2 h-4 w-4" />
-        Сподели
-      </Button>
+    <div className="space-y-6 w-full">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Обобщен доклад за имота
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Основна информация */}
+            <div className="rounded-lg border p-4">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Home className="h-5 w-5 text-primary" />
+                Основна информация
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Тип имот</p>
+                  <p className="font-medium">
+                    {propertyData.type === 'apartment' ? 'Апартамент' :
+                     propertyData.type === 'house' ? 'Къща' :
+                     propertyData.type === 'villa' ? 'Вила' : 'Земеделска земя'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Площ</p>
+                  <p className="font-medium">{propertyData.squareMeters} кв.м</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Адрес</p>
+                  <p className="font-medium">{propertyData.address}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Година на строителство</p>
+                  <p className="font-medium">{propertyData.constructionYear || 'Не е посочена'}</p>
+                </div>
+                {propertyData.floor && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Етаж</p>
+                    <p className="font-medium">{propertyData.floor}</p>
+                  </div>
+                )}
+                {propertyData.totalFloors && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Общо етажи</p>
+                    <p className="font-medium">{propertyData.totalFloors}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Документи */}
+            {propertyData.documents && propertyData.documents.length > 0 && (
+              <div className="rounded-lg border p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Анализ на документите
+                </h3>
+                <div className="space-y-4">
+                  {propertyData.documents.map((doc: any, index: number) => (
+                    <div key={index} className="p-4 rounded-lg bg-accent/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="font-medium">
+                          {doc.type === 'notary_act' ? 'Нотариален акт' :
+                           doc.type === 'sketch' ? 'Скица' : 'Данъчна оценка'}
+                        </span>
+                      </div>
+                      {doc.extractedData && (
+                        <div className="grid gap-2 text-sm">
+                          {doc.extractedData.documentDate && (
+                            <div>
+                              <span className="text-muted-foreground">Дата: </span>
+                              <span>{doc.extractedData.documentDate}</span>
+                            </div>
+                          )}
+                          {doc.extractedData.squareMeters && (
+                            <div>
+                              <span className="text-muted-foreground">Площ: </span>
+                              <span>{doc.extractedData.squareMeters} кв.м</span>
+                            </div>
+                          )}
+                          {doc.extractedData.owner && (
+                            <div>
+                              <span className="text-muted-foreground">Собственик: </span>
+                              <span>{doc.extractedData.owner}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Снимки */}
+            {propertyData.roomPhotos && propertyData.roomPhotos.length > 0 && (
+              <div className="rounded-lg border p-4">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Снимки на помещенията
+                </h3>
+                <div className="space-y-4">
+                  {propertyData.roomPhotos.map((room: any, index: number) => (
+                    <div key={index} className="p-4 rounded-lg bg-accent/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Home className="h-4 w-4 text-primary" />
+                        <span className="font-medium">
+                          {room.roomType === 'entrance' ? 'Входна врата' :
+                           room.roomType === 'kitchen' ? 'Кухня' :
+                           room.roomType === 'living' ? 'Хол' :
+                           room.roomType === 'bathroom' ? 'Баня' : 'Спалня'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{room.description}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {room.photos.map((photo: File, photoIndex: number) => (
+                          <div key={photoIndex} className="aspect-square rounded-lg overflow-hidden bg-accent/10">
+                            <img
+                              src={URL.createObjectURL(photo)}
+                              alt={`Снимка ${photoIndex + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Оценка */}
+            <div className="rounded-lg border p-4">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Оценка на имота
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Приблизителна пазарна стойност</p>
+                  <p className="font-medium text-xl">€{propertyData.estimatedValue?.toLocaleString() || 'Не е изчислена'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Точност на оценката</p>
+                  <div className="flex items-center gap-2">
+                    <Progress value={Math.round((propertyData.confidence || 0) * 100)} className="flex-1" />
+                    <span className="font-medium">{Math.round((propertyData.confidence || 0) * 100)}%</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Инвестиционен рейтинг</p>
+                  <p className="font-medium">{propertyData.investmentRating || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Локация (от 10)</p>
+                  <p className="font-medium">{propertyData.locationScore?.toString() || '-'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

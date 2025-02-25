@@ -112,21 +112,13 @@ export default function Step3() {
         >
           <ProgressSteps steps={STEPS} currentStep={3} />
 
-          <div className="flex justify-between items-start">
-            <h1 className="text-2xl font-bold">Резултати от оценката</h1>
-            <PropertyReport
-              propertyData={{
-                ...propertyData,
-                type: propertyType,
-                estimatedValue: mockEvaluation.estimatedValue,
-                confidence: mockEvaluation.confidence,
-                investmentRating: mockEvaluation.investmentRating,
-                locationScore: mockEvaluation.locationScore
-              }}
-              evaluationType={evaluationType}
-            />
-          </div>
-
+          <PropertyReport
+            propertyData={{
+              ...propertyData,
+              ...mockEvaluation
+            }}
+            evaluationType={evaluationType}
+          />
           <div className="grid gap-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -687,7 +679,7 @@ export default function Step3() {
                                         <div>
                                           <p className="text-sm font-medium">Цена на имота</p>
                                           <p className="text-sm text-gray-600">
-                                                                           {doc.extractedData.price.toLocaleString()} лв.
+                                            {doc.extractedData.price.toLocaleString()} лв.
                                           </p>
                                         </div>
                                       </div>
@@ -696,7 +688,7 @@ export default function Step3() {
                                     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                                       <User className="h-4 w-4 text-gray-500" />
                                       <div>
-                                        <p className="text-sm font-medium">Нотариус</p>
+                                        <p className="text-sm font-medium>Нотариус</p>
                                         <p className="text-sm text-gray-600">{doc.extractedData.notaryName}</p>
                                       </div>
                                     </div>
