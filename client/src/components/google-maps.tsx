@@ -1,7 +1,9 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
+import { Loader2 } from "lucide-react";
+import { AddressSearch } from "./address-search";
 
 // Fix for default marker icon
 const defaultIcon = new Icon({
@@ -14,6 +16,7 @@ const defaultIcon = new Icon({
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   initialLocation?: { lat: number; lng: number };
+  defaultAddress?: string;
 }
 
 // Component to handle location updates
@@ -38,27 +41,64 @@ function LocationMarker({ onLocationSelect }: { onLocationSelect?: (location: { 
   return null;
 }
 
-export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProps) {
-  const defaultLocation = initialLocation || { lat: 42.6977, lng: 23.3219 }; // София по подразбиране
+export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState(
+    initialLocation || { lat: 42.6977, lng: 23.3219 } // София по подразбиране
+  );
+
+  // Handle map load complete
+  const handleMapLoad = () => {
+    setIsLoading(false);
+  };
+
+  const handleLocationFound = (location: { lat: number; lng: number; display_name: string }) => {
+    setCurrentLocation(location);
+    onLocationSelect?.(location);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-[300px] rounded-md border flex items-center justify-center bg-accent/5">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <MapContainer
-      center={[defaultLocation.lat, defaultLocation.lng]}
-      zoom={13}
-      className="w-full h-[300px] rounded-md border"
-      style={{ zIndex: 1 }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    <div className="space-y-4">
+      <AddressSearch 
+        onLocationFound={handleLocationFound}
+        defaultAddress={defaultAddress}
       />
-      {initialLocation && (
-        <Marker 
-          position={[initialLocation.lat, initialLocation.lng]}
-          icon={defaultIcon}
-        />
-      )}
-      <LocationMarker onLocationSelect={onLocationSelect} />
-    </MapContainer>
+      <div className="relative w-full h-[300px]">
+        <MapContainer
+          center={[currentLocation.lat, currentLocation.lng]}
+          zoom={13}
+          className="w-full h-[300px] rounded-md border"
+          style={{ zIndex: 1 }}
+          whenReady={handleMapLoad}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker 
+            position={[currentLocation.lat, currentLocation.lng]}
+            icon={defaultIcon}
+          />
+          {/* Add a radius circle around the property */}
+          <Circle
+            center={[currentLocation.lat, currentLocation.lng]}
+            radius={500}
+            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
+          />
+          <LocationMarker onLocationSelect={onLocationSelect} />
+        </MapContainer>
+      </div>
+    </div>
   );
 }
