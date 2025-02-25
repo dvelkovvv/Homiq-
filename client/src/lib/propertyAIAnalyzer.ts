@@ -2,14 +2,13 @@ import { Property } from "@shared/schema";
 import { format } from "date-fns";
 import { bg } from "date-fns/locale";
 
-// API ключът и URL са дефинирани като статични членове на класа
 export class PropertyAIAnalyzer {
   private static readonly DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
   private static readonly DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
   private static instance: PropertyAIAnalyzer;
+  private readonly CONFIDENCE_THRESHOLD = 0.75;
 
   private constructor() {
-    // Проверяваме API ключа при инициализация
     if (!PropertyAIAnalyzer.DEEPSEEK_API_KEY) {
       console.warn('DeepSeek API key not found, analyzer will use fallback mode');
     }
@@ -59,155 +58,6 @@ export class PropertyAIAnalyzer {
     } catch (error) {
       console.error('Error calling DeepSeek API:', error);
       throw error;
-    }
-  }
-
-  public async analyzeDocument(text: string, documentType: string = 'other'): Promise<any> {
-    try {
-      // Ако нямаме API ключ, връщаме базов анализ
-      if (!PropertyAIAnalyzer.DEEPSEEK_API_KEY) {
-        return {
-          type: documentType,
-          confidence: 0.7,
-          extractedData: this.fallbackExtraction(text, documentType)
-        };
-      }
-
-      const extractedData = await this.extractDataFromText(text, documentType);
-      const totalFields = Object.keys(extractedData).length;
-      const expectedFields = documentType === 'sketch' ? 8 :
-                           documentType === 'notary_act' ? 7 :
-                           documentType === 'tax_assessment' ? 4 : 3;
-
-      const confidence = Math.min(totalFields / expectedFields, 1);
-
-      return {
-        type: documentType,
-        confidence,
-        extractedData
-      };
-    } catch (error) {
-      console.error('Error in document analysis:', error);
-      // При грешка връщаме базов анализ
-      return {
-        type: documentType,
-        confidence: 0.7,
-        extractedData: this.fallbackExtraction(text, documentType)
-      };
-    }
-  }
-
-  private fallbackExtraction(text: string, documentType: string): any {
-    const data: any = {};
-
-    const areaMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра)/i);
-    if (areaMatch) {
-      data.squareMeters = parseFloat(areaMatch[1]);
-    }
-
-    const yearMatch = text.match(/построен(?:а|о)?\s*(?:през|в)?\s*(\d{4})/i);
-    if (yearMatch) {
-      data.constructionYear = parseInt(yearMatch[1]);
-    }
-
-    const addressMatch = text.match(/(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i);
-    if (addressMatch) {
-      data.address = addressMatch[1].trim();
-    }
-
-    if (documentType === 'tax_assessment') {
-      const taxMatch = text.match(/данъчна\s*оценка[:\s]*(\d+(?:\s*\d+)*(?:\.\d+)?)/i);
-      if (taxMatch) {
-        data.taxAssessment = parseFloat(taxMatch[1].replace(/\s/g, ''));
-      }
-    }
-
-    return data;
-  }
-
-  private async extractDataFromText(text: string, documentType: string): Promise<any> {
-    try {
-      const prompt = this.generatePromptForDocumentType(text, documentType);
-      const result = await this.callDeepSeekAPI(prompt);
-      return this.validateAndCleanData(result, documentType);
-    } catch (error) {
-      console.error('Error analyzing document with AI:', error);
-      return this.fallbackExtraction(text, documentType);
-    }
-  }
-
-  private generatePromptForDocumentType(text: string, documentType: string): string {
-    switch (documentType) {
-      case 'sketch':
-        return `Analyze this cadastral sketch and extract the following information in JSON format:
-          - cadastralNumber (string): The cadastral identifier
-          - squareMeters (number): Total area in square meters
-          - address (string): Property address
-          - landArea (number): Total land area
-          Document text: ${text}`;
-
-      case 'notary_act':
-        return `Analyze this notary act and extract the following information in JSON format:
-          - address (string): Full property address
-          - squareMeters (number): Total area in square meters
-          - constructionYear (number): Year of construction
-          - constructionType (string): Type of construction
-          Document text: ${text}`;
-
-      case 'tax_assessment':
-        return `Analyze this tax assessment document and extract the following information in JSON format:
-          - taxAssessment (number): Tax assessment value
-          - cadastralNumber (string): Cadastral identifier
-          - squareMeters (number): Property area
-          Document text: ${text}`;
-
-      default:
-        return `Analyze this real estate document and extract the following information in JSON format:
-          - address (string): Property address if present
-          - squareMeters (number): Area in square meters if present
-          - constructionYear (number): Year of construction if present
-          Document text: ${text}`;
-    }
-  }
-
-  private validateAndCleanData(data: any, documentType: string): any {
-    const cleanData: any = {};
-
-    if (typeof data.squareMeters === 'number' && data.squareMeters > 0) {
-      cleanData.squareMeters = data.squareMeters;
-    }
-    if (typeof data.constructionYear === 'number' && data.constructionYear > 1800) {
-      cleanData.constructionYear = data.constructionYear;
-    }
-    if (typeof data.address === 'string' && data.address.length > 5) {
-      cleanData.address = data.address;
-    }
-
-    switch (documentType) {
-      case 'tax_assessment':
-        if (typeof data.taxAssessment === 'number' && data.taxAssessment > 0) {
-          cleanData.taxAssessment = data.taxAssessment;
-        }
-        break;
-
-      case 'notary_act':
-        if (typeof data.constructionType === 'string') {
-          cleanData.constructionType = data.constructionType;
-        }
-        break;
-    }
-
-    return cleanData;
-  }
-  private readonly CONFIDENCE_THRESHOLD = 0.75;
-  private async extractDataFromText(text: string, documentType: DocumentAnalysis['type']): Promise<DocumentAnalysis['extractedData']> {
-    try {
-      const prompt = this.generatePromptForDocumentType(text, documentType);
-      const result = await this.callDeepSeekAPI(prompt);
-      return this.validateAndCleanData(result, documentType);
-    } catch (error) {
-      console.error('Error analyzing document with AI:', error);
-      return this.fallbackExtraction(text, documentType);
     }
   }
 
@@ -337,6 +187,17 @@ export class PropertyAIAnalyzer {
     }
 
     return data;
+  }
+
+  private async extractDataFromText(text: string, documentType: DocumentAnalysis['type']): Promise<DocumentAnalysis['extractedData']> {
+    try {
+      const prompt = this.generatePromptForDocumentType(text, documentType);
+      const result = await this.callDeepSeekAPI(prompt);
+      return this.validateAndCleanData(result, documentType);
+    } catch (error) {
+      console.error('Error analyzing document with AI:', error);
+      return this.fallbackExtraction(text, documentType);
+    }
   }
 
   public async analyzeDocument(text: string, documentType: DocumentAnalysis['type'] = 'other'): Promise<DocumentAnalysis> {
