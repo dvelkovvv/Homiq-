@@ -529,10 +529,10 @@ export default function Step2() {
                   const Icon = roomType.icon;
 
                   return (
-                    <Card key={roomType.id}>
+                    <Card key={roomType.id} className="mb-6">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Icon className="h-5 w-5" />
+                          <Icon className="h-5 w-5 text-primary" />
                           {roomType.name}
                         </CardTitle>
                         <CardDescription>
@@ -543,7 +543,7 @@ export default function Step2() {
                         <div className="mb-4">
                           <input
                             type="text"
-                            className="w-full p-2 border rounded-lg"
+                            className="w-full p-2 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                             value={room.description}
                             onChange={(e) => handleRoomDescriptionChange(roomType.id, e.target.value)}
                             placeholder={`Описание на ${roomType.name.toLowerCase()}`}
@@ -563,7 +563,7 @@ export default function Step2() {
                         {room.photos.length > 0 && (
                           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {room.photos.map((file, photoIndex) => (
-                              <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border">
+                              <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border bg-accent/5">
                                 <img
                                   src={URL.createObjectURL(file)}
                                   alt={`${roomType.name} снимка ${photoIndex + 1}`}
