@@ -195,14 +195,13 @@ export default function Step1() {
     return () => subscription.unsubscribe();
   }, [form.watch, saveFormData]);
 
-  useEffect(() => {
-    const currentStep = localStorage.getItem('currentStep');
-    if (currentStep === '2' || currentStep === '3') {
-      setLocation(`/evaluation/step${currentStep}`);
-    }
-  }, [setLocation]);
-
   useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
+
+  // Remove automatic step redirection
+  useEffect(() => {
+    // Clear any existing steps when starting from step 1
+    localStorage.removeItem('currentStep');
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
