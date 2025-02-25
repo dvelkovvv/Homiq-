@@ -219,31 +219,61 @@ export default function Step3() {
               </Card>
             </motion.div>
 
-            <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-                <TabsTrigger value="overview" className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  <span>Обобщение</span>
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-4 p-1 bg-gradient-to-r from-gray-50 to-white rounded-xl">
+                <TabsTrigger 
+                  value="overview" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/10 data-[state=active]:to-primary/5 data-[state=active]:text-primary hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Обобщение</span>
                 </TabsTrigger>
-                <TabsTrigger value="market" className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Пазарен анализ</span>
+                <TabsTrigger 
+                  value="market" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-50 data-[state=active]:to-blue-50/50 data-[state=active]:text-blue-600 hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Пазарен анализ</span>
                 </TabsTrigger>
-                <TabsTrigger value="location" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>Локация</span>
+                <TabsTrigger 
+                  value="location" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-50 data-[state=active]:to-purple-50/50 data-[state=active]:text-purple-600 hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-purple-50 to-purple-50/50 rounded-lg">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Локация</span>
                 </TabsTrigger>
-                <TabsTrigger value="comparison" className="flex items-center gap-2">
-                  <ChartBar className="h-4 w-4" />
-                  <span>Сравнение</span>
+                <TabsTrigger 
+                  value="comparison" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-green-50 data-[state=active]:to-green-50/50 data-[state=active]:text-green-600 hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-green-50 to-green-50/50 rounded-lg">
+                    <ChartBar className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Сравнение</span>
                 </TabsTrigger>
-                <TabsTrigger value="risk" className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Риск анализ</span>
+                <TabsTrigger 
+                  value="risk" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-yellow-50 data-[state=active]:to-yellow-50/50 data-[state=active]:text-yellow-600 hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-yellow-50 to-yellow-50/50 rounded-lg">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Риск анализ</span>
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  <span>Документи</span>
+                <TabsTrigger 
+                  value="documents" 
+                  className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-orange-50 data-[state=active]:to-orange-50/50 data-[state=active]:text-orange-600 hover:bg-gray-50 transition-all"
+                >
+                  <div className="p-2 bg-gradient-to-br from-orange-50 to-orange-50/50 rounded-lg">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Документи</span>
                 </TabsTrigger>
               </TabsList>
 
