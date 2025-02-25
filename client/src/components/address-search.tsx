@@ -6,6 +6,7 @@ import { geocodeAddress } from "@/lib/geocoding";
 import { toast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface AddressSearchProps {
   onLocationFound: (location: { lat: number; lng: number; display_name: string }) => void;
@@ -23,6 +24,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -70,9 +72,21 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
           display_name: result.display_name
         });
         setOpen(false);
+        setSelectedItem(result.display_name);
+
+        // Success animation
         toast({
           title: "Адресът е намерен",
-          description: "Местоположението е маркирано на картата.",
+          description: (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2"
+            >
+              <MapPin className="h-4 w-4 text-green-500" />
+              <span>Местоположението е маркирано на картата</span>
+            </motion.div>
+          ),
         });
       }
     } catch (error) {
@@ -97,41 +111,86 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
               value={address}
               onChange={(e) => {
                 setAddress(e.target.value);
+                setSelectedItem(null);
                 setOpen(true);
               }}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch(address)}
-              className="flex-1"
+              className={`flex-1 transition-all ${
+                selectedItem ? 'border-green-500 focus:ring-green-500/20' : ''
+              }`}
             />
             <Button 
               onClick={() => handleSearch(address)}
               disabled={isSearching}
+              className={`transition-all ${
+                isSearching ? 'bg-primary/80' : ''
+              }`}
             >
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
+              <AnimatePresence mode="wait">
+                {isSearching ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="search"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Search className="h-4 w-4" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Button>
           </div>
         </PopoverTrigger>
-        <PopoverContent className="p-0" align="start">
+        <PopoverContent 
+          className="p-0 w-[calc(100vw-2rem)] sm:w-[500px]" 
+          align="start"
+          side="bottom"
+          sideOffset={4}
+        >
           <Command>
-            <CommandInput placeholder="Търсене на адрес..." value={address} onValueChange={setAddress} />
-            <CommandEmpty>Няма намерени адреси.</CommandEmpty>
+            <CommandInput 
+              placeholder="Търсене на адрес..." 
+              value={address} 
+              onValueChange={setAddress}
+              className="border-none focus:ring-0"
+            />
+            <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+              Няма намерени адреси.
+            </CommandEmpty>
             <CommandGroup>
-              {suggestions.map((suggestion) => (
-                <CommandItem
-                  key={suggestion.display_name}
-                  onSelect={() => {
-                    setAddress(suggestion.display_name);
-                    handleSearch(suggestion.display_name);
-                  }}
-                  className="flex items-center gap-2 py-3"
-                >
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <span>{suggestion.display_name}</span>
-                </CommandItem>
-              ))}
+              <AnimatePresence>
+                {suggestions.map((suggestion, index) => (
+                  <motion.div
+                    key={suggestion.display_name}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ 
+                      opacity: 1, 
+                      y: 0,
+                      transition: { delay: index * 0.05 }
+                    }}
+                  >
+                    <CommandItem
+                      onSelect={() => {
+                        setAddress(suggestion.display_name);
+                        handleSearch(suggestion.display_name);
+                      }}
+                      className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
+                    >
+                      <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span className="truncate">{suggestion.display_name}</span>
+                    </CommandItem>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </CommandGroup>
           </Command>
         </PopoverContent>

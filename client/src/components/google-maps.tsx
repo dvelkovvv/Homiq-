@@ -24,6 +24,8 @@ function MapUpdater({ center }: { center: [number, number] }) {
   const map = useMap();
 
   useEffect(() => {
+    if (!map) return;
+
     map.setView(center, map.getZoom(), {
       animate: true,
       duration: 0.8
@@ -35,9 +37,17 @@ function MapUpdater({ center }: { center: [number, number] }) {
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(
-    initialLocation || { lat: 42.6977, lng: 23.3219 } // София по подразбиране
-  );
+  const [currentLocation, setCurrentLocation] = useState(() => {
+    try {
+      const savedLocation = localStorage.getItem('lastLocation');
+      if (savedLocation) {
+        return JSON.parse(savedLocation);
+      }
+    } catch (error) {
+      console.error('Error reading location from localStorage:', error);
+    }
+    return initialLocation || { lat: 42.6977, lng: 23.3219 }; // София по подразбиране
+  });
 
   // Мемоизация на центъра на картата
   const center = useMemo(() => 
@@ -53,6 +63,14 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
   const handleLocationFound = (location: { lat: number; lng: number; display_name: string }) => {
     setCurrentLocation(location);
     onLocationSelect?.(location);
+
+    try {
+      // Запазваме адреса в localStorage за да го запомним
+      localStorage.setItem('lastAddress', location.display_name);
+      localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
+    } catch (error) {
+      console.error('Error saving location to localStorage:', error);
+    }
   };
 
   if (isLoading) {
@@ -70,7 +88,13 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     <div className="space-y-4">
       <AddressSearch 
         onLocationFound={handleLocationFound}
-        defaultAddress={defaultAddress}
+        defaultAddress={defaultAddress || (() => {
+          try {
+            return localStorage.getItem('lastAddress') || '';
+          } catch {
+            return '';
+          }
+        })()}
       />
       <div className="relative w-full h-[300px]">
         <MapContainer
@@ -89,7 +113,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
             position={center}
             icon={defaultIcon}
           />
-          {/* Add a radius circle around the property */}
+          {/* Добавяме радиус около имота */}
           <Circle
             center={center}
             radius={500}
