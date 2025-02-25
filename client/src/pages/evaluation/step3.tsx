@@ -24,6 +24,7 @@ import {
 } from "recharts";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
+import { PropertyReport } from "@/components/property-report";
 
 const STEPS = [
   {
@@ -46,6 +47,7 @@ export default function Step3() {
   // Get property data from localStorage
   const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
+  const propertyType = propertyData.type || "apartment";
 
   // Mock data based on property type and characteristics
   const mockEvaluation = {
@@ -109,6 +111,21 @@ export default function Step3() {
           className="space-y-8"
         >
           <ProgressSteps steps={STEPS} currentStep={3} />
+
+          <div className="flex justify-between items-start">
+            <h1 className="text-2xl font-bold">Резултати от оценката</h1>
+            <PropertyReport
+              propertyData={{
+                ...propertyData,
+                type: propertyType,
+                estimatedValue: mockEvaluation.estimatedValue,
+                confidence: mockEvaluation.confidence,
+                investmentRating: mockEvaluation.investmentRating,
+                locationScore: mockEvaluation.locationScore
+              }}
+              evaluationType={evaluationType}
+            />
+          </div>
 
           <div className="grid gap-6">
             <motion.div
@@ -670,7 +687,7 @@ export default function Step3() {
                                         <div>
                                           <p className="text-sm font-medium">Цена на имота</p>
                                           <p className="text-sm text-gray-600">
-                                            {doc.extractedData.price.toLocaleString()} лв.
+                                                                           {doc.extractedData.price.toLocaleString()} лв.
                                           </p>
                                         </div>
                                       </div>
