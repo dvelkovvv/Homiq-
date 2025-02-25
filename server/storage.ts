@@ -14,7 +14,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async createProperty(insertProperty: InsertProperty): Promise<Property> {
-    const [property] = await db.insert(properties).values(insertProperty).returning();
+    const [property] = await db.insert(properties).values([insertProperty]).returning();
     return property;
   }
 
@@ -24,7 +24,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvaluation(insertEvaluation: InsertEvaluation): Promise<Evaluation> {
-    const [evaluation] = await db.insert(evaluations).values(insertEvaluation).returning();
+    const [evaluation] = await db.insert(evaluations).values([insertEvaluation]).returning();
     return evaluation;
   }
 
