@@ -3,13 +3,13 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { 
-  HelpCircle, 
-  Image as ImageIcon, 
-  Download, 
-  X, 
-  Clock, 
-  CheckCircle, 
+import {
+  HelpCircle,
+  Image as ImageIcon,
+  Download,
+  X,
+  Clock,
+  CheckCircle,
   FileText,
   Home,
   Building2,
@@ -522,80 +522,79 @@ export default function Step2() {
                   </CardContent>
                 </Card>
 
-                <div className="space-y-6">
-                  {getRoomTypes().map((roomType) => {
-                    const room = roomPhotos.find(r => r.roomType === roomType.id);
-                    if (!room) return null;
+                {roomPhotos.length > 0 && getRoomTypes().map((roomType) => {
+                  const room = roomPhotos.find(r => r.roomType === roomType.id);
+                  if (!room) return null;
 
-                    const Icon = roomType.icon;
+                  const Icon = roomType.icon;
 
-                    return (
-                      <Card key={roomType.id}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Icon className="h-5 w-5" />
-                            {roomType.name}
-                          </CardTitle>
-                          <CardDescription>
-                            Качете снимки за {roomType.name.toLowerCase()}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="mb-4">
-                            <input
-                              type="text"
-                              className="w-full p-2 border rounded-lg"
-                              value={room.description}
-                              onChange={(e) => handleRoomDescriptionChange(roomType.id, e.target.value)}
-                              placeholder={`Описание на ${roomType.name.toLowerCase()}`}
-                            />
-                          </div>
-
-                          <FileUploadZone
-                            accept={{
-                              'image/*': ['.png', '.jpg', '.jpeg']
-                            }}
-                            maxFiles={5}
-                            onFilesAdded={(files) => handleRoomPhotosAdded(roomType.id, files)}
-                            fileType="image"
+                  return (
+                    <Card key={roomType.id}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Icon className="h-5 w-5" />
+                          {roomType.name}
+                        </CardTitle>
+                        <CardDescription>
+                          Качете снимки за {roomType.name.toLowerCase()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="mb-4">
+                          <input
+                            type="text"
+                            className="w-full p-2 border rounded-lg"
+                            value={room.description}
+                            onChange={(e) => handleRoomDescriptionChange(roomType.id, e.target.value)}
+                            placeholder={`Описание на ${roomType.name.toLowerCase()}`}
                           />
+                        </div>
 
-                          {room.photos.length > 0 && (
-                            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                              {room.photos.map((file, photoIndex) => (
-                                <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border">
-                                  <img
-                                    src={URL.createObjectURL(file)}
-                                    alt={`${roomType.name} снимка ${photoIndex + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-                                      onClick={() => handleDownload(file)}
-                                    >
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-                                      onClick={() => handleRemoveRoomPhoto(roomType.id, photoIndex)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                        <FileUploadZone
+                          accept={{
+                            'image/*': ['.png', '.jpg', '.jpeg']
+                          }}
+                          maxFiles={5}
+                          onFilesAdded={(files) => handleRoomPhotosAdded(roomType.id, files)}
+                          fileType="image"
+                          roomType={roomType.id}
+                        />
+
+                        {room.photos.length > 0 && (
+                          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {room.photos.map((file, photoIndex) => (
+                              <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border">
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={`${roomType.name} снимка ${photoIndex + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                                    onClick={() => handleDownload(file)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                                    onClick={() => handleRemoveRoomPhoto(roomType.id, photoIndex)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </>
             )}
 
