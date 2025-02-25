@@ -43,6 +43,9 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Enable trust proxy to handle Replit's proxy
+    app.set('trust proxy', true);
+
     const server = await registerRoutes(app);
 
     // Setup Vite in development or serve static files in production
@@ -70,7 +73,7 @@ app.use((req, res, next) => {
     });
 
     // Start server
-    const port = 5000;
+    const port = process.env.PORT || 5000;
     server.listen({
       port,
       host: "0.0.0.0",
