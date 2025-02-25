@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory, Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight, Banknote, Calendar } from "lucide-react";
+import { DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory, Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight, Banknote, Calendar, Building2, FileText, Images, ChartBar, Scale, Receipt, FileSignature, BarChart3 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { motion, AnimatePresence } from "framer-motion";
@@ -149,6 +149,322 @@ const STEPS = [
   }
 ];
 
+interface DocumentAnalysis {
+  propertyDetails: {
+    area?: number;
+    rooms?: number;
+    floor?: number;
+    totalFloors?: number;
+    constructionYear?: number;
+    constructionType?: string;
+    heating?: string;
+    parking?: boolean;
+  };
+  locationInfo: {
+    address: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+    neighborhood?: string;
+    nearbyAmenities?: string[];
+  };
+  legalStatus: {
+    ownership: string;
+    encumbrances?: string[];
+    restrictions?: string[];
+  };
+  marketAnalysis: {
+    currentValue: number;
+    pricePerSqm: number;
+    comparableProperties: {
+      price: number;
+      area: number;
+      distance: number;
+    }[];
+    marketTrends: {
+      yearly: number;
+      quarterly: number;
+      monthly: number;
+    };
+  };
+}
+
+const DocumentAnalysisSection = ({ analysis, documents }: { analysis: DocumentAnalysis, documents: any[] }) => {
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          Анализ на документите
+        </CardTitle>
+        <CardDescription>
+          Детайлна информация извлечена от предоставените документи
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="property">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="property">
+              <Building2 className="h-4 w-4 mr-2" />
+              Имот
+            </TabsTrigger>
+            <TabsTrigger value="legal">
+              <FileSignature className="h-4 w-4 mr-2" />
+              Правен статус
+            </TabsTrigger>
+            <TabsTrigger value="location">
+              <MapPin className="h-4 w-4 mr-2" />
+              Локация
+            </TabsTrigger>
+            <TabsTrigger value="market">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Пазар
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="property" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Основни характеристики</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt>Площ</dt>
+                      <dd>{analysis.propertyDetails.area} м²</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Брой стаи</dt>
+                      <dd>{analysis.propertyDetails.rooms}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Етаж</dt>
+                      <dd>{analysis.propertyDetails.floor} от {analysis.propertyDetails.totalFloors}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Строителство</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt>Година</dt>
+                      <dd>{analysis.propertyDetails.constructionYear}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Конструкция</dt>
+                      <dd>{analysis.propertyDetails.constructionType}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Отопление</dt>
+                      <dd>{analysis.propertyDetails.heating}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="legal">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Правен статус</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="font-medium">Собственост</dt>
+                    <dd className="mt-1">{analysis.legalStatus.ownership}</dd>
+                  </div>
+                  {analysis.legalStatus.encumbrances && analysis.legalStatus.encumbrances.length > 0 && (
+                    <div>
+                      <dt className="font-medium">Тежести</dt>
+                      <dd className="mt-1">
+                        <ul className="list-disc pl-5">
+                          {analysis.legalStatus.encumbrances.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
+                  )}
+                  {analysis.legalStatus.restrictions && analysis.legalStatus.restrictions.length > 0 && (
+                    <div>
+                      <dt className="font-medium">Ограничения</dt>
+                      <dd className="mt-1">
+                        <ul className="list-disc pl-5">
+                          {analysis.legalStatus.restrictions.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="location">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Адрес и локация</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">{analysis.locationInfo.address}</p>
+                  {analysis.locationInfo.nearbyAmenities && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Близки обекти</h4>
+                      <ul className="space-y-1">
+                        {analysis.locationInfo.nearbyAmenities.map((amenity, index) => (
+                          <li key={index} className="text-sm">• {amenity}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Инфраструктура</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Add infrastructure details here */}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="market">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Пазарни данни</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt>Текуща стойност</dt>
+                      <dd>€{analysis.marketAnalysis.currentValue.toLocaleString()}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Цена на кв.м.</dt>
+                      <dd>€{analysis.marketAnalysis.pricePerSqm.toLocaleString()}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Тенденции</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt>Годишно изменение</dt>
+                      <dd className={analysis.marketAnalysis.marketTrends.yearly >= 0 ? "text-green-600" : "text-red-600"}>
+                        {analysis.marketAnalysis.marketTrends.yearly}%
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Тримесечно изменение</dt>
+                      <dd className={analysis.marketAnalysis.marketTrends.quarterly >= 0 ? "text-green-600" : "text-red-600"}>
+                        {analysis.marketAnalysis.marketTrends.quarterly}%
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt>Месечно изменение</dt>
+                      <dd className={analysis.marketAnalysis.marketTrends.monthly >= 0 ? "text-green-600" : "text-red-600"}>
+                        {analysis.marketAnalysis.marketTrends.monthly}%
+                      </dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-lg">Сравними имоти</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analysis.marketAnalysis.comparableProperties.map((prop, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div>
+                        <span className="font-medium">€{prop.price.toLocaleString()}</span>
+                        <span className="text-sm text-gray-600 ml-2">({prop.area} м²)</span>
+                      </div>
+                      <span className="text-sm text-gray-600">{prop.distance}км разстояние</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+};
+
+const mockDocumentAnalysis: DocumentAnalysis = {
+  propertyDetails: {
+    area: 85,
+    rooms: 3,
+    floor: 4,
+    totalFloors: 6,
+    constructionYear: 2018,
+    constructionType: "Тухла",
+    heating: "ТЕЦ",
+    parking: true
+  },
+  locationInfo: {
+    address: "ул. Примерна 123, София",
+    coordinates: {
+      lat: 42.698334,
+      lng: 23.319941
+    },
+    neighborhood: "Център",
+    nearbyAmenities: [
+      "Метростанция (250м)",
+      "Супермаркет (150м)",
+      "Училище (400м)",
+      "Парк (600м)"
+    ]
+  },
+  legalStatus: {
+    ownership: "Частна собственост",
+    encumbrances: ["Ипотека към банка"],
+    restrictions: []
+  },
+  marketAnalysis: {
+    currentValue: 250000,
+    pricePerSqm: 2941,
+    comparableProperties: [
+      { price: 245000, area: 82, distance: 0.3 },
+      { price: 260000, area: 88, distance: 0.5 },
+      { price: 240000, area: 80, distance: 0.7 }
+    ],
+    marketTrends: {
+      yearly: 5.2,
+      quarterly: 1.8,
+      monthly: 0.4
+    }
+  }
+};
+
 export default function Step3() {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
@@ -168,7 +484,6 @@ export default function Step3() {
     }
 
     try {
-      // Parse data from URL
       const roomPhotosParam = params.get('roomPhotos');
       const documentsParam = params.get('documents');
       const extractedDataParam = params.get('extractedData');
@@ -216,7 +531,6 @@ export default function Step3() {
 
       setPropertyData(data);
 
-      // Simulate API call
       setTimeout(() => {
         setAnalysis({
           estimatedValue: 250000,
@@ -228,46 +542,46 @@ export default function Step3() {
           },
           priceHistory: Array.from({ length: 12 }).map((_, i) => ({
             date: format(new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
-            value: 250000 // Placeholder value
+            value: 250000 
           })),
           similarProperties: Array.from({ length: 5 }).map(() => ({
-            price: 230000, // Placeholder value
-            distance: 2,    // Placeholder value
-            features: ['feature1', 'feature2'], // Placeholder values
+            price: 230000, 
+            distance: 2,    
+            features: ['feature1', 'feature2'], 
             prediction: {
-              oneYear: 260000, // Placeholder value
-              threeYears: 280000, // Placeholder value
-              fiveYears: 300000 // Placeholder value
+              oneYear: 260000, 
+              threeYears: 280000, 
+              fiveYears: 300000 
             }
           })),
           forecast: Array.from({ length: 24 }).map((_, i) => ({
             date: format(new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000), 'MMM yyyy', { locale: bg }),
-            optimistic: 250000 + (i * 5000), // Placeholder values
-            conservative: 250000 + (i * 3000), // Placeholder values
-            marketTrend: 250000 + (i * 4000) // Placeholder values
+            optimistic: 250000 + (i * 5000), 
+            conservative: 250000 + (i * 3000), 
+            marketTrend: 250000 + (i * 4000) 
           })),
           riskAssessment: {
-            score: 80, // Placeholder value
+            score: 80, 
             factors: [
               { name: 'Локация', impact: 85, details: 'София' },
               { name: 'Година на строителство', impact: 70, details: '2010' },
               { name: 'Конструкция', impact: 90, details: 'Тухла' }
             ],
-            marketVolatility: 15, // Placeholder value
+            marketVolatility: 15, 
             economicFactors: {
-              interestRates: 3.5, // Placeholder value
-              economicGrowth: 2.8, // Placeholder value
-              inflation: 3.2 // Placeholder value
+              interestRates: 3.5, 
+              economicGrowth: 2.8, 
+              inflation: 3.2 
             }
           },
           investmentMetrics: {
-            roi: 6.2, // Placeholder value
-            breakeven: 60, // Placeholder value
-            appreciation: 4.0, // Placeholder value
-            rentalYield: 5.0, // Placeholder value
+            roi: 6.2, 
+            breakeven: 60, 
+            appreciation: 4.0, 
+            rentalYield: 5.0, 
             cashFlow: {
-              monthly: 1000, // Placeholder value
-              annual: 12000 // Placeholder value
+              monthly: 1000, 
+              annual: 12000 
             },
             investmentScenarios: {
               conservative: { returnRate: 4, totalReturn: 300000, timeline: 5 },
@@ -276,7 +590,7 @@ export default function Step3() {
             }
           },
           neighborhoodAnalysis: {
-            score: 90, // Placeholder value
+            score: 90, 
             amenities: [
               { type: 'Транспорт', distance: 0.5, impact: 80 },
               { type: 'Училища', distance: 1.0, impact: 90 },
@@ -452,65 +766,13 @@ export default function Step3() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {propertyData?.documents && propertyData.documents.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Анализ на документите</CardTitle>
-                  <CardDescription>
-                    Информация извлечена от предоставените документи
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="documents" className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="documents">Документи</TabsTrigger>
-                      <TabsTrigger value="extracted">Извлечени данни</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="documents">
-                      <div className="space-y-4">
-                        {Object.entries(DOCUMENT_TYPES).map(([type, label]) => {
-                          const docs = propertyData.documents.filter((doc: any) => doc.type === type);
-                          if (docs.length === 0) return null;
-
-                          return (
-                            <div key={type} className="border rounded-lg p-4">
-                              <h3 className="font-medium mb-2">{label}</h3>
-                              <div className="space-y-2">
-                                {docs.map((doc: any, index: number) => (
-                                  <div key={index} className="flex items-center justify-between text-sm">
-                                    <span>{doc.name}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => window.open(doc.url)}
-                                    >
-                                      <Download className="h-4 w-4 mr-1" />
-                                      Изтегли
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="extracted">
-                      {propertyData.extractedData && (
-                        <div className="space-y-4">
-                          {Object.entries(propertyData.extractedData).map(([key, value]: [string, any]) => (
-                            <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <span className="font-medium">{key}</span>
-                              <span>{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
+            {propertyData && (
+              <DocumentAnalysisSection
+                analysis={mockDocumentAnalysis}
+                documents={propertyData.documents || []}
+              />
             )}
+
 
             {propertyData?.roomPhotos && propertyData.roomPhotos.length > 0 && (
               <Card className="mb-6">
@@ -591,8 +853,7 @@ export default function Step3() {
                     >
                       <motion.div
                         initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
-                        className="text-center"
+                        animate={{ scale: 1 }}                        className="text-center"
                       >
                         <h3 className="text-3xl font-bold text-[#003366]">
                           €{analysis.estimatedValue.toLocaleString()}
@@ -789,7 +1050,7 @@ export default function Step3() {
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Изтегли PDF отчет
-                                                </Button>
+                        </Button>
 
                         <Dialog>
                           <DialogTrigger asChild>
@@ -873,6 +1134,65 @@ export default function Step3() {
   );
 }
 
+function InvestmentScenarios({ scenarios }: { scenarios: PropertyAnalysis['investmentMetrics']['investmentScenarios'] }) {
+  return (
+    <Card className="p-6">
+      <h4 className="font-medium mb-4">Инвестиционни сценарии</h4>
+      <div className="space-y-4">
+        {Object.entries(scenarios).map(([scenario, data]) => (
+          <div key={scenario} className="flex items-center justify-between">
+            <span className="font-medium">{scenario.charAt(0).toUpperCase() + scenario.slice(1)} сценарий</span>
+            <span className="font-medium">
+              {data.returnRate.toFixed(1)}% възвръщаемост за {data.timeline} години (€{data.totalReturn.toLocaleString()})
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function NeighborhoodAnalysis({ analysis }: { analysis: PropertyAnalysis['neighborhoodAnalysis'] }) {
+  return (
+    <Card className="p-6">
+      <h4 className="font-medium mb-4">Анализ на квартала</h4>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Оценка на района</span>
+          <span className="font-medium">{analysis.score}/100</span>
+        </div>
+        <div className="space-y-2">
+          {analysis.amenities.map((amenity, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <span>{amenity.type}</span>
+              <span>{amenity.distance} км ({amenity.impact}%)</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Планирано развитие</span>
+          <span className="font-medium">{analysis.development.planned.join(', ')}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Влияние на развитието</span>
+          <span className="font-medium">{analysis.development.impact}%</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Население</span>
+          <span className="font-medium">{analysis.demographics.population}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Растеж на населението</span>
+          <span className="font-medium">{analysis.demographics.growth}%</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Доходи</span>
+          <span className="font-medium">{analysis.demographics.income}</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
 //This is a placeholder.  Replace with your actual data provider.
 class PropertyDataProvider {
   private static instance: PropertyDataProvider;
@@ -884,9 +1204,8 @@ class PropertyDataProvider {
     return PropertyDataProvider.instance;
   }
   public async getMarketData(location: string, type: string, squareMeters: number): Promise<{averagePrice: number}> {
-    // Replace this with your actual data fetching logic.  This is a stub.
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    const averagePrice = squareMeters * 1200 + (location === "София" ? 50000 : 0); //Example calculation
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+    const averagePrice = squareMeters * 1200 + (location === "София" ? 50000 : 0); 
     return { averagePrice };
   }
 }
@@ -904,10 +1223,8 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
   const marketDataPromise = getMarketData();
   const basePricePromise = marketDataPromise.then(data => data.averagePrice);
 
-  // Коефициенти за оценка базирани на реални данни
   const getLocationFactor = (address?: string) => {
     if (!address) return 0.9;
-    // Прецизна оценка базирана на адреса
     const premiumLocations = ['витоша', 'лозенец', 'докторски паметник', 'иван вазов'];
     const normalLocations = ['младост', 'люлин', 'дружба', 'надежда'];
 
@@ -920,12 +1237,11 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
   const getYearFactor = (year?: number) => {
     if (!year) return Math.max(0.7, 1 - (new Date().getFullYear() - property.yearBuilt) / 100);
     const age = new Date().getFullYear() - year;
-    // По-прецизна оценка на състоянието според годината
-    if (age < 5) return 1.3; // Нова сграда
-    if (age < 15) return 1.1; // Относително нова
-    if (age < 30) return 0.9; // Средна възраст
-    if (age < 50) return 0.7; // По-стара сграда
-    return 0.5; // Много стара сграда
+    if (age < 5) return 1.3; 
+    if (age < 15) return 1.1; 
+    if (age < 30) return 0.9; 
+    if (age < 50) return 0.7; 
+    return 0.5; 
   };
 
   const getConstructionTypeFactor = (type?: string) => {
@@ -947,7 +1263,6 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
 
     const estimatedValue = basePrice * locationFactor * yearFactor * constructionTypeFactor;
 
-    // Останалата част от кода остава същата, само добавяме нови данни
     const riskAssessment = {
       score: Math.round((locationFactor + yearFactor + constructionTypeFactor) / 3 * 100),
       factors: [
@@ -1074,64 +1389,4 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
       neighborhoodAnalysis
     };
   });
-}
-
-function InvestmentScenarios({ scenarios }: { scenarios: PropertyAnalysis['investmentMetrics']['investmentScenarios'] }) {
-  return (
-    <Card className="p-6">
-      <h4 className="font-medium mb-4">Инвестиционни сценарии</h4>
-      <div className="space-y-4">
-        {Object.entries(scenarios).map(([scenario, data]) => (
-          <div key={scenario} className="flex items-center justify-between">
-            <span className="font-medium">{scenario.charAt(0).toUpperCase() + scenario.slice(1)} сценарий</span>
-            <span className="font-medium">
-              {data.returnRate.toFixed(1)}% възвръщаемост за {data.timeline} години (€{data.totalReturn.toLocaleString()})
-            </span>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function NeighborhoodAnalysis({ analysis }: { analysis: PropertyAnalysis['neighborhoodAnalysis'] }) {
-  return (
-    <Card className="p-6">
-      <h4 className="font-medium mb-4">Анализ на квартала</h4>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Оценка на района</span>
-          <span className="font-medium">{analysis.score}/100</span>
-        </div>
-        <div className="space-y-2">
-          {analysis.amenities.map((amenity, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <span>{amenity.type}</span>
-              <span>{amenity.distance} км ({amenity.impact}%)</span>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Планирано развитие</span>
-          <span className="font-medium">{analysis.development.planned.join(', ')}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Влияние на развитието</span>
-          <span className="font-medium">{analysis.development.impact}%</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Население</span>
-          <span className="font-medium">{analysis.demographics.population}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Растеж на населението</span>
-          <span className="font-medium">{analysis.demographics.growth}%</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Доходи</span>
-          <span className="font-medium">{analysis.demographics.income}</span>
-        </div>
-      </div>
-    </Card>
-  );
 }
