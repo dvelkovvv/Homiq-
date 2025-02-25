@@ -113,6 +113,25 @@ export default function Step2() {
     setIsScanning(false);
     setScannedText(text);
     setExtractedData(data);
+
+    // Get existing property data
+    const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+
+    // Initialize or update documents array
+    const documents = propertyData.documents || [];
+    documents.push({
+      type: data.documentType,
+      extractedData: data,
+      text: text,
+      scannedAt: new Date().toISOString()
+    });
+
+    // Save back to localStorage
+    localStorage.setItem('propertyData', JSON.stringify({
+      ...propertyData,
+      documents: documents
+    }));
+
     toast({
       title: "Документът е сканиран успешно",
       description: "Текстът е извлечен от документа.",
