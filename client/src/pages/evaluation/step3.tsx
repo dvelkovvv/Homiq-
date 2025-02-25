@@ -115,7 +115,8 @@ export default function Step3() {
           <PropertyReport
             propertyData={{
               ...propertyData,
-              ...mockEvaluation
+              ...mockEvaluation,
+              roomPhotos: propertyData.roomPhotos || []
             }}
             evaluationType={evaluationType}
           />
@@ -685,7 +686,7 @@ export default function Step3() {
                                       </div>
                                     )}
 
-                                    <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-2 p3 bg-gray-50 rounded-lg">
                                       <User className="h-4 w-4 text-gray-500" />
                                       <div>
                                         <p className="text-sm font-medium">Нотариус</p>

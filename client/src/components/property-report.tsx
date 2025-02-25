@@ -12,25 +12,37 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    // Създаваме URL обекти за всички снимки
     const urls: string[] = [];
-    if (propertyData.roomPhotos) {
+
+    // Проверяваме дали имаме снимки и дали са във валиден формат
+    if (propertyData.roomPhotos && Array.isArray(propertyData.roomPhotos)) {
       propertyData.roomPhotos.forEach((room: any) => {
-        if (room.photos) {
+        if (room && room.photos && Array.isArray(room.photos)) {
           room.photos.forEach((photo: File) => {
-            const url = URL.createObjectURL(photo);
-            urls.push(url);
+            try {
+              const url = URL.createObjectURL(photo);
+              urls.push(url);
+            } catch (error) {
+              console.error('Error creating URL for photo:', error);
+            }
           });
         }
       });
     }
+
     setPhotoUrls(urls);
 
-    // Почистване при размонтиране
     return () => {
       urls.forEach(url => URL.revokeObjectURL(url));
     };
   }, [propertyData.roomPhotos]);
+
+  // Debug log to check data
+  console.log('PropertyReport data:', { 
+    hasRoomPhotos: Boolean(propertyData.roomPhotos),
+    roomPhotosCount: propertyData.roomPhotos?.length,
+    photoUrls 
+  });
 
   return (
     <div className="space-y-6 w-full">
@@ -138,38 +150,40 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
                   Снимки на помещенията
                 </h3>
                 <div className="space-y-6">
-                  {propertyData.roomPhotos.map((room: any, index: number) => (
-                    <div key={index} className="p-4 rounded-lg bg-accent/5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Home className="h-4 w-4 text-primary" />
-                        <span className="font-medium">
-                          {room.roomType === 'entrance' ? 'Входна врата' :
-                           room.roomType === 'kitchen' ? 'Кухня' :
-                           room.roomType === 'living' ? 'Хол' :
-                           room.roomType === 'bathroom' ? 'Баня' : 'Спалня'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-4">{room.description}</p>
-                      {room.photos && room.photos.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                          {room.photos.map((photo: File, photoIndex: number) => {
-                            const urlIndex = propertyData.roomPhotos
-                              .slice(0, index)
-                              .reduce((acc: number, r: any) => acc + (r.photos?.length || 0), 0) + photoIndex;
-                            return (
-                              <div key={photoIndex} className="aspect-square rounded-lg overflow-hidden bg-accent/5">
+                  {propertyData.roomPhotos.map((room: any, roomIndex: number) => {
+                    // Calculate starting index for this room's photos
+                    const startPhotoIndex = propertyData.roomPhotos
+                      .slice(0, roomIndex)
+                      .reduce((acc: number, r: any) => acc + (r.photos?.length || 0), 0);
+
+                    return (
+                      <div key={roomIndex} className="p-4 rounded-lg bg-accent/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Home className="h-4 w-4 text-primary" />
+                          <span className="font-medium">
+                            {room.roomType === 'entrance' ? 'Входна врата' :
+                             room.roomType === 'kitchen' ? 'Кухня' :
+                             room.roomType === 'living' ? 'Хол' :
+                             room.roomType === 'bathroom' ? 'Баня' : 'Спалня'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">{room.description}</p>
+                        {room.photos && room.photos.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {room.photos.map((photo: File, index: number) => (
+                              <div key={index} className="aspect-square rounded-lg overflow-hidden bg-accent/5">
                                 <img
-                                  src={photoUrls[urlIndex]}
-                                  alt={`${room.roomType} снимка ${photoIndex + 1}`}
+                                  src={photoUrls[startPhotoIndex + index]}
+                                  alt={`${room.roomType} снимка ${index + 1}`}
                                   className="w-full h-full object-cover hover:scale-105 transition-transform"
                                 />
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
