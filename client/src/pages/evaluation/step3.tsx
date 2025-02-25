@@ -6,6 +6,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import type { Evaluation } from "@shared/schema";
 
 const STEPS = [
   {
@@ -29,8 +30,8 @@ export default function Step3() {
   const evaluationType = params.get('evaluationType');
 
   // Fetch evaluation data
-  const { data: evaluation, isLoading, error } = useQuery({
-    queryKey: [`/api/evaluations/${propertyId}`],
+  const { data: evaluation, isLoading, error } = useQuery<Evaluation>({
+    queryKey: [`/api/evaluations/property/${propertyId}`],
     enabled: !!propertyId,
   });
 
@@ -45,10 +46,10 @@ export default function Step3() {
     );
   }
 
-  if (error) {
+  if (error || !evaluation) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-[400px] text-center">
+        <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="text-red-500">Грешка</CardTitle>
           </CardHeader>
@@ -77,25 +78,31 @@ export default function Step3() {
         >
           <ProgressSteps steps={STEPS} currentStep={3} />
 
-          {evaluation && (
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Оценка на имота</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-primary">
-                      €{evaluation.estimatedValue?.toLocaleString()}
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Оценка на имота</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-primary">
+                    €{evaluation.estimatedValue.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Приблизителна пазарна стойност
+                  </p>
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600">
+                      Точност на оценката: {Math.round(evaluation.confidence * 100)}%
                     </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Приблизителна пазарна стойност
+                    <p className="text-sm text-gray-600">
+                      Тип оценка: {evaluation.evaluationType === 'quick' ? 'Бърза' : 'Лицензирана'}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
       </div>
     </div>

@@ -5,28 +5,16 @@ import { z } from "zod";
 // Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
-  // Basic information
   type: text("type").notNull(),
   address: text("address").notNull(),
   squareMeters: integer("square_meters").notNull(),
   yearBuilt: integer("year_built").notNull(),
   location: jsonb("location").$type<{lat: number, lng: number}>().notNull(),
-
-  // Property characteristics
   rooms: integer("rooms"),
   floor: integer("floor"),
   totalFloors: integer("total_floors"),
   heating: text("heating"),
   parking: boolean("parking"),
-
-  // Industrial characteristics
-  productionArea: integer("production_area"),
-  storageArea: integer("storage_area"),
-  loadingDock: boolean("loading_dock"),
-  ceilingHeight: numeric("ceiling_height"),
-  threePhasePower: boolean("three_phase_power"),
-
-  // Media files
   photos: text("photos").array().notNull().default([]),
   documents: jsonb("documents").$type<Array<{
     type: 'sketch' | 'notary_act' | 'tax_assessment' | 'other';
@@ -39,7 +27,6 @@ export const properties = pgTable("properties", {
     description: string;
     photos: string[];
   }>>().notNull().default([]),
-
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -47,10 +34,13 @@ export const properties = pgTable("properties", {
 export const evaluations = pgTable("evaluations", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull().references(() => properties.id),
-  value: numeric("value").notNull(),
+  estimatedValue: numeric("estimated_value").notNull(),
+  confidence: numeric("confidence").notNull(),
   currency: text("currency").notNull().default("EUR"),
-  evaluationDate: timestamp("evaluation_date").notNull().defaultNow(),
+  evaluationType: text("evaluation_type").notNull(),
+  status: text("status").notNull().default("pending"),
   notes: text("notes"),
+  evaluationDate: timestamp("evaluation_date").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,40 +53,21 @@ export const insertPropertySchema = createInsertSchema(properties, {
   location: z.object({
     lat: z.number(),
     lng: z.number()
-  }),
-  rooms: z.number().min(1).optional(),
-  floor: z.number().min(0).optional(),
-  totalFloors: z.number().min(1).optional(),
-  heating: z.enum(["electric", "gas", "other"]).optional(),
-  parking: z.boolean().optional(),
-
-  productionArea: z.number().min(0).optional(),
-  storageArea: z.number().min(0).optional(),
-  loadingDock: z.boolean().optional(),
-  ceilingHeight: z.number().min(0).optional(),
-  threePhasePower: z.boolean().optional(),
-
-  documents: z.array(z.object({
-    type: z.enum(['sketch', 'notary_act', 'tax_assessment', 'other']),
-    name: z.string(),
-    url: z.string(),
-    extractedData: z.record(z.any()).optional()
-  })).optional(),
-
-  roomPhotos: z.array(z.object({
-    roomType: z.string(),
-    description: z.string(),
-    photos: z.array(z.string())
-  })).optional()
+  })
 }).omit({
   id: true,
   createdAt: true,
-  photos: true
+  photos: true,
+  documents: true,
+  roomPhotos: true
 });
 
 export const insertEvaluationSchema = createInsertSchema(evaluations, {
-  value: z.number().min(0),
+  estimatedValue: z.number().min(0),
+  confidence: z.number().min(0).max(1),
   currency: z.string().default("EUR"),
+  evaluationType: z.enum(["quick", "licensed"]),
+  status: z.enum(["pending", "completed", "failed"]).default("pending"),
   notes: z.string().optional(),
 }).omit({
   id: true,

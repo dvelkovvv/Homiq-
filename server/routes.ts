@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema } from "@shared/schema";
+import { insertPropertySchema, insertEvaluationSchema } from "@shared/schema";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express) {
@@ -49,6 +49,43 @@ export async function registerRoutes(app: Express) {
     }
 
     res.json(property);
+  }));
+
+  // Get evaluation by property ID
+  app.get("/api/evaluations/property/:propertyId", asyncHandler(async (req: Request, res: Response) => {
+    const propertyId = parseInt(req.params.propertyId);
+    if (isNaN(propertyId)) {
+      return res.status(400).json({
+        error: { message: "Invalid property ID" }
+      });
+    }
+
+    const evaluation = await storage.getPropertyEvaluation(propertyId);
+    if (!evaluation) {
+      return res.status(404).json({
+        error: { message: "Evaluation not found" }
+      });
+    }
+
+    log(`Retrieved evaluation for property ID: ${propertyId}`);
+    res.json(evaluation);
+  }));
+
+  // Create evaluation
+  app.post("/api/evaluations", asyncHandler(async (req: Request, res: Response) => {
+    const result = insertEvaluationSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: {
+          message: "Невалидни данни за оценка",
+          details: result.error.issues
+        }
+      });
+    }
+
+    const evaluation = await storage.createEvaluation(result.data);
+    log(`Created evaluation with ID: ${evaluation.id}`);
+    res.status(201).json(evaluation);
   }));
 
   const server = createServer(app);

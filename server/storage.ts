@@ -8,6 +8,7 @@ export interface IStorage {
   getProperty(id: number): Promise<Property | undefined>;
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
   getEvaluation(id: number): Promise<Evaluation | undefined>;
+  getPropertyEvaluation(propertyId: number): Promise<Evaluation | undefined>;
   getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]>;
 }
 
@@ -29,6 +30,16 @@ export class DatabaseStorage implements IStorage {
 
   async getEvaluation(id: number): Promise<Evaluation | undefined> {
     const [evaluation] = await db.select().from(evaluations).where(eq(evaluations.id, id));
+    return evaluation;
+  }
+
+  async getPropertyEvaluation(propertyId: number): Promise<Evaluation | undefined> {
+    const [evaluation] = await db
+      .select()
+      .from(evaluations)
+      .where(eq(evaluations.propertyId, propertyId))
+      .orderBy(evaluations.createdAt)
+      .limit(1);
     return evaluation;
   }
 
