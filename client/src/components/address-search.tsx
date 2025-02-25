@@ -26,6 +26,21 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
+  // Синхронизираме с localStorage при започване
+  useEffect(() => {
+    if (!defaultAddress) {
+      try {
+        const savedAddress = localStorage.getItem('lastAddress');
+        if (savedAddress) {
+          setAddress(savedAddress);
+          setSelectedItem(savedAddress);
+        }
+      } catch (error) {
+        console.error('Error reading address from localStorage:', error);
+      }
+    }
+  }, [defaultAddress]);
+
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (address.trim().length < 3) {
@@ -42,9 +57,11 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
 
         const data = await response.json();
         setSuggestions(data);
+        setOpen(data.length > 0);
       } catch (error) {
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
+        setOpen(false);
       }
     };
 
@@ -73,8 +90,9 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
         });
         setOpen(false);
         setSelectedItem(result.display_name);
+        localStorage.setItem('lastAddress', result.display_name); // Save the address
 
-        // Success animation
+        // Success animation and feedback
         toast({
           title: "Адресът е намерен",
           description: (
