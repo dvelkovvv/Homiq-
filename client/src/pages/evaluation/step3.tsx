@@ -6,8 +6,8 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Building2, TrendingUp, MapPin, ChartBar, AlertTriangle, 
+import {
+  Building2, TrendingUp, MapPin, ChartBar, AlertTriangle,
   Download, Share2, Home, Euro, Calendar, BarChart4,
   ArrowUpCircle, BadgeCheck, Clock, Star
 } from "lucide-react";
@@ -111,7 +111,6 @@ export default function Step3() {
           <ProgressSteps steps={STEPS} currentStep={3} />
 
           <div className="grid gap-6">
-            {/* Main Evaluation Card */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -140,7 +139,7 @@ export default function Step3() {
                       {evaluationType === 'licensed' ? 'Лицензирана оценка' : 'Бърза оценка'}
                     </motion.div>
 
-                    <motion.p 
+                    <motion.p
                       className="text-6xl font-bold mb-2"
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
@@ -153,7 +152,7 @@ export default function Step3() {
                     </p>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mt-8">
-                      <motion.div 
+                      <motion.div
                         className="text-center"
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -170,7 +169,7 @@ export default function Step3() {
                         <p className="text-sm text-gray-200">Точност на оценката</p>
                       </motion.div>
 
-                      <motion.div 
+                      <motion.div
                         className="text-center"
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -185,7 +184,7 @@ export default function Step3() {
                         <p className="text-sm text-gray-200">Инвестиционен рейтинг</p>
                       </motion.div>
 
-                      <motion.div 
+                      <motion.div
                         className="text-center"
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -200,7 +199,7 @@ export default function Step3() {
                         <p className="text-sm text-gray-200">Площ</p>
                       </motion.div>
 
-                      <motion.div 
+                      <motion.div
                         className="text-center"
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -220,7 +219,6 @@ export default function Step3() {
               </Card>
             </motion.div>
 
-            {/* Analysis Tabs */}
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                 <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -252,80 +250,111 @@ export default function Step3() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Обобщен анализ</CardTitle>
-                        <CardDescription>
-                          Основни показатели за имота
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="space-y-6">
-                            <h4 className="font-semibold flex items-center gap-2">
-                              <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                              Ключови фактори
-                            </h4>
-                            <div className="space-y-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Годишна възвръщаемост</span>
-                                  <span className="font-semibold text-green-600">
-                                    +{mockEvaluation.yearlyAppreciation}%
-                                  </span>
+                    <div className="grid gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                            Ключови фактори
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                                  <TrendingUp className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="font-semibold text-xl text-green-600">
+                                  +{mockEvaluation.yearlyAppreciation}%
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Годишна възвръщаемост
                                 </div>
                               </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Сравними имоти</span>
-                                  <span className="font-semibold">
-                                    {mockEvaluation.comparableProperties}
-                                  </span>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                                  <Building2 className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="font-semibold text-xl text-blue-600">
+                                  {mockEvaluation.comparableProperties}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Сравними имоти
                                 </div>
                               </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Рейтинг на локацията</span>
-                                  <span className="font-semibold">
-                                    {mockEvaluation.locationScore}/10
-                                  </span>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100">
+                                  <MapPin className="h-5 w-5 text-purple-600" />
+                                </div>
+                                <div className="font-semibold text-xl text-purple-600">
+                                  {mockEvaluation.locationScore}/10
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Рейтинг на локацията
                                 </div>
                               </div>
                             </div>
                           </div>
-                          <div className="space-y-6">
-                            <h4 className="font-semibold flex items-center gap-2">
-                              <TrendingUp className="h-5 w-5 text-blue-500" />
-                              Пазарни индикатори
-                            </h4>
-                            <div className="space-y-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Пазарен тренд</span>
-                                  <span className="font-semibold text-blue-600">
-                                    Възходящ
-                                  </span>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <ChartBar className="h-5 w-5 text-blue-500" />
+                            Пазарни индикатори
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="font-semibold text-lg text-blue-600">
+                                  Възходящ
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Пазарен тренд
                                 </div>
                               </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Ликвидност</span>
-                                  <span className="font-semibold">Висока</span>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                                  <ArrowUpCircle className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="font-semibold text-lg text-green-600">
+                                  Висока
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Ликвидност
                                 </div>
                               </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-center">
-                                  <span>Инвестиционен потенциал</span>
-                                  <span className="font-semibold text-green-600">
-                                    Отличен
-                                  </span>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-yellow-50 to-white rounded-xl border">
+                              <div className="text-center">
+                                <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100">
+                                  <Star className="h-5 w-5 text-yellow-600" />
+                                </div>
+                                <div className="font-semibold text-lg text-yellow-600">
+                                  Отличен
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Инвестиционен потенциал
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </motion.div>
                 </TabsContent>
 
@@ -347,7 +376,7 @@ export default function Step3() {
                           <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={priceHistoryData}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                              <XAxis 
+                              <XAxis
                                 dataKey="month"
                                 stroke="#666"
                                 tick={{ fill: '#666' }}
@@ -441,7 +470,7 @@ export default function Step3() {
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={similarPropertiesData}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                              <XAxis 
+                              <XAxis
                                 dataKey="type"
                                 stroke="#666"
                                 tick={{ fill: '#666' }}
@@ -456,8 +485,8 @@ export default function Step3() {
                                 labelStyle={{ color: '#666' }}
                                 contentStyle={{ background: 'white', border: '1px solid #ddd' }}
                               />
-                              <Bar 
-                                dataKey="value" 
+                              <Bar
+                                dataKey="value"
                                 fill="#003366"
                                 radius={[4, 4, 0, 0]}
                               />
@@ -485,7 +514,7 @@ export default function Step3() {
                       <CardContent>
                         <div className="space-y-6">
                           {riskFactors.map((factor, index) => (
-                            <motion.div 
+                            <motion.div
                               key={factor.factor}
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
@@ -498,8 +527,8 @@ export default function Step3() {
                               </div>
                               <Progress value={factor.score} className="h-2" />
                               <p className="text-sm text-gray-500">
-                                {factor.score >= 80 ? 'Отличен показател' : 
-                                 factor.score >= 60 ? 'Добър показател' : 'Нуждае се от внимание'}
+                                {factor.score >= 80 ? 'Отличен показател' :
+                                  factor.score >= 60 ? 'Добър показател' : 'Нуждае се от внимание'}
                               </p>
                             </motion.div>
                           ))}
@@ -511,7 +540,6 @@ export default function Step3() {
               </AnimatePresence>
             </Tabs>
 
-            {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 justify-center mt-8">
               <Button
                 variant="outline"
