@@ -1,49 +1,64 @@
-import { useEffect, useRef } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { Icon } from "leaflet";
+
+// Fix for default marker icon
+const defaultIcon = new Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   initialLocation?: { lat: number; lng: number };
 }
 
-export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+// Component to handle location updates
+function LocationMarker({ onLocationSelect }: { onLocationSelect?: (location: { lat: number; lng: number }) => void }) {
+  const map = useMap();
 
   useEffect(() => {
-    // Mock Google Maps with a basic implementation
-    const loadMap = async () => {
-      const mapDiv = mapRef.current;
-      if (!mapDiv) return;
+    if (!onLocationSelect) return;
 
-      mapDiv.style.backgroundColor = "#eee";
-      mapDiv.innerHTML = `
-        <div class="flex items-center justify-center h-full">
-          <p class="text-gray-500">Google Maps integration mocked for demo</p>
-          <p class="text-sm text-gray-400">Click anywhere to set location</p>
-        </div>
-      `;
-
-      mapDiv.addEventListener("click", (e) => {
-        const rect = mapDiv.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Convert click to mock coordinates
-        const lat = (y / rect.height) * 180 - 90;
-        const lng = (x / rect.width) * 360 - 180;
-        
-        onLocationSelect?.({ lat, lng });
-      });
+    const handleClick = (e: any) => {
+      const { lat, lng } = e.latlng;
+      onLocationSelect({ lat, lng });
     };
 
-    loadMap();
-  }, [onLocationSelect]);
+    map.on('click', handleClick);
+
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onLocationSelect]);
+
+  return null;
+}
+
+export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProps) {
+  const defaultLocation = initialLocation || { lat: 42.6977, lng: 23.3219 }; // София по подразбиране
 
   return (
-    <div 
-      ref={mapRef}
+    <MapContainer
+      center={[defaultLocation.lat, defaultLocation.lng]}
+      zoom={13}
       className="w-full h-[300px] rounded-md border"
-    />
+      style={{ zIndex: 1 }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {initialLocation && (
+        <Marker 
+          position={[initialLocation.lat, initialLocation.lng]}
+          icon={defaultIcon}
+        />
+      )}
+      <LocationMarker onLocationSelect={onLocationSelect} />
+    </MapContainer>
   );
 }
