@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, DoorClosed, Utensils, Sofa, Bath, Bed } from "lucide-react";
+import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
@@ -29,12 +29,25 @@ const STEPS = [
   }
 ];
 
-const ROOM_TYPES = [
+const RESIDENTIAL_ROOM_TYPES = [
   { id: "entrance", name: "Входна врата", icon: DoorClosed },
   { id: "kitchen", name: "Кухня", icon: Utensils },
   { id: "living", name: "Хол", icon: Sofa },
   { id: "bathroom", name: "Баня", icon: Bath },
   { id: "bedroom", name: "Спалня", icon: Bed }
+];
+
+const INDUSTRIAL_ROOM_TYPES = [
+  { id: "production", name: "Производствена зона", icon: Factory },
+  { id: "storage", name: "Складова зона", icon: Warehouse },
+  { id: "loading", name: "Товаро-разтоварна зона", icon: Warehouse },
+  { id: "office", name: "Офис част", icon: DoorClosed }
+];
+
+const AGRICULTURAL_ROOM_TYPES = [
+  { id: "field", name: "Обработваема земя", icon: Trees },
+  { id: "irrigation", name: "Напоителна система", icon: Factory },
+  { id: "storage", name: "Складови съоръжения", icon: Warehouse }
 ];
 
 interface RoomPhotos {
@@ -56,7 +69,23 @@ export default function Step2() {
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
 
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
+  const propertyType = new URLSearchParams(window.location.search).get('type') || 'apartment';
   const rooms = parseInt(new URLSearchParams(window.location.search).get('rooms') || '0');
+
+  const getRoomTypes = () => {
+    switch (propertyType) {
+      case 'apartment':
+      case 'house':
+      case 'villa':
+        return RESIDENTIAL_ROOM_TYPES;
+      case 'industrial':
+        return INDUSTRIAL_ROOM_TYPES;
+      case 'agricultural':
+        return AGRICULTURAL_ROOM_TYPES;
+      default:
+        return [];
+    }
+  };
 
   useEffect(() => {
     if (!propertyId) {
@@ -64,17 +93,18 @@ export default function Step2() {
       return;
     }
 
-    // Initialize room photos array with predefined room types
-    if (rooms > 0 && roomPhotos.length === 0) {
+    // Initialize room photos array with appropriate room types
+    const roomTypes = getRoomTypes();
+    if (roomTypes.length > 0 && roomPhotos.length === 0) {
       setRoomPhotos(
-        ROOM_TYPES.map(room => ({
+        roomTypes.map(room => ({
           roomType: room.id,
           photos: [],
           description: room.name
         }))
       );
     }
-  }, [propertyId, navigate, rooms]);
+  }, [propertyId, navigate, propertyType]);
 
   const handleScanComplete = (text: string, data: any) => {
     setIsScanning(false);
@@ -101,7 +131,7 @@ export default function Step2() {
         : room
     ));
     toast({
-      title: `Снимките за ${ROOM_TYPES.find(rt => rt.id === roomType)?.name} са качени успешно`,
+      title: `Снимките за ${getRoomTypes().find(rt => rt.id === roomType)?.name} са качени успешно`,
       description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`,
     });
   };
@@ -336,7 +366,6 @@ export default function Step2() {
               </Card>
             ) : (
               <>
-                {/* Document Upload Section */}
                 <Card className="mb-6">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -426,9 +455,8 @@ export default function Step2() {
                   </CardContent>
                 </Card>
 
-                {/* Room Photos Section */}
                 <div className="space-y-6">
-                  {ROOM_TYPES.map((roomType) => {
+                  {getRoomTypes().map((roomType) => {
                     const room = roomPhotos.find(r => r.roomType === roomType.id);
                     if (!room) return null;
 
