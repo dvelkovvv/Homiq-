@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2, TrendingUp, MapPin, ChartBar, AlertTriangle,
   Download, Share2, Home, Euro, Calendar, BarChart4,
-  ArrowUpCircle, BadgeCheck, Clock, Star
+  ArrowUpCircle, BadgeCheck, Clock, Star, FileText, User, Hash
 } from "lucide-react";
 import {
   LineChart,
@@ -220,7 +220,7 @@ export default function Step3() {
             </motion.div>
 
             <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+              <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-2">
                 <TabsTrigger value="overview" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   <span>Обобщение</span>
@@ -240,6 +240,10 @@ export default function Step3() {
                 <TabsTrigger value="risk" className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   <span>Риск анализ</span>
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Документи</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -532,6 +536,178 @@ export default function Step3() {
                               </p>
                             </motion.div>
                           ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="documents">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-blue-500" />
+                          Информация от документи
+                        </CardTitle>
+                        <CardDescription>
+                          Данни извлечени от сканираните документи
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-6">
+                          {propertyData.documents?.map((doc: any, index: number) => (
+                            <div key={index} className="border rounded-lg p-6 space-y-4">
+                              <div className="flex items-center gap-2 mb-4">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                  <FileText className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">{doc.type === 'notary_act' ? 'Нотариален акт' :
+                                    doc.type === 'sketch' ? 'Скица' : 'Данъчна оценка'}</h4>
+                                  {doc.extractedData?.documentDate && (
+                                    <p className="text-sm text-muted-foreground">
+                                      Дата: {doc.extractedData.documentDate}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="grid md:grid-cols-2 gap-4">
+                                {/* Основна информация */}
+                                {doc.extractedData?.owner && (
+                                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <User className="h-4 w-4 text-gray-500" />
+                                    <div>
+                                      <p className="text-sm font-medium">Собственик</p>
+                                      <p className="text-sm text-gray-600">{doc.extractedData.owner}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {doc.extractedData?.identifier && (
+                                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <Hash className="h-4 w-4 text-gray-500" />
+                                    <div>
+                                      <p className="text-sm font-medium">Идентификатор</p>
+                                      <p className="text-sm text-gray-600">{doc.extractedData.identifier}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {doc.extractedData?.squareMeters && (
+                                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <Building2 className="h-4 w-4 text-gray-500" />
+                                    <div>
+                                      <p className="text-sm font-medium">Обща площ</p>
+                                      <p className="text-sm text-gray-600">{doc.extractedData.squareMeters} кв.м</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {doc.extractedData?.address && (
+                                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <MapPin className="h-4 w-4 text-gray-500" />
+                                    <div>
+                                      <p className="text-sm font-medium">Адрес</p>
+                                      <p className="text-sm text-gray-600">{doc.extractedData.address}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Данни от нотариален акт */}
+                                {doc.type === 'notary_act' && (
+                                  <>
+                                    {doc.extractedData?.notaryNumber && (
+                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                        <FileText className="h-4 w-4 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium">Номер на акта</p>
+                                          <p className="text-sm text-gray-600">{doc.extractedData.notaryNumber}</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {doc.extractedData?.price && (
+                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                        <Euro className="h-4 w-4 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium">Цена на имота</p>
+                                          <p className="text-sm text-gray-600">
+                                            {doc.extractedData.price.toLocaleString()} лв.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {doc.extractedData?.notaryName && (
+                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                        <User className="h-4 w-4 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium">Нотариус</p>
+                                          <p className="text-sm text-gray-600">{doc.extractedData.notaryName}</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {doc.extractedData?.boundaries && doc.extractedData.boundaries.length > 0 && (
+                                      <div className="col-span-2 p-3 bg-gray-50 rounded-lg">
+                                        <p className="text-sm font-medium mb-2">Граници на имота</p>
+                                        <ul className="list-disc list-inside text-sm text-gray-600">
+                                          {doc.extractedData.boundaries.map((boundary, idx) => (
+                                            <li key={idx}>{boundary}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Данни от скица */}
+                                {doc.type === 'sketch' && (
+                                  <>
+                                    {doc.extractedData?.purpose && (
+                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                        <Building2 className="h-4 w-4 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium">Предназначение</p>
+                                          <p className="text-sm text-gray-600">{doc.extractedData.purpose}</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {doc.extractedData?.builtUpArea && (
+                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                        <Building2 className="h-4 w-4 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium">Застроена площ</p>
+                                          <p className="text-sm text-gray-600">{doc.extractedData.builtUpArea} кв.м</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {doc.extractedData?.commonParts && (
+                                      <div className="col-span-2 p-3 bg-gray-50 rounded-lg">
+                                        <p className="text-sm font-medium">Общи части</p>
+                                        <p className="text-sm text-gray-600">{doc.extractedData.commonParts}</p>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                          {(!propertyData.documents || propertyData.documents.length === 0) && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <p>Няма сканирани документи</p>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

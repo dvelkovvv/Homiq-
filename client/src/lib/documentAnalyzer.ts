@@ -7,6 +7,21 @@ interface ExtractedData {
   rooms?: number;
   floor?: number;
   totalFloors?: number;
+  owner?: string;
+  identifier?: string;
+  cadastralNumber?: string;
+  documentDate?: string;
+  notaryNumber?: string;
+  taxAssessmentValue?: number;
+  boundaries?: string[];
+  purpose?: string;
+  builtUpArea?: number;
+  totalArea?: number;
+  commonParts?: string;
+  notaryName?: string;
+  actVolume?: string;
+  actPage?: string;
+  registryEntry?: string;
 }
 
 export class DocumentAnalyzer {
@@ -23,9 +38,116 @@ export class DocumentAnalyzer {
       data.documentType = 'tax_assessment';
     }
 
+    // Търсим собственик/ци
+    const ownerPatterns = [
+      /собственик(?:\(ци\))?:?\s*([^\n,\.]+)/i,
+      /притежател(?:\(и\))?:?\s*([^\n,\.]+)/i,
+      /лице:?\s*([^\n,\.]+)/i,
+      /купувач(?:\(и\))?:?\s*([^\n,\.]+)/i
+    ];
+
+    for (const pattern of ownerPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const owner = match[1].trim();
+        if (owner.length > 2) {
+          data.owner = owner;
+          break;
+        }
+      }
+    }
+
+    // Търсим кадастрален номер и идентификатор
+    const identifierPatterns = [
+      /(?:идентификатор|кад\. *№):?\s*([\d\.]+)/i,
+      /кадастрален номер:?\s*([\d\.]+)/i,
+      /номер на имота:?\s*([\d\.]+)/i,
+      /поземлен имот с идентификатор:?\s*([\d\.]+)/i
+    ];
+
+    for (const pattern of identifierPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        data.identifier = match[1].trim();
+        data.cadastralNumber = match[1].trim();
+        break;
+      }
+    }
+
+    // Търсим дата на документа
+    const datePatterns = [
+      /дата:?\s*(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/i,
+      /издаден(?:а|о)? на:?\s*(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/i,
+      /днес,?\s*(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/i
+    ];
+
+    for (const pattern of datePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        data.documentDate = match[1].trim();
+        break;
+      }
+    }
+
+    // Търсим данни за нотариален акт
+    if (data.documentType === 'notary_act') {
+      // Номер на акта
+      const notaryPatterns = [
+        /акт №:?\s*(\d+)/i,
+        /нотариален акт:?\s*(?:№|номер):?\s*(\d+)/i
+      ];
+
+      for (const pattern of notaryPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          data.notaryNumber = match[1].trim();
+          break;
+        }
+      }
+
+      // Том и страница
+      const volumeMatch = text.match(/том:?\s*(\w+)/i);
+      if (volumeMatch) data.actVolume = volumeMatch[1].trim();
+
+      const pageMatch = text.match(/стр(?:аница)?:?\s*(\d+)/i);
+      if (pageMatch) data.actPage = pageMatch[1].trim();
+
+      // Нотариус
+      const notaryMatch = text.match(/нотариус:?\s*([^\n,\.]+)/i);
+      if (notaryMatch) data.notaryName = notaryMatch[1].trim();
+
+      // Вписване
+      const registryMatch = text.match(/вх\. рег\. №:?\s*([^\n,\.]+)/i);
+      if (registryMatch) data.registryEntry = registryMatch[1].trim();
+
+      // Граници на имота
+      const boundariesMatch = text.match(/граници:?\s*([^\n]+)/i);
+      if (boundariesMatch) {
+        data.boundaries = boundariesMatch[1]
+          .split(/[,;]/)
+          .map(b => b.trim())
+          .filter(b => b.length > 0);
+      }
+    }
+
+    // Данни за скица
+    if (data.documentType === 'sketch') {
+      // Предназначение
+      const purposeMatch = text.match(/(?:предназначение|начин на трайно ползване):?\s*([^\n,\.]+)/i);
+      if (purposeMatch) data.purpose = purposeMatch[1].trim();
+
+      // Застроена площ
+      const builtUpAreaMatch = text.match(/застроена площ:?\s*(\d+(?:\.\d+)?)/i);
+      if (builtUpAreaMatch) data.builtUpArea = parseFloat(builtUpAreaMatch[1]);
+
+      // Общи части
+      const commonPartsMatch = text.match(/общи части:?\s*([^\n,\.]+)/i);
+      if (commonPartsMatch) data.commonParts = commonPartsMatch[1].trim();
+    }
+
     // Търсим квадратура (различни формати)
     const areaPatterns = [
-      /(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра|кв\. м\.)/i,
+      /(?:обща\s+)?площ:?\s*(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|m2|квадратни метра|кв\. м\.)/i,
       /площ от\s*(\d+(?:\.\d+)?)/i,
       /застроена площ[:\s]+(\d+(?:\.\d+)?)/i
     ];
@@ -61,16 +183,16 @@ export class DocumentAnalyzer {
 
     // Търсим адрес
     const addressPatterns = [
-      /(?:адрес|находящ се|разположен)[:\s]+([^\n]+)/i,
+      /(?:адрес|находящ[а-я]* се|разположен[а-я]*)[:\s]+([^\n]+)/i,
       /град[:\s]+([^\n]+)/i,
-      /ул\.[:\s]+([^\n]+)/i
+      /(?:ул|бул|ж\.к)\.[:\s]+([^\n]+)/i
     ];
 
     for (const pattern of addressPatterns) {
       const match = text.match(pattern);
       if (match) {
         const address = match[1].trim();
-        if (address.length > 5) { // Минимална валидация
+        if (address.length > 5) {
           data.address = address;
           break;
         }
@@ -79,8 +201,8 @@ export class DocumentAnalyzer {
 
     // Търсим цена
     const pricePatterns = [
-      /цена[:\s]+(\d+(?:\.\d+)?)\s*(?:лв\.|лева|EUR|евро)/i,
-      /стойност[:\s]+(\d+(?:\.\d+)?)\s*(?:лв\.|лева|EUR|евро)/i
+      /(?:цена|стойност|продажна цена)[:\s]+(\d+(?:\.\d+)?)\s*(?:лв\.|лева|EUR|евро)/i,
+      /имота се оценява на[:\s]+(\d+(?:\.\d+)?)\s*(?:лв\.|лева|EUR|евро)/i
     ];
 
     for (const pattern of pricePatterns) {
@@ -90,39 +212,6 @@ export class DocumentAnalyzer {
         if (price > 0) {
           data.price = price;
           break;
-        }
-      }
-    }
-
-    // Търсим брой стаи
-    const roomPatterns = [
-      /(\d+)\s*(?:стаен|стаи|стая)/i,
-      /стаи[:\s]+(\d+)/i
-    ];
-
-    for (const pattern of roomPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        const rooms = parseInt(match[1]);
-        if (rooms > 0 && rooms < 20) {
-          data.rooms = rooms;
-          break;
-        }
-      }
-    }
-
-    // Търсим етаж
-    const floorPattern = /(?:етаж|ет\.)[:\s]+(\d+)(?:\s*от\s*(\d+))?/i;
-    const floorMatch = text.match(floorPattern);
-    if (floorMatch) {
-      const floor = parseInt(floorMatch[1]);
-      if (floor >= 0 && floor < 100) {
-        data.floor = floor;
-        if (floorMatch[2]) {
-          const totalFloors = parseInt(floorMatch[2]);
-          if (totalFloors >= floor) {
-            data.totalFloors = totalFloors;
-          }
         }
       }
     }
