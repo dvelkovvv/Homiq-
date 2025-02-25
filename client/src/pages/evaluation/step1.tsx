@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Home, Building2, Warehouse, Trees, Factory, Info, HelpCircle } from "lucide-react";
 import { ProgressSteps } from "@/components/progress-steps";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect } from "react";
 import { debounce } from "lodash";
 import { Logo } from "@/components/logo";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
@@ -73,6 +73,67 @@ export default function Step1() {
       parking: false
     }
   });
+
+  const onSubmit = async (data: any) => {
+    try {
+      // Store form data in localStorage
+      const formData = {
+        ...data,
+        submittedAt: new Date().toISOString()
+      };
+
+      localStorage.setItem('propertyData', JSON.stringify(formData));
+
+      toast({
+        title: "Успешно запазени данни",
+        description: "Продължете към следващата стъпка за качване на снимки и документи.",
+      });
+
+      // Use wouter's navigation
+      setLocation('/evaluation/step2');
+
+      // Add a fallback navigation after a short delay if the first attempt fails
+      setTimeout(() => {
+        if (window.location.pathname !== '/evaluation/step2') {
+          console.log('Fallback navigation triggered');
+          window.location.href = '/evaluation/step2';
+        }
+      }, 100);
+    } catch (error: any) {
+      console.error('Navigation error:', error);
+      toast({
+        title: "Грешка",
+        description: "Възникна проблем при навигацията. Моля, опитайте отново.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveFormData = useCallback(
+    debounce((data: any) => {
+      localStorage.setItem('propertyFormData', JSON.stringify(data));
+    }, 1000),
+    []
+  );
+
+  useEffect(() => {
+    const savedData = localStorage.getItem('propertyFormData');
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      form.reset(parsedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    const subscription = form.watch((data) => {
+      if (Object.keys(form.formState.dirtyFields).length > 0) {
+        saveFormData(data);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch, saveFormData]);
+
+  useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
 
   const propertyType = form.watch("type");
 
@@ -137,59 +198,6 @@ export default function Step1() {
         };
     }
   }, [propertyType]);
-
-  const onSubmit = async (data: any) => {
-    try {
-      // Store form data in localStorage
-      const formData = {
-        ...data,
-        submittedAt: new Date().toISOString()
-      };
-
-      localStorage.setItem('propertyData', JSON.stringify(formData));
-
-      toast({
-        title: "Успешно запазени данни",
-        description: "Продължете към следващата стъпка за качване на снимки и документи.",
-      });
-
-      // Force navigation to step 2
-      window.location.href = '/evaluation/step2';
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast({
-        title: "Грешка",
-        description: error.message || "Възникна проблем при запазването на данните. Моля, опитайте отново.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const saveFormData = useCallback(
-    debounce((data: any) => {
-      localStorage.setItem('propertyFormData', JSON.stringify(data));
-    }, 1000),
-    []
-  );
-
-  useEffect(() => {
-    const savedData = localStorage.getItem('propertyFormData');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      form.reset(parsedData);
-    }
-  }, []);
-
-  useEffect(() => {
-    const subscription = form.watch((data) => {
-      if (Object.keys(form.formState.dirtyFields).length > 0) {
-        saveFormData(data);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch, saveFormData]);
-
-  useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
 
   return (
     <div className="min-h-screen bg-background">

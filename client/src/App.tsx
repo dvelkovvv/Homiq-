@@ -23,12 +23,14 @@ function LoadingSpinner() {
 function Router() {
   return (
     <div className="min-h-screen bg-background">
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/evaluation/step1" component={Step1} />
-        <Route path="/evaluation/step2" component={Step2} />
-        <Route path="/evaluation/step3" component={Step3} />
-      </Switch>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/evaluation/step1" component={Step1} />
+          <Route path="/evaluation/step2" component={Step2} />
+          <Route path="/evaluation/step3" component={Step3} />
+        </Switch>
+      </Suspense>
     </div>
   );
 }
@@ -37,10 +39,8 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Router />
-          <Toaster />
-        </Suspense>
+        <Router />
+        <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>
   );
