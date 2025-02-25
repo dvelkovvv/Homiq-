@@ -29,6 +29,11 @@ export const properties = pgTable("properties", {
   // Media files
   photos: text("photos").array().notNull().default([]),
   documents: text("documents").array().notNull().default([]),
+  roomPhotos: jsonb("room_photos").$type<Array<{
+    roomNumber: number;
+    description: string;
+    photos: string[];
+  }>>().notNull().default([]),
 
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -74,7 +79,12 @@ export const insertPropertySchema = createInsertSchema(properties, {
   loadingDock: z.boolean().optional(),
   ceilingHeight: z.number().min(0).optional(),
   threePhasePower: z.boolean().optional(),
-}).omit({ 
+  roomPhotos: z.array(z.object({
+    roomNumber: z.number(),
+    description: z.string(),
+    photos: z.array(z.string())
+  })).optional()
+}).omit({
   id: true,
   createdAt: true,
   photos: true,

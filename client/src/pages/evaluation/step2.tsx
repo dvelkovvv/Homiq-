@@ -27,6 +27,12 @@ const STEPS = [
   }
 ];
 
+interface RoomPhotos {
+  roomNumber: number;
+  photos: File[];
+  description: string;
+}
+
 export default function Step2() {
   const [, navigate] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
@@ -34,13 +40,28 @@ export default function Step2() {
   const [extractedData, setExtractedData] = useState<any>(null);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
+  const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
+
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
+  const rooms = parseInt(new URLSearchParams(window.location.search).get('rooms') || '0');
 
   useEffect(() => {
     if (!propertyId) {
       navigate('/evaluation/step1');
+      return;
     }
-  }, [propertyId, navigate]);
+
+    // Initialize room photos array based on number of rooms
+    if (rooms > 0 && roomPhotos.length === 0) {
+      setRoomPhotos(
+        Array.from({ length: rooms }, (_, i) => ({
+          roomNumber: i + 1,
+          photos: [],
+          description: `Стая ${i + 1}`
+        }))
+      );
+    }
+  }, [propertyId, navigate, rooms]);
 
   const handleScanComplete = (text: string, data: any) => {
     setIsScanning(false);
@@ -58,6 +79,26 @@ export default function Step2() {
       title: "Снимките са качени успешно",
       description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`,
     });
+  };
+
+  const handleRoomPhotosAdded = (roomNumber: number, files: File[]) => {
+    setRoomPhotos(prev => prev.map(room => 
+      room.roomNumber === roomNumber 
+        ? { ...room, photos: [...room.photos, ...files] }
+        : room
+    ));
+    toast({
+      title: `Снимките за стая ${roomNumber} са качени успешно`,
+      description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`,
+    });
+  };
+
+  const handleRoomDescriptionChange = (roomNumber: number, description: string) => {
+    setRoomPhotos(prev => prev.map(room =>
+      room.roomNumber === roomNumber
+        ? { ...room, description }
+        : room
+    ));
   };
 
   const handleDocumentsAdded = (files: File[]) => {
@@ -83,6 +124,14 @@ export default function Step2() {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleRemoveRoomPhoto = (roomNumber: number, photoIndex: number) => {
+    setRoomPhotos(prev => prev.map(room =>
+      room.roomNumber === roomNumber
+        ? { ...room, photos: room.photos.filter((_, i) => i !== photoIndex) }
+        : room
+    ));
+  };
+
   const handleRemoveDocument = (index: number) => {
     setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
   };
@@ -93,8 +142,16 @@ export default function Step2() {
       uploadedImages.forEach(file => formData.append('images', file));
       uploadedDocuments.forEach(file => formData.append('documents', file));
 
+      // Prepare room photos data
+      const roomPhotosData = roomPhotos.map(room => ({
+        roomNumber: room.roomNumber,
+        description: room.description,
+        photos: room.photos.map(photo => URL.createObjectURL(photo))
+      }));
+
       const params = new URLSearchParams();
       params.set('propertyId', propertyId!);
+      params.set('roomPhotos', JSON.stringify(roomPhotosData));
       if (extractedData) {
         params.set('extractedData', JSON.stringify(extractedData));
       }
@@ -133,10 +190,10 @@ export default function Step2() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ImageIcon className="h-5 w-5" />
-                  Снимки на имота
+                  Общи снимки на имота
                 </CardTitle>
                 <CardDescription>
-                  Качете снимки на имота за по-добра оценка
+                  Качете общи снимки на имота за по-добра оценка
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -182,6 +239,73 @@ export default function Step2() {
               </CardContent>
             </Card>
 
+            {/* Room Photos Section */}
+            {roomPhotos.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Снимки по стаи</CardTitle>
+                  <CardDescription>
+                    Качете снимки за всяка стая поотделно
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {roomPhotos.map((room) => (
+                      <div key={room.roomNumber} className="border rounded-lg p-4">
+                        <h3 className="text-lg font-medium mb-2">Стая {room.roomNumber}</h3>
+                        <input
+                          type="text"
+                          className="w-full mb-4 p-2 border rounded"
+                          value={room.description}
+                          onChange={(e) => handleRoomDescriptionChange(room.roomNumber, e.target.value)}
+                          placeholder="Описание на стаята"
+                        />
+                        <FileUploadZone
+                          accept={{
+                            'image/*': ['.png', '.jpg', '.jpeg']
+                          }}
+                          maxFiles={5}
+                          onFilesAdded={(files) => handleRoomPhotosAdded(room.roomNumber, files)}
+                          fileType="image"
+                        />
+                        {room.photos.length > 0 && (
+                          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {room.photos.map((file, photoIndex) => (
+                              <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border">
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={`Room ${room.roomNumber} Photo ${photoIndex + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                                    onClick={() => handleDownload(file)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                                    onClick={() => handleRemoveRoomPhoto(room.roomNumber, photoIndex)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Document Upload and Scan Section */}
             <Card>
               <CardHeader>
@@ -200,7 +324,6 @@ export default function Step2() {
                   )}
 
                   <DocumentScanner 
-                    onScanStart={() => setIsScanning(true)}
                     onScanComplete={handleScanComplete} 
                   />
 
