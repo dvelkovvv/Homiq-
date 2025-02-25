@@ -46,8 +46,8 @@ export function FileUploadZone({
   });
 
   return (
-    <div 
-      {...getRootProps()} 
+    <div
+      {...getRootProps()}
       className={`
         relative
         flex 
@@ -69,7 +69,7 @@ export function FileUploadZone({
         ) : (
           <FileText className="mx-auto h-12 w-12 text-gray-300" />
         )}
-        
+
         <AnimatePresence>
           {isDragActive ? (
             <motion.div

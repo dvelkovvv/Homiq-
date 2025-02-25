@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory, Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight } from "lucide-react";
+import { DoorClosed, Utensils, Sofa, Bath, Bed, Warehouse, Trees, Factory, Download, TrendingUp, MapPin, Home, Share2, HelpCircle, Info, ArrowUpRight, Banknote, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { InstructionCard } from "@/components/instruction-card";
@@ -518,8 +518,8 @@ export default function Step3() {
                   <CardTitle>Снимки по помещения</CardTitle>
                   <CardDescription>
                     {propertyType === 'industrial' ? 'Снимки на производствените зони' :
-                     propertyType === 'agricultural' ? 'Снимки на земеделските площи' :
-                     'Снимки на помещенията'}
+                      propertyType === 'agricultural' ? 'Снимки на земеделските площи' :
+                        'Снимки на помещенията'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -561,7 +561,7 @@ export default function Step3() {
               <CardHeader>
                 <CardTitle>Резултат от оценката</CardTitle>
                 <CardDescription>
-                  {evaluationType === 'quick' 
+                  {evaluationType === 'quick'
                     ? 'Бърза оценка базирана на локация и основна информация'
                     : 'Професионален анализ базиран на всички предоставени документи'}
                 </CardDescription>
@@ -674,15 +674,16 @@ export default function Step3() {
                               <AreaChart data={analysis.forecast}>
                                 <defs>
                                   <linearGradient id="optimisticGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#4CAF50" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#4CAF50" stopOpacity={0} />
                                   </linearGradient>
-                                  <linearGradient id="conservativeGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#003366" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#003366" stopOpacity={0}/>
+                                  <linearGradient id="conservativeGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#003366" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#003366" stopOpacity={0} />
                                   </linearGradient>
                                   <linearGradient id="marketTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#FF9800" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#FF9800" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#FF9800" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#FF9800" stopOpacity={0} />
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -783,12 +784,12 @@ export default function Step3() {
                         animate={{ y: 0, opacity: 1 }}
                         className="flex flex-col sm:flex-row gap-4"
                       >
-                        <Button                        onClick={generatePDF}
+                        <Button onClick={generatePDF}
                           className="flex-1 bg-[#4CAF50] hover:bg-[#45a049]"
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Изтегли PDF отчет
-                        </Button>
+                                                </Button>
 
                         <Dialog>
                           <DialogTrigger asChild>
@@ -950,21 +951,21 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
     const riskAssessment = {
       score: Math.round((locationFactor + yearFactor + constructionTypeFactor) / 3 * 100),
       factors: [
-        { 
-          name: 'Локация', 
+        {
+          name: 'Локация',
           impact: Math.round(locationFactor * 100),
           details: extractedData?.address ? `Базирано на адрес: ${extractedData.address}` : undefined
         },
-        { 
-          name: 'Година на строителство', 
+        {
+          name: 'Година на строителство',
           impact: Math.round(yearFactor * 100),
-          details: extractedData?.constructionYear ? 
+          details: extractedData?.constructionYear ?
             `Построена през ${extractedData.constructionYear}` : undefined
         },
-        { 
-          name: 'Конструкция', 
+        {
+          name: 'Конструкция',
           impact: Math.round(constructionTypeFactor * 100),
-          details: extractedData?.constructionType ? 
+          details: extractedData?.constructionType ?
             `Тип конструкция: ${extractedData.constructionType}` : undefined
         }
       ],
@@ -1075,7 +1076,7 @@ function calculatePropertyValue(property: any, extractedData?: ExtractedProperty
   });
 }
 
-function InvestmentScenarios({scenarios}: {scenarios: PropertyAnalysis['investmentMetrics']['investmentScenarios']}) {
+function InvestmentScenarios({ scenarios }: { scenarios: PropertyAnalysis['investmentMetrics']['investmentScenarios'] }) {
   return (
     <Card className="p-6">
       <h4 className="font-medium mb-4">Инвестиционни сценарии</h4>
@@ -1093,7 +1094,7 @@ function InvestmentScenarios({scenarios}: {scenarios: PropertyAnalysis['investme
   );
 }
 
-function NeighborhoodAnalysis({analysis}: {analysis: PropertyAnalysis['neighborhoodAnalysis']}) {
+function NeighborhoodAnalysis({ analysis }: { analysis: PropertyAnalysis['neighborhoodAnalysis'] }) {
   return (
     <Card className="p-6">
       <h4 className="font-medium mb-4">Анализ на квартала</h4>
