@@ -5,8 +5,6 @@ import { Progress } from "@/components/ui/progress";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import type { Evaluation } from "@shared/schema";
 
 const STEPS = [
   {
@@ -27,52 +25,21 @@ export default function Step3() {
   const [, navigate] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const propertyId = params.get('propertyId');
-  const evaluationType = params.get('evaluationType');
+  const evaluationType = params.get('evaluationType') || 'quick';
 
-  // Fetch evaluation data
-  const { data: evaluation, isLoading, error } = useQuery<Evaluation>({
-    queryKey: [`/api/evaluations/property/${propertyId}`],
-    enabled: !!propertyId,
-  });
+  // Mock evaluation data
+  const mockEvaluation = {
+    estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
+    confidence: Math.random() * (0.95 - 0.75) + 0.75,
+    currency: "EUR",
+    evaluationType: evaluationType,
+    status: "completed"
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Progress value={30} className="w-60 h-2 mb-4" />
-          <p className="text-gray-500">Изчисляване на оценката...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !evaluation) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="text-red-500">Грешка</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Възникна проблем при зареждането на оценката.</p>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/evaluation/step1')}
-              className="mt-4"
-            >
-              Към начало
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const formatCurrency = (value: number | string) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return numValue.toLocaleString('bg-BG', {
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('bg-BG', {
       style: 'currency',
-      currency: evaluation.currency || 'EUR',
+      currency: mockEvaluation.currency,
       maximumFractionDigits: 0
     });
   };
@@ -95,18 +62,26 @@ export default function Step3() {
               <CardContent>
                 <div className="text-center">
                   <p className="text-3xl font-bold text-primary">
-                    {formatCurrency(evaluation.estimatedValue)}
+                    {formatCurrency(mockEvaluation.estimatedValue)}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Приблизителна пазарна стойност
                   </p>
                   <div className="mt-4">
                     <p className="text-sm text-gray-600">
-                      Точност на оценката: {Math.round(Number(evaluation.confidence) * 100)}%
+                      Точност на оценката: {Math.round(mockEvaluation.confidence * 100)}%
                     </p>
                     <p className="text-sm text-gray-600">
-                      Тип оценка: {evaluation.evaluationType === 'quick' ? 'Бърза' : 'Лицензирана'}
+                      Тип оценка: {mockEvaluation.evaluationType === 'quick' ? 'Бърза' : 'Лицензирана'}
                     </p>
+                  </div>
+                  <div className="mt-8">
+                    <Button 
+                      onClick={() => navigate("/")}
+                      className="bg-[#003366] hover:bg-[#002244]"
+                    >
+                      Към начало
+                    </Button>
                   </div>
                 </div>
               </CardContent>
