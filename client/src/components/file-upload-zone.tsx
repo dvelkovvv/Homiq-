@@ -2,10 +2,11 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Image as ImageIcon, X, FileText, Upload, CheckCircle } from "lucide-react";
+import { Image as ImageIcon, X, FileText, Upload, CheckCircle, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoomImageAnalyzer } from "@/lib/roomImageAnalyzer";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface FileUploadZoneProps {
   accept: {
@@ -18,6 +19,17 @@ interface FileUploadZoneProps {
   roomType?: string;
 }
 
+const getRoomTypeName = (type: string): string => {
+  const types: Record<string, string> = {
+    entrance: "входна врата",
+    kitchen: "кухня",
+    living: "хол",
+    bathroom: "баня",
+    bedroom: "спалня"
+  };
+  return types[type] || type;
+};
+
 export function FileUploadZone({
   accept,
   maxFiles = 10,
@@ -28,58 +40,92 @@ export function FileUploadZone({
 }: FileUploadZoneProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<Array<{
+    file: File;
+    result: any;
+  }>>([]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     try {
-      // Симулираме прогрес на качването
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setUploadProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          setUploadProgress(0);
-        }
-      }, 100);
+      setAnalyzing(true);
+      const analyzedFiles = [];
+      const results = [];
 
-      if (fileType === "image" && roomType) {
-        setAnalyzing(true);
-
-        // Анализираме всяка снимка
-        const analyzedFiles = [];
-        for (const file of acceptedFiles) {
-          try {
+      for (const file of acceptedFiles) {
+        try {
+          setUploadProgress(25);
+          if (fileType === "image" && roomType) {
             const result = await RoomImageAnalyzer.analyzeImage(file);
+            setUploadProgress(75);
 
-            if (result.roomType === roomType) {
+            if (result.confidence >= 0.75 && result.roomType === roomType) {
               analyzedFiles.push(file);
+              results.push({ file, result });
+
               toast({
                 title: "Успешно разпознаване",
-                description: `Снимката е разпозната като ${result.roomType} с ${Math.round(result.confidence * 100)}% увереност`,
+                description: (
+                  <div className="space-y-2">
+                    <p>Снимката е разпозната като {getRoomTypeName(result.roomType)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Увереност: {Math.round(result.confidence * 100)}%
+                    </p>
+                    {result.detectedObjects.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {result.detectedObjects.map((obj, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {obj}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ),
               });
             } else {
               toast({
                 title: "Внимание",
-                description: `Снимката изглежда като ${result.roomType}, а не като ${roomType}. Моля, проверете дали сте избрали правилната снимка.`,
+                description: (
+                  <div className="space-y-2">
+                    <p>
+                      {result.confidence < 0.75
+                        ? "Не можем да разпознаем със сигурност типа помещение"
+                        : `Снимката изглежда като ${getRoomTypeName(result.roomType)}, а не като ${getRoomTypeName(roomType)}`}
+                    </p>
+                    {result.detectedObjects.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mt-2">Открити обекти:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {result.detectedObjects.map((obj, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {obj}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ),
                 variant: "destructive"
               });
             }
-          } catch (error) {
-            console.error('Error analyzing image:', error);
-            toast({
-              title: "Грешка при анализа",
-              description: "Не успяхме да анализираме снимката. Моля, опитайте с друга.",
-              variant: "destructive"
-            });
+          } else {
+            analyzedFiles.push(file);
           }
+        } catch (error) {
+          console.error('Error analyzing file:', error);
+          toast({
+            title: "Грешка при анализа",
+            description: "Не успяхме да анализираме снимката. Моля, опитайте с друга.",
+            variant: "destructive"
+          });
         }
+      }
 
-        if (analyzedFiles.length > 0) {
-          onFilesAdded(analyzedFiles);
-        }
-      } else {
-        // За документи или снимки без специфичен тип стая
-        onFilesAdded(acceptedFiles);
+      setUploadProgress(100);
+      if (analyzedFiles.length > 0) {
+        onFilesAdded(analyzedFiles);
+        setAnalysisResults(results);
       }
     } catch (error) {
       console.error('Error handling files:', error);
@@ -90,6 +136,7 @@ export function FileUploadZone({
       });
     } finally {
       setAnalyzing(false);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   }, [onFilesAdded, fileType, roomType]);
 
@@ -128,7 +175,9 @@ export function FileUploadZone({
             >
               <ImageIcon className="mx-auto h-12 w-12 text-primary" />
             </motion.div>
-            <p className="text-sm text-gray-500">Анализиране на изображението...</p>
+            <p className="text-sm text-gray-500">
+              {fileType === "image" ? "Анализиране на изображението..." : "Обработка на файла..."}
+            </p>
           </div>
         ) : (
           <>
@@ -159,7 +208,11 @@ export function FileUploadZone({
                 >
                   <p className="text-sm text-gray-500">
                     {fileType === "image" ? (
-                      <>Плъзнете снимки тук или</>
+                      roomType ? (
+                        <>Добавете снимки на {getRoomTypeName(roomType)}</>
+                      ) : (
+                        <>Плъзнете снимки тук или</>
+                      )
                     ) : (
                       <>Плъзнете документи тук или</>
                     )}
