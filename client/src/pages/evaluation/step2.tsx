@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, DoorClosed, Kitchen, Sofa, Bath, Bed } from "lucide-react";
+import { HelpCircle, Image as ImageIcon, Download, X, Clock, CheckCircle, DoorClosed, Utensils, Sofa, Bath, Bed } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProgressSteps } from "@/components/progress-steps";
 import { DocumentScanner } from "@/components/document-scanner";
@@ -31,7 +31,7 @@ const STEPS = [
 
 const ROOM_TYPES = [
   { id: "entrance", name: "Входна врата", icon: DoorClosed },
-  { id: "kitchen", name: "Кухня", icon: Kitchen },
+  { id: "kitchen", name: "Кухня", icon: Utensils },
   { id: "living", name: "Хол", icon: Sofa },
   { id: "bathroom", name: "Баня", icon: Bath },
   { id: "bedroom", name: "Спалня", icon: Bed }
@@ -43,6 +43,8 @@ interface RoomPhotos {
   description: string;
 }
 
+type EvaluationType = "quick" | "licensed";
+
 export default function Step2() {
   const [, navigate] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
@@ -51,7 +53,7 @@ export default function Step2() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
-  const [evaluationType, setEvaluationType] = useState<"quick" | "licensed">("quick");
+  const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
 
   const propertyId = new URLSearchParams(window.location.search).get('propertyId');
   const rooms = parseInt(new URLSearchParams(window.location.search).get('rooms') || '0');
@@ -210,10 +212,10 @@ export default function Step2() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs value={evaluationType} onValueChange={(value: "quick" | "licensed") => setEvaluationType(value)}>
+                <Tabs value={evaluationType} onValueChange={(value: EvaluationType) => setEvaluationType(value)}>
                   <TabsList className="grid w-full grid-cols-2 gap-4 h-auto p-1">
-                    <TabsTrigger 
-                      value="quick" 
+                    <TabsTrigger
+                      value="quick"
                       className={`flex flex-col items-center gap-2 p-4 data-[state=active]:bg-blue-50 ${
                         evaluationType === "quick" ? "border-2 border-blue-500" : ""
                       }`}
@@ -224,8 +226,8 @@ export default function Step2() {
                         <p className="text-sm text-gray-600">Получете оценка до 24 часа</p>
                       </div>
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="licensed" 
+                    <TabsTrigger
+                      value="licensed"
                       className={`flex flex-col items-center gap-2 p-4 data-[state=active]:bg-green-50 ${
                         evaluationType === "licensed" ? "border-2 border-green-500" : ""
                       }`}
