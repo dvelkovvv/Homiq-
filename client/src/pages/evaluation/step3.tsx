@@ -4,9 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, TrendingUp, MapPin, ChartBar, AlertTriangle, Download, Share2, Home } from "lucide-react";
+import { 
+  Building2, TrendingUp, MapPin, ChartBar, AlertTriangle, 
+  Download, Share2, Home, Euro, Calendar, BarChart4,
+  ArrowUpCircle, BadgeCheck, Clock, Star
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -19,6 +23,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { toast } from "@/hooks/use-toast";
+import { Logo } from "@/components/logo";
 
 const STEPS = [
   {
@@ -40,6 +45,7 @@ export default function Step3() {
 
   // Get property data from localStorage
   const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+  const evaluationType = localStorage.getItem('evaluationType') || 'quick';
 
   // Mock data based on property type and characteristics
   const mockEvaluation = {
@@ -64,7 +70,7 @@ export default function Step3() {
     });
   };
 
-  // Price history data - could be based on real market data later
+  // Price history data
   const priceHistoryData = [
     { month: "Яну", value: mockEvaluation.estimatedValue * 0.9 },
     { month: "Фев", value: mockEvaluation.estimatedValue * 0.92 },
@@ -89,8 +95,14 @@ export default function Step3() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <header className="border-b sticky top-0 bg-white/80 backdrop-blur-sm z-10">
+        <div className="container mx-auto px-4 h-16 flex items-center">
+          <Logo />
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -100,47 +112,113 @@ export default function Step3() {
 
           <div className="grid gap-6">
             {/* Main Evaluation Card */}
-            <Card className="bg-gradient-to-br from-[#003366] to-[#002244] text-white overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <Home className="h-6 w-6" />
-                  Оценка на имота
-                </CardTitle>
-                <CardDescription className="text-gray-200">
-                  Генерирана на {new Date().toLocaleDateString('bg-BG')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <p className="text-5xl font-bold">
-                    {formatCurrency(mockEvaluation.estimatedValue)}
-                  </p>
-                  <p className="text-xl text-gray-200 mt-2">
-                    Приблизителна пазарна стойност
-                  </p>
-                  <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                    <div>
-                      <p className="text-4xl font-bold">
-                        {Math.round(mockEvaluation.confidence * 100)}%
-                      </p>
-                      <p className="text-sm text-gray-200">Точност на оценката</p>
-                    </div>
-                    <div>
-                      <p className="text-4xl font-bold">{mockEvaluation.investmentRating}</p>
-                      <p className="text-sm text-gray-200">Инвестиционен рейтинг</p>
-                    </div>
-                    <div>
-                      <p className="text-4xl font-bold">{mockEvaluation.area}м²</p>
-                      <p className="text-sm text-gray-200">Площ</p>
-                    </div>
-                    <div>
-                      <p className="text-4xl font-bold">{mockEvaluation.locationScore}</p>
-                      <p className="text-sm text-gray-200">Локация (от 10)</p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-gradient-to-br from-[#003366] to-[#002244] text-white overflow-hidden relative">
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Home className="h-6 w-6" />
+                    Оценка на имота
+                  </CardTitle>
+                  <CardDescription className="text-gray-200 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Генерирана на {new Date().toLocaleDateString('bg-BG')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 relative">
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2"
+                    >
+                      <BadgeCheck className="h-4 w-4" />
+                      {evaluationType === 'licensed' ? 'Лицензирана оценка' : 'Бърза оценка'}
+                    </motion.div>
+
+                    <motion.p 
+                      className="text-6xl font-bold mb-2"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.6 }}
+                    >
+                      {formatCurrency(mockEvaluation.estimatedValue)}
+                    </motion.p>
+                    <p className="text-xl text-gray-200 mb-8">
+                      Приблизителна пазарна стойност
+                    </p>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mt-8">
+                      <motion.div 
+                        className="text-center"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                      >
+                        <div className="mb-2">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-2">
+                            <Star className="h-6 w-6 text-yellow-400" />
+                          </div>
+                        </div>
+                        <p className="text-4xl font-bold">
+                          {Math.round(mockEvaluation.confidence * 100)}%
+                        </p>
+                        <p className="text-sm text-gray-200">Точност на оценката</p>
+                      </motion.div>
+
+                      <motion.div 
+                        className="text-center"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                      >
+                        <div className="mb-2">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-2">
+                            <BarChart4 className="h-6 w-6 text-green-400" />
+                          </div>
+                        </div>
+                        <p className="text-4xl font-bold">{mockEvaluation.investmentRating}</p>
+                        <p className="text-sm text-gray-200">Инвестиционен рейтинг</p>
+                      </motion.div>
+
+                      <motion.div 
+                        className="text-center"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 1.0 }}
+                      >
+                        <div className="mb-2">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-2">
+                            <Home className="h-6 w-6 text-blue-400" />
+                          </div>
+                        </div>
+                        <p className="text-4xl font-bold">{mockEvaluation.area}м²</p>
+                        <p className="text-sm text-gray-200">Площ</p>
+                      </motion.div>
+
+                      <motion.div 
+                        className="text-center"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                      >
+                        <div className="mb-2">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-2">
+                            <MapPin className="h-6 w-6 text-red-400" />
+                          </div>
+                        </div>
+                        <p className="text-4xl font-bold">{mockEvaluation.locationScore}</p>
+                        <p className="text-sm text-gray-200">Локация (от 10)</p>
+                      </motion.div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Analysis Tabs */}
             <Tabs defaultValue="overview" className="space-y-4">
@@ -167,180 +245,278 @@ export default function Step3() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Обобщен анализ</CardTitle>
-                    <CardDescription>
-                      Основни показатели за имота
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h4 className="font-semibold">Ключови фактори</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span>Годишна възвръщаемост</span>
-                            <span className="font-semibold text-green-600">
-                              +{mockEvaluation.yearlyAppreciation}%
-                            </span>
+              <AnimatePresence mode="wait">
+                <TabsContent value="overview">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Обобщен анализ</CardTitle>
+                        <CardDescription>
+                          Основни показатели за имота
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-6">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                              Ключови фактори
+                            </h4>
+                            <div className="space-y-4">
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Годишна възвръщаемост</span>
+                                  <span className="font-semibold text-green-600">
+                                    +{mockEvaluation.yearlyAppreciation}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Сравними имоти</span>
+                                  <span className="font-semibold">
+                                    {mockEvaluation.comparableProperties}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Рейтинг на локацията</span>
+                                  <span className="font-semibold">
+                                    {mockEvaluation.locationScore}/10
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span>Сравними имоти</span>
-                            <span className="font-semibold">
-                              {mockEvaluation.comparableProperties}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span>Рейтинг на локацията</span>
-                            <span className="font-semibold">
-                              {mockEvaluation.locationScore}/10
-                            </span>
+                          <div className="space-y-6">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <TrendingUp className="h-5 w-5 text-blue-500" />
+                              Пазарни индикатори
+                            </h4>
+                            <div className="space-y-4">
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Пазарен тренд</span>
+                                  <span className="font-semibold text-blue-600">
+                                    Възходящ
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Ликвидност</span>
+                                  <span className="font-semibold">Висока</span>
+                                </div>
+                              </div>
+                              <div className="p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span>Инвестиционен потенциал</span>
+                                  <span className="font-semibold text-green-600">
+                                    Отличен
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="space-y-4">
-                        <h4 className="font-semibold">Пазарни индикатори</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span>Пазарен тренд</span>
-                            <span className="font-semibold text-blue-600">
-                              Възходящ
-                            </span>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="market">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Пазарен анализ</CardTitle>
+                        <CardDescription>
+                          Динамика на цените в района
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[400px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={priceHistoryData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                              <XAxis 
+                                dataKey="month"
+                                stroke="#666"
+                                tick={{ fill: '#666' }}
+                              />
+                              <YAxis
+                                stroke="#666"
+                                tick={{ fill: '#666' }}
+                                tickFormatter={(value) => `${value.toLocaleString()} €`}
+                              />
+                              <Tooltip
+                                formatter={(value: any) => [`${value.toLocaleString()} €`, "Стойност"]}
+                                labelStyle={{ color: '#666' }}
+                                contentStyle={{ background: 'white', border: '1px solid #ddd' }}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke="#003366"
+                                strokeWidth={3}
+                                dot={{ fill: "#003366", strokeWidth: 2 }}
+                                activeDot={{ r: 8 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="location">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Анализ на локацията</CardTitle>
+                        <CardDescription>
+                          Фактори на местоположението
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="p-6 border rounded-xl bg-gradient-to-br from-blue-50 to-white">
+                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                              <MapPin className="h-5 w-5 text-blue-500" />
+                              Транспорт
+                            </h4>
+                            <Progress value={85} className="h-2 mb-2" />
+                            <p className="text-sm text-gray-600">Отлична достъпност</p>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span>Ликвидност</span>
-                            <span className="font-semibold">Висока</span>
+                          <div className="p-6 border rounded-xl bg-gradient-to-br from-green-50 to-white">
+                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                              <Building2 className="h-5 w-5 text-green-500" />
+                              Инфраструктура
+                            </h4>
+                            <Progress value={90} className="h-2 mb-2" />
+                            <p className="text-sm text-gray-600">Много добра</p>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span>Инвестиционен потенциал</span>
-                            <span className="font-semibold text-green-600">
-                              Отличен
-                            </span>
+                          <div className="p-6 border rounded-xl bg-gradient-to-br from-purple-50 to-white">
+                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                              <Home className="h-5 w-5 text-purple-500" />
+                              Удобства
+                            </h4>
+                            <Progress value={75} className="h-2 mb-2" />
+                            <p className="text-sm text-gray-600">Добри</p>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
 
-              <TabsContent value="market">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Пазарен анализ</CardTitle>
-                    <CardDescription>
-                      Динамика на цените в района
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={priceHistoryData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#003366"
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="location">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Анализ на локацията</CardTitle>
-                    <CardDescription>
-                      Фактори на местоположението
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 border rounded-lg">
-                        <h4 className="font-semibold mb-2">Транспорт</h4>
-                        <Progress value={85} className="h-2" />
-                        <p className="text-sm text-gray-600 mt-1">Отлична достъпност</p>
-                      </div>
-                      <div className="p-4 border rounded-lg">
-                        <h4 className="font-semibold mb-2">Инфраструктура</h4>
-                        <Progress value={90} className="h-2" />
-                        <p className="text-sm text-gray-600 mt-1">Много добра</p>
-                      </div>
-                      <div className="p-4 border rounded-lg">
-                        <h4 className="font-semibold mb-2">Удобства</h4>
-                        <Progress value={75} className="h-2" />
-                        <p className="text-sm text-gray-600 mt-1">Добри</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="comparison">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Сравнителен анализ</CardTitle>
-                    <CardDescription>
-                      Сравнение с подобни имоти
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={similarPropertiesData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="type" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#003366" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="risk">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Анализ на риска</CardTitle>
-                    <CardDescription>
-                      Оценка на рисковите фактори
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {riskFactors.map((factor) => (
-                        <div key={factor.factor} className="space-y-2">
-                          <div className="flex justify-between">
-                            <span>{factor.factor}</span>
-                            <span className="font-semibold">{factor.score}%</span>
-                          </div>
-                          <Progress value={factor.score} className="h-2" />
+                <TabsContent value="comparison">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Сравнителен анализ</CardTitle>
+                        <CardDescription>
+                          Сравнение с подобни имоти
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[400px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={similarPropertiesData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                              <XAxis 
+                                dataKey="type"
+                                stroke="#666"
+                                tick={{ fill: '#666' }}
+                              />
+                              <YAxis
+                                stroke="#666"
+                                tick={{ fill: '#666' }}
+                                tickFormatter={(value) => `${value.toLocaleString()} €`}
+                              />
+                              <Tooltip
+                                formatter={(value: any) => [`${value.toLocaleString()} €`, "Стойност"]}
+                                labelStyle={{ color: '#666' }}
+                                contentStyle={{ background: 'white', border: '1px solid #ddd' }}
+                              />
+                              <Bar 
+                                dataKey="value" 
+                                fill="#003366"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="risk">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Анализ на риска</CardTitle>
+                        <CardDescription>
+                          Оценка на рисковите фактори
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          {riskFactors.map((factor, index) => (
+                            <motion.div 
+                              key={factor.factor}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="space-y-2"
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium">{factor.factor}</span>
+                                <span className="font-semibold text-blue-600">{factor.score}%</span>
+                              </div>
+                              <Progress value={factor.score} className="h-2" />
+                              <p className="text-sm text-gray-500">
+                                {factor.score >= 80 ? 'Отличен показател' : 
+                                 factor.score >= 60 ? 'Добър показател' : 'Нуждае се от внимание'}
+                              </p>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </TabsContent>
+              </AnimatePresence>
             </Tabs>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 justify-center mt-6">
+            <div className="flex flex-wrap gap-4 justify-center mt-8">
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
                 onClick={() => {
-                  // Here we could generate a PDF report
                   toast({
                     title: "Изтегляне на оценка",
                     description: "Започна изтеглянето на оценката във формат PDF.",
@@ -354,7 +530,6 @@ export default function Step3() {
                 variant="outline"
                 className="flex items-center gap-2"
                 onClick={() => {
-                  // Here we could implement sharing functionality
                   toast({
                     title: "Споделяне",
                     description: "Копиран линк за споделяне.",
@@ -366,14 +541,15 @@ export default function Step3() {
               </Button>
               <Button
                 onClick={() => navigate("/")}
-                className="bg-[#003366] hover:bg-[#002244]"
+                className="bg-[#003366] hover:bg-[#002244] flex items-center gap-2"
               >
+                <Home className="h-4 w-4" />
                 Към начало
               </Button>
             </div>
           </div>
         </motion.div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Home, Building } from "lucide-react";
+import { Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
@@ -17,8 +17,11 @@ export function Logo({ className }: LogoProps) {
           </div>
         </div>
         <div className="flex flex-col -mt-1">
-          <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#4CAF50] leading-tight">
-            Homiq
+          <span className="text-2xl font-bold leading-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#4CAF50]">
+              HOMIQ
+            </span>
+            <span className="text-[#FF6B6B]">-IQ</span>
           </span>
           <span className="text-[10px] text-muted-foreground font-medium -mt-1">
             Smart Property Evaluation
