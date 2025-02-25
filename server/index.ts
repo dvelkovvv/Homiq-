@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import path from "path";
 
 const app = express();
 
@@ -46,14 +45,19 @@ app.use((req, res, next) => {
     // Enable trust proxy to handle Replit's proxy
     app.set('trust proxy', true);
 
+    // Log startup information
+    log('Starting server...');
+    log(`Environment: ${process.env.NODE_ENV}`);
+    log(`Port: ${process.env.PORT || 5000}`);
+
     const server = await registerRoutes(app);
 
-    // Setup Vite in development or serve static files in production
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
+    // Force development mode for now to avoid build requirement
+    process.env.NODE_ENV = "development";
+
+    // Setup Vite in development mode
+    log('Setting up Vite development server...');
+    await setupVite(app, server);
 
     // Global error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -80,10 +84,13 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`Server running on port ${port}`);
+      log(`Server URL: http://0.0.0.0:${port}`);
     });
 
     // Handle server errors
     server.on('error', (error: any) => {
+      log(`[ERROR] Server error: ${error.message}`);
+
       if (error.syscall !== 'listen') {
         throw error;
       }
