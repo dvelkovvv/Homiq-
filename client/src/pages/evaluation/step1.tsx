@@ -58,8 +58,8 @@ export default function Step1() {
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
     defaultValues: {
-      address: "",
       type: undefined,
+      address: "",
       squareMeters: 1,
       yearBuilt: new Date().getFullYear(),
       location: {
@@ -70,12 +70,7 @@ export default function Step1() {
       floor: 0,
       totalFloors: 1,
       heating: "electric",
-      parking: false,
-      productionArea: 0,
-      storageArea: 0,
-      ceilingHeight: 0,
-      loadingDock: false,
-      threePhasePower: false
+      parking: false
     }
   });
 
@@ -145,14 +140,17 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      localStorage.setItem('propertyData', JSON.stringify(data));
+      localStorage.setItem('propertyData', JSON.stringify({
+        ...data,
+        submittedAt: new Date().toISOString()
+      }));
 
       toast({
         title: "Успешно запазени данни",
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      setLocation(`/evaluation/step2?type=${data.type}&rooms=${data.rooms || 0}`);
+      setLocation('/evaluation/step2');
     } catch (error: any) {
       console.error('Error:', error);
       toast({
