@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
@@ -19,24 +19,16 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-// Component to handle location updates
-function LocationMarker({ onLocationSelect }: { onLocationSelect?: (location: { lat: number; lng: number }) => void }) {
+// Компонент за актуализиране на изгледа на картата
+function MapUpdater({ center }: { center: [number, number] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!onLocationSelect) return;
-
-    const handleClick = (e: any) => {
-      const { lat, lng } = e.latlng;
-      onLocationSelect({ lat, lng });
-    };
-
-    map.on('click', handleClick);
-
-    return () => {
-      map.off('click', handleClick);
-    };
-  }, [map, onLocationSelect]);
+    map.setView(center, map.getZoom(), {
+      animate: true,
+      duration: 0.8
+    });
+  }, [center, map]);
 
   return null;
 }
@@ -45,6 +37,12 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(
     initialLocation || { lat: 42.6977, lng: 23.3219 } // София по подразбиране
+  );
+
+  // Мемоизация на центъра на картата
+  const center = useMemo(() => 
+    [currentLocation.lat, currentLocation.lng] as [number, number],
+    [currentLocation.lat, currentLocation.lng]
   );
 
   // Handle map load complete
@@ -76,27 +74,28 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       />
       <div className="relative w-full h-[300px]">
         <MapContainer
-          center={[currentLocation.lat, currentLocation.lng]}
+          center={center}
           zoom={13}
           className="w-full h-[300px] rounded-md border"
           style={{ zIndex: 1 }}
           whenReady={handleMapLoad}
+          scrollWheelZoom={false}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <Marker 
-            position={[currentLocation.lat, currentLocation.lng]}
+            position={center}
             icon={defaultIcon}
           />
           {/* Add a radius circle around the property */}
           <Circle
-            center={[currentLocation.lat, currentLocation.lng]}
+            center={center}
             radius={500}
             pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
           />
-          <LocationMarker onLocationSelect={onLocationSelect} />
+          <MapUpdater center={center} />
         </MapContainer>
       </div>
     </div>
