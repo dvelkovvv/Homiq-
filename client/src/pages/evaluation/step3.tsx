@@ -222,8 +222,8 @@ export default function Step3() {
             <Tabs defaultValue="overview" className="space-y-8">
               <div className="bg-gradient-to-r from-gray-50 to-white p-4 rounded-xl border shadow-sm">
                 <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-                  <TabsTrigger 
-                    value="overview" 
+                  <TabsTrigger
+                    value="overview"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/10 data-[state=active]:to-primary/5 data-[state=active]:text-primary hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
@@ -231,8 +231,8 @@ export default function Step3() {
                     </div>
                     <span className="font-medium">Обобщение</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="market" 
+                  <TabsTrigger
+                    value="market"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-50 data-[state=active]:to-blue-50/50 data-[state=active]:text-blue-600 hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg">
@@ -240,8 +240,8 @@ export default function Step3() {
                     </div>
                     <span className="font-medium">Пазарен анализ</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="location" 
+                  <TabsTrigger
+                    value="location"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-50 data-[state=active]:to-purple-50/50 data-[state=active]:text-purple-600 hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-purple-50 to-purple-50/50 rounded-lg">
@@ -249,8 +249,8 @@ export default function Step3() {
                     </div>
                     <span className="font-medium">Локация</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="comparison" 
+                  <TabsTrigger
+                    value="comparison"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-green-50 data-[state=active]:to-green-50/50 data-[state=active]:text-green-600 hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-green-50 to-green-50/50 rounded-lg">
@@ -258,8 +258,8 @@ export default function Step3() {
                     </div>
                     <span className="font-medium">Сравнение</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="risk" 
+                  <TabsTrigger
+                    value="risk"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-yellow-50 data-[state=active]:to-yellow-50/50 data-[state=active]:text-yellow-600 hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-yellow-50 to-yellow-50/50 rounded-lg">
@@ -267,8 +267,8 @@ export default function Step3() {
                     </div>
                     <span className="font-medium">Риск анализ</span>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="documents" 
+                  <TabsTrigger
+                    value="documents"
                     className="flex items-center gap-3 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-orange-50 data-[state=active]:to-orange-50/50 data-[state=active]:text-orange-600 hover:bg-gray-50 transition-all"
                   >
                     <div className="p-2 bg-gradient-to-br from-orange-50 to-orange-50/50 rounded-lg">
@@ -676,15 +676,13 @@ export default function Step3() {
                                       </div>
                                     )}
 
-                                    {doc.extractedData?.notaryName && (
-                                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                                        <User className="h-4 w-4 text-gray-500" />
-                                        <div>
-                                          <p className="text-sm font-medium">Нотариус</p>
-                                          <p className="text-sm text-gray-600">{doc.extractedData.notaryName}</p>
-                                        </div>
-                                      </</div>
-                                    )}
+                                    <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                      <User className="h-4 w-4 text-gray-500" />
+                                      <div>
+                                        <p className="text-sm font-medium">Нотариус</p>
+                                        <p className="text-sm text-gray-600">{doc.extractedData.notaryName}</p>
+                                      </div>
+                                    </div>
 
                                     {doc.extractedData?.boundaries && doc.extractedData.boundaries.length > 0 && (
                                       <div className="col-span-2 p-3 bg-gray-50 rounded-lg">
