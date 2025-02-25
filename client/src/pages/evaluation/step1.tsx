@@ -140,17 +140,21 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      localStorage.setItem('propertyData', JSON.stringify({
+      // Store form data in localStorage
+      const formData = {
         ...data,
         submittedAt: new Date().toISOString()
-      }));
+      };
+
+      localStorage.setItem('propertyData', JSON.stringify(formData));
 
       toast({
         title: "Успешно запазени данни",
         description: "Продължете към следващата стъпка за качване на снимки и документи.",
       });
 
-      setLocation('/evaluation/step2');
+      // Force navigation to step 2
+      window.location.href = '/evaluation/step2';
     } catch (error: any) {
       console.error('Error:', error);
       toast({
