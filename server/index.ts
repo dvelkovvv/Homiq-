@@ -41,11 +41,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
 (async () => {
   try {
     const server = await registerRoutes(app);

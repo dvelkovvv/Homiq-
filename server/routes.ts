@@ -88,6 +88,6 @@ export async function registerRoutes(app: Express) {
     res.status(201).json(evaluation);
   }));
 
-  const server = createServer(app);
-  return server;
+  const httpServer = createServer(app);
+  return httpServer;
 }
