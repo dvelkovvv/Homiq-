@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Logo } from "@/components/logo";
 import { motion } from "framer-motion";
 import { ProgressSteps } from "@/components/progress-steps";
@@ -23,7 +21,7 @@ const STEPS = [
   }
 ];
 
-export function Step3() {
+export default function Step3() {
   const [, navigate] = useLocation();
 
   // Get property data from localStorage with safer parsing
