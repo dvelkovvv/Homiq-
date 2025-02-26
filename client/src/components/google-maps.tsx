@@ -28,7 +28,8 @@ function MapUpdater({ center }: { center: [number, number] }) {
 
     map.setView(center, map.getZoom(), {
       animate: true,
-      duration: 0.8
+      duration: 0.8,
+      easeLinearity: 0.25
     });
   }, [center, map]);
 
@@ -103,7 +104,10 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           className="w-full h-[300px] rounded-md border"
           style={{ zIndex: 1 }}
           whenReady={handleMapLoad}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
+          zoomControl={true}
+          doubleClickZoom={true}
+          dragging={true}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -112,12 +116,29 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           <Marker 
             position={center}
             icon={defaultIcon}
+            draggable={true}
+            eventHandlers={{
+              dragend: (e) => {
+                const marker = e.target;
+                const position = marker.getLatLng();
+                handleLocationFound({
+                  lat: position.lat,
+                  lng: position.lng,
+                  display_name: 'Избрана локация'
+                });
+              },
+            }}
           />
           {/* Добавяме радиус около имота */}
           <Circle
             center={center}
             radius={500}
-            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
+            pathOptions={{ 
+              color: 'blue', 
+              fillColor: 'blue', 
+              fillOpacity: 0.1,
+              weight: 1
+            }}
           />
           <MapUpdater center={center} />
         </MapContainer>
