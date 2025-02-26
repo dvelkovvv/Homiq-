@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Home, MapPin, Building2, User } from "lucide-react";
+import { FileText, Home, MapPin, Building2, User, Calendar, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 
 interface PropertyReportProps {
   propertyData: any;
@@ -10,11 +10,18 @@ interface PropertyReportProps {
 
 export function PropertyReport({ propertyData, evaluationType }: PropertyReportProps) {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [documentAnalysis, setDocumentAnalysis] = useState<{
+    confidence: number;
+    issues: string[];
+    recommendations: string[];
+  }>({
+    confidence: 0,
+    issues: [],
+    recommendations: []
+  });
 
   useEffect(() => {
     const urls: string[] = [];
-
-    // Проверяваме дали имаме снимки и дали са във валиден формат
     if (propertyData.roomPhotos && Array.isArray(propertyData.roomPhotos)) {
       propertyData.roomPhotos.forEach((room: any) => {
         if (room && room.photos && Array.isArray(room.photos)) {
@@ -32,17 +39,46 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
 
     setPhotoUrls(urls);
 
+    // Анализ на документите
+    if (propertyData.documents && Array.isArray(propertyData.documents)) {
+      let totalConfidence = 0;
+      const issues: string[] = [];
+      const recommendations: string[] = [];
+
+      propertyData.documents.forEach((doc: any) => {
+        if (doc.extractedData) {
+          // Проверка за несъответствия
+          if (doc.extractedData.squareMeters !== propertyData.squareMeters) {
+            issues.push(`Несъответствие в квадратурата между документите`);
+          }
+          if (doc.extractedData.address && doc.extractedData.address !== propertyData.address) {
+            issues.push(`Несъответствие в адреса между документите`);
+          }
+
+          // Проверка за липсваща информация
+          if (!doc.extractedData.documentDate) {
+            recommendations.push(`Препоръчва се да се добави дата на документа`);
+          }
+          if (!doc.extractedData.owner) {
+            recommendations.push(`Препоръчва се да се добави информация за собственика`);
+          }
+
+          // Изчисляване на увереност в анализа
+          totalConfidence += doc.extractedData.confidence || 0;
+        }
+      });
+
+      setDocumentAnalysis({
+        confidence: totalConfidence / propertyData.documents.length,
+        issues,
+        recommendations
+      });
+    }
+
     return () => {
       urls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [propertyData.roomPhotos]);
-
-  // Debug log to check data
-  console.log('PropertyReport data:', { 
-    hasRoomPhotos: Boolean(propertyData.roomPhotos),
-    roomPhotosCount: propertyData.roomPhotos?.length,
-    photoUrls 
-  });
+  }, [propertyData]);
 
   return (
     <div className="space-y-6 w-full">
@@ -97,41 +133,69 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
               </div>
             </div>
 
-            {/* Документи */}
+            {/* Анализ на документи */}
             {propertyData.documents && propertyData.documents.length > 0 && (
               <div className="rounded-lg border p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
                   Анализ на документите
                 </h3>
+
+                {/* Прогрес на анализа */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Точност на анализа</span>
+                    <span className="font-medium">{Math.round(documentAnalysis.confidence * 100)}%</span>
+                  </div>
+                  <Progress value={documentAnalysis.confidence * 100} className="h-2" />
+                </div>
+
+                {/* Списък с документи */}
                 <div className="space-y-4">
                   {propertyData.documents.map((doc: any, index: number) => (
                     <div key={index} className="p-4 rounded-lg bg-accent/5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="font-medium">
-                          {doc.type === 'notary_act' ? 'Нотариален акт' :
-                           doc.type === 'sketch' ? 'Скица' : 'Данъчна оценка'}
-                        </span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-medium">
+                            {doc.type === 'notary_act' ? 'Нотариален акт' :
+                             doc.type === 'sketch' ? 'Скица' : 'Данъчна оценка'}
+                          </span>
+                        </div>
+                        {doc.extractedData?.verified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                        )}
                       </div>
                       {doc.extractedData && (
                         <div className="grid gap-2 text-sm">
                           {doc.extractedData.documentDate && (
-                            <div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
                               <span className="text-muted-foreground">Дата: </span>
                               <span>{doc.extractedData.documentDate}</span>
                             </div>
                           )}
                           {doc.extractedData.squareMeters && (
-                            <div>
+                            <div className="flex items-center gap-2">
+                              <Home className="h-4 w-4 text-muted-foreground" />
                               <span className="text-muted-foreground">Площ: </span>
                               <span>{doc.extractedData.squareMeters} кв.м</span>
                             </div>
                           )}
                           {doc.extractedData.owner && (
-                            <div>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
                               <span className="text-muted-foreground">Собственик: </span>
                               <span>{doc.extractedData.owner}</span>
+                            </div>
+                          )}
+                          {doc.extractedData.scanDate && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Сканиран на: </span>
+                              <span>{new Date(doc.extractedData.scanDate).toLocaleDateString('bg-BG')}</span>
                             </div>
                           )}
                         </div>
@@ -139,10 +203,42 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
                     </div>
                   ))}
                 </div>
+
+                {/* Несъответствия и препоръки */}
+                {(documentAnalysis.issues.length > 0 || documentAnalysis.recommendations.length > 0) && (
+                  <div className="mt-6 space-y-4">
+                    {documentAnalysis.issues.length > 0 && (
+                      <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                        <h4 className="font-medium text-yellow-800 mb-2">Открити несъответствия:</h4>
+                        <ul className="space-y-1">
+                          {documentAnalysis.issues.map((issue, index) => (
+                            <li key={index} className="text-sm text-yellow-700 flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {documentAnalysis.recommendations.length > 0 && (
+                      <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                        <h4 className="font-medium text-blue-800 mb-2">Препоръки:</h4>
+                        <ul className="space-y-1">
+                          {documentAnalysis.recommendations.map((rec, index) => (
+                            <li key={index} className="text-sm text-blue-700 flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4" />
+                              {rec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Снимки */}
+            {/* Снимки и визуална информация */}
             {propertyData.roomPhotos && propertyData.roomPhotos.length > 0 && (
               <div className="rounded-lg border p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -151,7 +247,6 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
                 </h3>
                 <div className="space-y-6">
                   {propertyData.roomPhotos.map((room: any, roomIndex: number) => {
-                    // Calculate starting index for this room's photos
                     const startPhotoIndex = propertyData.roomPhotos
                       .slice(0, roomIndex)
                       .reduce((acc: number, r: any) => acc + (r.photos?.length || 0), 0);
@@ -188,7 +283,7 @@ export function PropertyReport({ propertyData, evaluationType }: PropertyReportP
               </div>
             )}
 
-            {/* Оценка */}
+            {/* Оценка на имота */}
             <div className="rounded-lg border p-4">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
