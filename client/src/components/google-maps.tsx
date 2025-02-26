@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
@@ -19,13 +19,17 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-// Компонент за актуализиране на изгледа на картата
 function MapUpdater({ center }: { center: [number, number] }) {
   const map = useMap();
+  console.log("MapUpdater rendered, map instance:", !!map);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map) {
+      console.log("No map instance available");
+      return;
+    }
 
+    console.log("Updating map view to:", center);
     map.setView(center, map.getZoom(), {
       animate: true,
       duration: 0.8,
@@ -37,7 +41,10 @@ function MapUpdater({ center }: { center: [number, number] }) {
 }
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
+  console.log("GoogleMaps component rendering");
+
   const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState(() => {
     try {
       const savedLocation = localStorage.getItem('lastLocation');
@@ -56,23 +63,44 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     [currentLocation.lat, currentLocation.lng]
   );
 
-  // Handle map load complete
+  useEffect(() => {
+    setMapError(null);
+    console.log("Map component mounted");
+  }, []);
+
   const handleMapLoad = () => {
+    console.log("Map loaded successfully");
     setIsLoading(false);
   };
 
   const handleLocationFound = (location: { lat: number; lng: number; display_name: string }) => {
+    console.log("New location found:", location);
     setCurrentLocation(location);
     onLocationSelect?.(location);
 
     try {
-      // Запазваме адреса в localStorage за да го запомним
       localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
     } catch (error) {
       console.error('Error saving location to localStorage:', error);
     }
   };
+
+  if (mapError) {
+    return (
+      <div className="w-full h-[300px] rounded-md border flex items-center justify-center bg-destructive/5">
+        <div className="text-center p-4">
+          <p className="text-sm text-destructive">Грешка при зареждане на картата</p>
+          <button 
+            className="mt-2 text-sm text-primary hover:underline"
+            onClick={() => window.location.reload()}
+          >
+            Опитайте отново
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -97,12 +125,11 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           }
         })()}
       />
-      <div className="relative w-full h-[300px]">
+      <div className="relative w-full h-[300px] border rounded-md overflow-hidden">
         <MapContainer
           center={center}
           zoom={13}
-          className="w-full h-[300px] rounded-md border"
-          style={{ zIndex: 1 }}
+          className="w-full h-full"
           whenReady={handleMapLoad}
           scrollWheelZoom={true}
           zoomControl={true}
@@ -129,7 +156,6 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
               },
             }}
           />
-          {/* Добавяме радиус около имота */}
           <Circle
             center={center}
             radius={500}
