@@ -63,20 +63,6 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
   const handleMapLoad = (map: google.maps.Map) => {
     console.log('Map loaded successfully');
     setMap(map);
-
-    map.setOptions({
-      streetViewControl: false,
-      mapTypeControl: false,
-      fullscreenControl: false,
-      zoomControl: true,
-      styles: [
-        {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }]
-        }
-      ]
-    });
   };
 
   const handleLoadError = (error: Error) => {
@@ -84,7 +70,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     setError("Грешка при зареждане на картата");
     toast({
       title: "Грешка при зареждане",
-      description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
+      description: "Проверете дали домейнът е добавен в Google Cloud Console",
       variant: "destructive"
     });
   };
@@ -155,6 +141,19 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
             zoom={14}
             onLoad={handleMapLoad}
             onUnmount={handleMapUnmount}
+            options={{
+              streetViewControl: false,
+              mapTypeControl: false,
+              fullscreenControl: false,
+              zoomControl: true,
+              styles: [
+                {
+                  featureType: "poi",
+                  elementType: "labels",
+                  stylers: [{ visibility: "off" }]
+                }
+              ]
+            }}
           >
             <Marker
               position={center}
