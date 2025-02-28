@@ -8,7 +8,6 @@ import { FileText, Image as ImageIcon, MapPin, CheckCircle, Info, Clock, Buildin
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
-import { LocationAnalysis } from "@/components/location-analysis";
 
 interface DocumentStatus {
   notary_act: boolean;
@@ -201,11 +200,6 @@ export default function Step2() {
                 </div>
               </CardContent>
             </Card>
-            {evaluationType === 'quick' && (
-              <LocationAnalysis 
-                address={JSON.parse(localStorage.getItem('propertyData') || '{}').address || ''}
-              />
-            )}
           </div>
         </TabsContent>
 
