@@ -1,116 +1,87 @@
 import { toast } from "@/hooks/use-toast";
-import { geocodeAddress } from "./geocoding";
+import axios from 'axios';
 
-export interface LocationPoint {
-  type: 'transport' | 'education' | 'shopping' | 'leisure';
+interface LocationPoint {
+  type: 'transport' | 'park';
   name: string;
   distance: number;
-  rating?: number;
 }
 
-export interface AreaAnalysis {
-  transportScore: number;
-  educationScore: number;
-  shoppingScore: number;
-  leisureScore: number;
-  averagePrice: number;
-  priceChange: number;
-  infrastructureProjects: string[];
+interface PropertyData {
+  area: number;
+  lat: number;
+  lng: number;
+  metro_distance: number | null;
+  green_zones: number;
 }
 
-export class LocationAnalyzer {
-  static async getNearbyPoints(address: string, radius: number = 1000): Promise<LocationPoint[]> {
-    try {
-      const points: LocationPoint[] = [];
-      const categories = {
-        transport: ['subway_station', 'bus_station', 'train_station'],
-        education: ['school', 'university'],
-        shopping: ['shopping_mall', 'supermarket'],
-        leisure: ['park', 'gym']
-      };
+// Calculate distance between two points in meters
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
 
-      // First get coordinates for the address
-      const geoResult = await geocodeAddress(address);
-      if (!geoResult) {
-        throw new Error('Failed to geocode address');
-      }
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-      const locationString = `${geoResult.lat},${geoResult.lng}`;
+  return R * c;
+}
 
-      // Fetch nearby points for each category
-      for (const [type, placeTypes] of Object.entries(categories)) {
-        for (const placeType of placeTypes) {
-          const response = await fetch(
-            `/api/places/nearby?location=${locationString}&type=${placeType}&radius=${radius}`
-          );
-          const data = await response.json();
-
-          if (data.status === 'OK') {
-            for (const place of data.results) {
-              points.push({
-                type: type as 'transport' | 'education' | 'shopping' | 'leisure',
-                name: place.name,
-                distance: Math.round(
-                  google.maps.geometry.spherical.computeDistanceBetween(
-                    new google.maps.LatLng(geoResult.lat, geoResult.lng),
-                    new google.maps.LatLng(place.geometry.location.lat, place.geometry.location.lng)
-                  )
-                ),
-                rating: place.rating
-              });
-            }
-          }
+export async function analyzeLocation(lat: number, lng: number): Promise<PropertyData> {
+  try {
+    // Get nearby metro stations and parks
+    const [metroResponse, parksResponse] = await Promise.all([
+      axios.get('/api/places/nearby', {
+        params: {
+          location: `${lat},${lng}`,
+          type: 'subway_station',
+          radius: 1500
         }
-      }
+      }),
+      axios.get('/api/places/nearby', {
+        params: {
+          location: `${lat},${lng}`,
+          type: 'park',
+          radius: 1000
+        }
+      })
+    ]);
 
-      return points;
-    } catch (error) {
-      console.error('Error fetching nearby points:', error);
-      toast({
-        title: "Грешка при анализ на локацията",
-        description: "Не успяхме да заредим информация за околността",
-        variant: "destructive"
-      });
-      return [];
+    // Find nearest metro station
+    let metro_distance: number | null = null;
+    if (metroResponse.data.results?.length > 0) {
+      const nearestMetro = metroResponse.data.results[0];
+      metro_distance = calculateDistance(
+        lat, lng,
+        nearestMetro.geometry.location.lat,
+        nearestMetro.geometry.location.lng
+      );
     }
-  }
 
-  static async getAreaAnalysis(address: string): Promise<AreaAnalysis> {
-    try {
-      // Get points
-      const points = await this.getNearbyPoints(address);
+    // Count green zones
+    const green_zones = parksResponse.data.results?.length || 0;
 
-      // Calculate scores based on nearby points
-      const calculateScore = (type: string): number => {
-        const typePoints = points.filter(p => p.type === type);
-        if (typePoints.length === 0) return 0;
+    // Mock area value - in real app this would come from user input or database
+    const area = 85;
 
-        const baseScore = Math.min(10, typePoints.length * 2);
-        const avgRating = typePoints.reduce((acc, p) => acc + (p.rating || 0), 0) / typePoints.length;
-        return Math.round((baseScore + (avgRating || 0)) / 2);
-      };
-
-      return {
-        transportScore: calculateScore('transport'),
-        educationScore: calculateScore('education'),
-        shoppingScore: calculateScore('shopping'),
-        leisureScore: calculateScore('leisure'),
-        averagePrice: 2200, // EUR/m² - This should come from a real estate API
-        priceChange: 5.2, // % last year - This should come from a real estate API
-        infrastructureProjects: [
-          'Разширение на метрото',
-          'Нов парк',
-          'Ремонт на булевард'
-        ]
-      };
-    } catch (error) {
-      console.error('Error analyzing area:', error);
-      toast({
-        title: "Грешка при анализ на района",
-        description: "Не успяхме да заредим информация за района",
-        variant: "destructive"
-      });
-      throw error;
-    }
+    return {
+      area,
+      lat,
+      lng,
+      metro_distance,
+      green_zones
+    };
+  } catch (error) {
+    console.error('Error analyzing location:', error);
+    toast({
+      title: "Грешка при анализ",
+      description: "Не успяхме да анализираме района",
+      variant: "destructive"
+    });
+    throw error;
   }
 }

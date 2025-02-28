@@ -2,17 +2,24 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import fetch from "node-fetch";
-import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } from "@shared/schema";
+import { insertPropertySchema } from "@shared/schema";
+import { insertDocumentSchema } from "@shared/schema";
+import { insertEvaluationSchema } from "@shared/schema";
+import pkg from 'pg';
+const { Pool } = pkg;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   return Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Proxy for Google Maps API calls
 async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    console.error('Google Maps API key is not configured');
     throw new Error('Google Maps API key is not configured');
   }
 
@@ -21,30 +28,29 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
     key: apiKey
   })}`;
 
-  try {
-    console.log(`Making request to Google Maps API: ${path}`);
-    const response = await fetch(url);
-    const data = await response.json();
+  const response = await fetch(url);
+  const data = await response.json();
 
-    if (!response.ok) {
-      console.error(`Google Maps API request failed with status: ${response.status}`);
-      throw new Error(`Google Maps API request failed: ${response.statusText}`);
-    }
-
-    console.log(`Google Maps API response status: ${data.status}`);
-    if (data.status !== 'OK') {
-      console.error(`Google Maps API returned non-OK status: ${data.status}`);
-      throw new Error(data.error_message || 'Google Maps API returned error');
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Google Maps API error:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Google Maps API request failed: ${response.statusText}`);
   }
+
+  if (data.status !== 'OK') {
+    throw new Error(data.error_message || 'Google Maps API returned error');
+  }
+
+  return data;
 }
 
 export async function registerRoutes(app: Express) {
+  // Test database connection
+  try {
+    await pool.query('SELECT NOW()');
+    console.log('Database connection successful');
+  } catch (error) {
+    console.error('Database connection failed:', error);
+  }
+
   // CORS middleware
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -74,24 +80,16 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      let data;
-      if (address) {
-        data = await proxyGoogleMapsRequest('geocode/json', {
-          address: address as string,
-          components: 'country:BG',
-          language: 'bg'
-        });
-      } else {
-        data = await proxyGoogleMapsRequest('geocode/json', {
-          latlng: latlng as string,
-          language: 'bg'
-        });
-      }
+      const data = await proxyGoogleMapsRequest('geocode/json', {
+        ...(address ? { address: address as string } : { latlng: latlng as string }),
+        components: 'country:BG',
+        language: 'bg'
+      });
       res.json(data);
     } catch (error) {
       res.status(500).json({ 
-        error: "Failed to geocode address", 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        error: "Failed to geocode address",
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }));
@@ -115,6 +113,57 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       res.status(500).json({ 
         error: "Failed to fetch nearby places",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+
+  // Property analysis endpoint
+  app.post("/api/properties/analyze", asyncHandler(async (req: Request, res: Response) => {
+    const { address, area, lat, lng } = req.body;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "Coordinates are required" });
+    }
+
+    try {
+      // Get nearby metro stations and parks
+      const [metroData, parksData] = await Promise.all([
+        proxyGoogleMapsRequest('place/nearbysearch/json', {
+          location: `${lat},${lng}`,
+          type: 'subway_station',
+          radius: '1500',
+          language: 'bg'
+        }),
+        proxyGoogleMapsRequest('place/nearbysearch/json', {
+          location: `${lat},${lng}`,
+          type: 'park',
+          radius: '1000',
+          language: 'bg'
+        })
+      ]);
+
+      // Save property data to database
+      const propertyResult = await pool.query(
+        'INSERT INTO properties (address, area, lat, lng) VALUES ($1, $2, $3, $4) RETURNING id',
+        [address, area, lat, lng]
+      );
+
+      res.json({
+        id: propertyResult.rows[0].id,
+        address,
+        area,
+        location: { lat, lng },
+        analysis: {
+          metro_stations: metroData.results.length,
+          parks: parksData.results.length,
+          nearest_metro: metroData.results[0]?.name,
+          nearest_park: parksData.results[0]?.name
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Failed to analyze location",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
