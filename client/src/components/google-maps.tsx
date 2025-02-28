@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, Circle, InfoWindow } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
 import { LocationAnalyzer, LocationPoint } from "@/lib/location-analysis";
@@ -27,34 +27,29 @@ const markerIcons = {
   leisure: "🌳"
 };
 
-const libraries: ("places" | "geometry" | "drawing" | "localContext" | "visualization")[] = ["places"];
-
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<LocationPoint | null>(null);
   const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
   const [center, setCenter] = useState(initialLocation || defaultCenter);
-
-  // Initialize Google Maps with the correct API key and libraries
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries,
-    version: "weekly"
-  });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (defaultAddress) {
       LocationAnalyzer.getNearbyPoints(defaultAddress)
         .then(points => setNearbyPoints(points))
-        .catch(console.error);
+        .catch(error => {
+          console.error('Error loading nearby points:', error);
+          setError("Грешка при зареждане на точките на интерес");
+        });
     }
   }, [defaultAddress]);
 
-  const onLoad = (map: google.maps.Map) => {
+  const handleMapLoad = (map: google.maps.Map) => {
     setMap(map);
   };
 
-  const onUnmount = () => {
+  const handleMapUnmount = () => {
     setMap(null);
   };
 
@@ -70,26 +65,16 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       setNearbyPoints(points);
     } catch (error) {
       console.error('Error processing location:', error);
+      setError("Грешка при обработка на локацията");
     }
   };
 
-  if (loadError) {
+  if (error) {
     return (
       <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-destructive/5">
         <div className="text-center">
-          <p className="text-sm text-destructive">Грешка при зареждане на картата</p>
-          <p className="text-xs text-muted-foreground mt-1">Моля, проверете връзката си с интернет</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-accent/5">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
+          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-xs text-muted-foreground mt-1">Моля, опитайте отново по-късно</p>
         </div>
       </div>
     );
@@ -102,98 +87,109 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
         defaultAddress={defaultAddress}
       />
       <div className="relative w-full h-[400px] border rounded-md overflow-hidden">
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={14}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-          options={{
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-            zoomControl: true,
-            styles: [
-              {
-                featureType: "poi",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-              }
-            ]
-          }}
+        <LoadScript
+          googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+          language="bg"
+          libraries={["places", "geometry"]}
+          loadingElement={
+            <div className="w-full h-[400px] flex items-center justify-center bg-accent/5">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
+              </div>
+            </div>
+          }
         >
-          {/* Main marker */}
-          <Marker
-            position={center}
-            draggable={true}
-            onDragEnd={(e) => {
-              if (e.latLng) {
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-                handleLocationFound({
-                  lat,
-                  lng,
-                  display_name: 'Избрана локация'
-                });
-              }
+          <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={center}
+            zoom={14}
+            onLoad={handleMapLoad}
+            onUnmount={handleMapUnmount}
+            options={{
+              streetViewControl: false,
+              mapTypeControl: false,
+              fullscreenControl: false,
+              zoomControl: true,
+              styles: [
+                {
+                  featureType: "poi",
+                  elementType: "labels",
+                  stylers: [{ visibility: "off" }]
+                }
+              ]
             }}
           >
-            <InfoWindow>
-              <div className="text-sm">
-                <div className="font-medium">Избрана локация</div>
-                <div className="text-muted-foreground mt-1">
-                  Преместете маркера за прецизиране на локацията
+            <Marker
+              position={center}
+              draggable={true}
+              onDragEnd={(e) => {
+                if (e.latLng) {
+                  const lat = e.latLng.lat();
+                  const lng = e.latLng.lng();
+                  handleLocationFound({
+                    lat,
+                    lng,
+                    display_name: 'Избрана локация'
+                  });
+                }
+              }}
+            >
+              <InfoWindow>
+                <div className="text-sm">
+                  <div className="font-medium">Избрана локация</div>
+                  <div className="text-muted-foreground mt-1">
+                    Преместете маркера за прецизиране на локацията
+                  </div>
                 </div>
-              </div>
-            </InfoWindow>
-          </Marker>
+              </InfoWindow>
+            </Marker>
 
-          {/* Nearby points */}
-          {nearbyPoints.map((point, index) => {
-            const position = {
-              lat: center.lat + (Math.random() - 0.5) * 0.01,
-              lng: center.lng + (Math.random() - 0.5) * 0.01
-            };
+            {nearbyPoints.map((point, index) => {
+              const position = {
+                lat: center.lat + (Math.random() - 0.5) * 0.01,
+                lng: center.lng + (Math.random() - 0.5) * 0.01
+              };
 
-            return (
-              <Marker
-                key={index}
-                position={position}
-                icon={{
-                  url: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><text y="18">${markerIcons[point.type]}</text></svg>`,
-                  anchor: new google.maps.Point(12, 12),
-                }}
-                onClick={() => setSelectedMarker(point)}
-              >
-                {selectedMarker === point && (
-                  <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                    <div className="text-sm">
-                      <div className="flex items-center gap-2">
-                        <span>{markerIcons[point.type]}</span>
-                        <span className="font-medium">{point.name}</span>
+              return (
+                <Marker
+                  key={index}
+                  position={position}
+                  icon={{
+                    url: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><text y="18">${markerIcons[point.type]}</text></svg>`,
+                    anchor: new google.maps.Point(12, 12),
+                  }}
+                  onClick={() => setSelectedMarker(point)}
+                >
+                  {selectedMarker === point && (
+                    <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
+                      <div className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>{markerIcons[point.type]}</span>
+                          <span className="font-medium">{point.name}</span>
+                        </div>
+                        <div className="text-muted-foreground mt-1">
+                          {point.distance}м разстояние
+                        </div>
                       </div>
-                      <div className="text-muted-foreground mt-1">
-                        {point.distance}м разстояние
-                      </div>
-                    </div>
-                  </InfoWindow>
-                )}
-              </Marker>
-            );
-          })}
+                    </InfoWindow>
+                  )}
+                </Marker>
+              );
+            })}
 
-          {/* 500m radius circle */}
-          <Circle
-            center={center}
-            radius={500}
-            options={{
-              fillColor: '#4299e1',
-              fillOpacity: 0.1,
-              strokeColor: '#4299e1',
-              strokeWeight: 1
-            }}
-          />
-        </GoogleMap>
+            <Circle
+              center={center}
+              radius={500}
+              options={{
+                fillColor: '#4299e1',
+                fillOpacity: 0.1,
+                strokeColor: '#4299e1',
+                strokeWeight: 1
+              }}
+            />
+          </GoogleMap>
+        </LoadScript>
       </div>
     </div>
   );
