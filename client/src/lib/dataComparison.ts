@@ -1,4 +1,6 @@
 import { toast } from "@/hooks/use-toast";
+import { geocodeAddress } from "./geocoding";
+import { LocationAnalyzer } from "./location-analysis";
 
 interface PropertyData {
   address?: string;
@@ -9,10 +11,24 @@ interface PropertyData {
   totalFloors?: number;
   constructionYear?: number;
   price?: number;
+  location?: {
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+    analysis: {
+      transportScore: number;
+      educationScore: number;
+      shoppingScore: number;
+      leisureScore: number;
+      averagePrice: number;
+      priceChange: number;
+    };
+  };
 }
 
 export class DataComparison {
-  static extractDataFromDocument(text: string): PropertyData {
+  static async extractDataFromDocument(text: string): Promise<PropertyData> {
     const data: PropertyData = {};
 
     // Извличане на адрес
@@ -20,6 +36,28 @@ export class DataComparison {
     const addressMatch = text.match(addressRegex);
     if (addressMatch) {
       data.address = addressMatch[1].trim();
+
+      // Ако имаме адрес, веднага започваме анализ на локацията
+      try {
+        const geoResult = await geocodeAddress(data.address);
+        if (geoResult) {
+          const analysis = await LocationAnalyzer.getAreaAnalysis(data.address);
+          data.location = {
+            coordinates: {
+              lat: geoResult.lat,
+              lng: geoResult.lng
+            },
+            analysis
+          };
+        }
+      } catch (error) {
+        console.error('Location analysis error:', error);
+        toast({
+          title: "Грешка при анализ на локацията",
+          description: "Не успяхме да анализираме локацията автоматично",
+          variant: "destructive"
+        });
+      }
     }
 
     // Извличане на квадратура
@@ -67,25 +105,50 @@ export class DataComparison {
     return data;
   }
 
-  static autofillFormData(documentData: PropertyData): void {
-    // Вземаме съществуващите данни от localStorage
-    const existingData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+  static async autofillFormData(documentData: PropertyData): Promise<void> {
+    try {
+      // Вземаме съществуващите данни от localStorage
+      const existingData = JSON.parse(localStorage.getItem('propertyData') || '{}');
 
-    // Сливаме новите данни със съществуващите
-    const mergedData = {
-      ...existingData,
-      ...documentData
-    };
+      // Ако имаме нов адрес и той е различен от съществуващия
+      if (documentData.address && documentData.address !== existingData.address) {
+        // Извършваме анализ на локацията
+        const geoResult = await geocodeAddress(documentData.address);
+        if (geoResult) {
+          const analysis = await LocationAnalyzer.getAreaAnalysis(documentData.address);
+          documentData.location = {
+            coordinates: {
+              lat: geoResult.lat,
+              lng: geoResult.lng
+            },
+            analysis
+          };
+        }
+      }
 
-    // Запазваме обратно в localStorage
-    localStorage.setItem('propertyData', JSON.stringify(mergedData));
+      // Сливаме новите данни със съществуващите
+      const mergedData = {
+        ...existingData,
+        ...documentData
+      };
 
-    // Показваме съобщение за успешно попълване
-    toast({
-      title: "Данните са извлечени успешно",
-      description: "Формата е попълнена автоматично с данните от документа.",
-      variant: "success",
-    });
+      // Запазваме обратно в localStorage
+      localStorage.setItem('propertyData', JSON.stringify(mergedData));
+
+      // Показваме съобщение за успешно попълване
+      toast({
+        title: "Данните са извлечени успешно",
+        description: "Формата е попълнена автоматично с данните от документа",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error('Error in autofillFormData:', error);
+      toast({
+        title: "Грешка при обработка на данните",
+        description: "Възникна проблем при автоматичното попълване на формата",
+        variant: "destructive"
+      });
+    }
   }
 
   static compareAddresses(address1: string, address2: string): number {
@@ -126,7 +189,7 @@ export class DataComparison {
     return similarity;
   }
 
-  static compareData(formData: PropertyData, documentData: PropertyData): void {
+  static async compareData(formData: PropertyData, documentData: PropertyData): Promise<void> {
     const discrepancies: string[] = [];
 
     // Compare addresses if both exist
@@ -182,16 +245,12 @@ export class DataComparison {
     // Use the most reliable square meters value
     const squareMeters = documentData.squareMeters || formData.squareMeters || 0;
 
-    // Base price per square meter depending on property type
-    const basePrices: Record<string, number> = {
-      apartment: 1200,
-      house: 1000,
-      villa: 1100,
-      agricultural: 50,
-      industrial: 800,
-    };
+    // Get location-based price if available
+    let basePrice = 1000; // Default base price
+    if (formData.location?.analysis.averagePrice) {
+      basePrice = formData.location.analysis.averagePrice;
+    }
 
-    const basePrice = basePrices[formData.type || 'apartment'] || 1000;
     let estimatedValue = squareMeters * basePrice;
 
     // Apply modifiers based on available data
@@ -205,6 +264,22 @@ export class DataComparison {
       // More rooms typically mean better layout
       const roomModifier = 1 + (formData.rooms - 1) * 0.05;
       estimatedValue *= roomModifier;
+    }
+
+    // Apply location score modifiers
+    if (formData.location?.analysis) {
+      const {
+        transportScore,
+        educationScore,
+        shoppingScore,
+        leisureScore
+      } = formData.location.analysis;
+
+      // Calculate average location score (0-10)
+      const locationScore = (transportScore + educationScore + shoppingScore + leisureScore) / 4;
+      // Apply location modifier (-10% to +10% based on score)
+      const locationModifier = 0.9 + (locationScore / 50); // 5 = neutral, 0 = -10%, 10 = +10%
+      estimatedValue *= locationModifier;
     }
 
     return Math.round(estimatedValue);
