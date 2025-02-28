@@ -71,18 +71,28 @@ export async function registerRoutes(app: Express) {
 
   // Google Maps API Proxy Routes
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
-    const { address } = req.query;
-    if (!address) {
-      return res.status(400).json({ error: "Address parameter is required" });
+    const { address, latlng } = req.query;
+
+    if (!address && !latlng) {
+      return res.status(400).json({ error: "Either address or latlng parameter is required" });
     }
 
     try {
-      console.log(`Geocoding address: ${address}`);
-      const data = await proxyGoogleMapsRequest('geocode/json', {
-        address: address as string,
-        components: 'country:BG',
-        language: 'bg'
-      });
+      let data;
+      if (address) {
+        console.log(`Geocoding address: ${address}`);
+        data = await proxyGoogleMapsRequest('geocode/json', {
+          address: address as string,
+          components: 'country:BG',
+          language: 'bg'
+        });
+      } else {
+        console.log(`Reverse geocoding coordinates: ${latlng}`);
+        data = await proxyGoogleMapsRequest('geocode/json', {
+          latlng: latlng as string,
+          language: 'bg'
+        });
+      }
       res.json(data);
     } catch (error) {
       console.error('Geocoding error:', error);

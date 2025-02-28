@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { geocodeAddress } from "./geocoding";
 
 export interface LocationPoint {
   type: 'transport' | 'education' | 'shopping' | 'leisure';
@@ -30,15 +30,12 @@ export class LocationAnalyzer {
       };
 
       // First get coordinates for the address
-      const geocodeResponse = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
-      const geocodeData = await geocodeResponse.json();
-
-      if (geocodeData.status !== 'OK' || !geocodeData.results?.[0]?.geometry?.location) {
+      const geoResult = await geocodeAddress(address);
+      if (!geoResult) {
         throw new Error('Failed to geocode address');
       }
 
-      const location = geocodeData.results[0].geometry.location;
-      const locationString = `${location.lat},${location.lng}`;
+      const locationString = `${geoResult.lat},${geoResult.lng}`;
 
       // Fetch nearby points for each category
       for (const [type, placeTypes] of Object.entries(categories)) {
@@ -55,7 +52,7 @@ export class LocationAnalyzer {
                 name: place.name,
                 distance: Math.round(
                   google.maps.geometry.spherical.computeDistanceBetween(
-                    new google.maps.LatLng(location.lat, location.lng),
+                    new google.maps.LatLng(geoResult.lat, geoResult.lng),
                     new google.maps.LatLng(place.geometry.location.lat, place.geometry.location.lng)
                   )
                 ),
@@ -86,6 +83,8 @@ export class LocationAnalyzer {
       // Calculate scores based on nearby points
       const calculateScore = (type: string): number => {
         const typePoints = points.filter(p => p.type === type);
+        if (typePoints.length === 0) return 0;
+
         const baseScore = Math.min(10, typePoints.length * 2);
         const avgRating = typePoints.reduce((acc, p) => acc + (p.rating || 0), 0) / typePoints.length;
         return Math.round((baseScore + (avgRating || 0)) / 2);

@@ -18,7 +18,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
     }
 
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&components=country:BG`
+      `/api/geocode?address=${encodeURIComponent(address)}`
     );
 
     if (!response.ok) {
@@ -41,6 +41,12 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
       return geoResult;
     }
 
+    toast({
+      title: "Адресът не е намерен",
+      description: "Моля, опитайте с по-точен адрес",
+      variant: "destructive"
+    });
+
     return null;
   } catch (error) {
     console.error('Geocoding error:', error);
@@ -56,7 +62,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&language=bg`
+      `/api/geocode?latlng=${lat},${lng}`
     );
 
     if (!response.ok) {
