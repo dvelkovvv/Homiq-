@@ -7,6 +7,10 @@ import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
+import * as PDFJS from 'pdfjs-dist';
+
+// Set the PDF.js worker from CDN
+PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
@@ -28,6 +32,31 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     return types[type] || types.other;
   };
 
+  const convertPDFToImage = async (file: File): Promise<string[]> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+    const imageUrls: string[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({
+        canvasContext: context!,
+        viewport: viewport
+      }).promise;
+
+      imageUrls.push(canvas.toDataURL('image/png'));
+    }
+
+    return imageUrls;
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
@@ -38,7 +67,15 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
       try {
         const file = acceptedFiles[0];
-        const imageUrl = URL.createObjectURL(file);
+        let imageUrls: string[] = [];
+
+        if (file.type === 'application/pdf') {
+          setCurrentStep('Конвертиране на PDF');
+          imageUrls = await convertPDFToImage(file);
+          setProgress(20);
+        } else {
+          imageUrls = [URL.createObjectURL(file)];
+        }
 
         toast({
           title: "Сканиране започна",
@@ -49,13 +86,13 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(20);
+              setProgress(40);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
-              setProgress(40);
+              setProgress(60);
             } else if (progress.status === 'recognizing text') {
               setCurrentStep('Разпознаване на текст');
-              setProgress(60);
+              setProgress(80);
             }
           }
         });
@@ -63,7 +100,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(70);
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
@@ -73,15 +109,18 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           tessedit_enable_doc_dict: '1'
         });
 
-        setCurrentStep('Извличане на текст');
-        const { data: { text } } = await worker.recognize(imageUrl);
-        setProgress(90);
+        let allText = '';
+        for (let i = 0; i < imageUrls.length; i++) {
+          setCurrentStep(`Разпознаване на страница ${i + 1} от ${imageUrls.length}`);
+          const { data: { text } } = await worker.recognize(imageUrls[i]);
+          allText += text + '\n';
+        }
 
         await worker.terminate();
-        URL.revokeObjectURL(imageUrl);
+        imageUrls.forEach(URL.revokeObjectURL);
 
-        if (text && text.trim().length > 0) {
-          const processedText = text
+        if (allText.trim().length > 0) {
+          const processedText = allText
             .trim()
             .replace(/\s+/g, ' ')
             .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()№]/g, '')
@@ -144,6 +183,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       }
     },
     accept: {
+      'application/pdf': ['.pdf'],
       'image/*': ['.png', '.jpg', '.jpeg']
     },
     maxFiles: 1,
@@ -182,7 +222,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
                     : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Поддържани формати: PNG, JPG (ясни снимки на документи)
+                  Поддържани формати: PDF, PNG, JPG (ясни копии на документи)
                 </p>
                 {!expectedType && (
                   <div className="flex gap-2 justify-center mt-2">
