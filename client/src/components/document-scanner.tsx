@@ -5,7 +5,6 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { DataComparison } from "@/lib/dataComparison";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data: any) => void;
@@ -16,7 +15,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
-  const [extractedData, setExtractedData] = useState<any>(null);
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -25,12 +23,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       'tax_assessment': 'Данъчна оценка'
     };
     return types[type] || 'Документ';
-  };
-
-  const handleAutofill = () => {
-    if (extractedData) {
-      DataComparison.autofillFormData(extractedData);
-    }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -63,61 +55,30 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         await worker.initialize('bul');
         setProgress(70);
 
-        setCurrentStep('Разпознаване на текст');
         const { data: { text } } = await worker.recognize(file);
-
         await worker.terminate();
 
         if (text.trim().length === 0) {
           throw new Error("Не беше открит текст в документа");
         }
 
-        const processedText = text
-          .trim()
-          .replace(/\s+/g, ' ')
-          .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()№]/g, '')
-          .trim();
+        const data = {
+          documentType: expectedType,
+          text: text.trim()
+        };
 
-        setCurrentStep('Анализ на данни');
-        const data = DataComparison.extractDataFromDocument(processedText);
-
-        if (expectedType) {
-          data.documentType = expectedType;
-        }
-
-        setExtractedData(data);
-        setProgress(100);
-        onScanComplete(processedText, data);
-
-        const extractedInfo = [];
-        if (data.squareMeters) extractedInfo.push(`Площ: ${data.squareMeters} кв.м`);
-        if (data.constructionYear) extractedInfo.push(`Година на строителство: ${data.constructionYear}`);
-        if (data.rooms) extractedInfo.push(`Брой стаи: ${data.rooms}`);
-        if (data.floor) extractedInfo.push(`Етаж: ${data.floor}`);
-        if (data.address) extractedInfo.push(`Адрес: ${data.address}`);
+        onScanComplete(text.trim(), data);
 
         toast({
           title: "Успешно сканиране",
-          description: (
-            <div className="space-y-2">
-              <p>Документът е обработен успешно</p>
-              {extractedInfo.map((info, index) => (
-                <p key={index} className="text-sm flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  {info}
-                </p>
-              ))}
-            </div>
-          ),
+          description: "Документът е обработен успешно"
         });
 
       } catch (error) {
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: error instanceof Error 
-            ? error.message 
-            : "Моля, опитайте с друг документ или проверете качеството на изображението.",
+          description: error instanceof Error ? error.message : "Моля, опитайте с друг документ.",
           variant: "destructive"
         });
       } finally {
@@ -172,15 +133,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           </div>
         )}
       </div>
-
-      {extractedData && !scanning && (
-        <Button 
-          onClick={handleAutofill}
-          className="w-full bg-primary hover:bg-primary/90"
-        >
-          Попълни формата автоматично
-        </Button>
-      )}
     </div>
   );
 }
