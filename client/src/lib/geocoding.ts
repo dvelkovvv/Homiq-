@@ -7,12 +7,12 @@ interface GeocodingResult {
   boundingbox?: [string, string, string, string];
 }
 
-// Кеш за геокодинг заявки
+// Cache for geocoding requests
 const geocodingCache = new Map<string, GeocodingResult>();
 
 export async function geocodeAddress(address: string): Promise<GeocodingResult | null> {
   try {
-    // Проверка в кеша
+    // Check cache first
     const cachedResult = geocodingCache.get(address);
     if (cachedResult) {
       return cachedResult;
@@ -38,7 +38,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
         boundingbox: result.boundingbox
       };
 
-      // Запазване в кеша
+      // Save to cache
       geocodingCache.set(address, geoResult);
 
       return geoResult;

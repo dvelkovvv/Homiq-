@@ -24,16 +24,15 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
-  // Синхронизираме с localStorage при започване
+  // Sync with localStorage on mount
   useEffect(() => {
     if (!defaultAddress) {
       try {
         const savedAddress = localStorage.getItem('lastAddress');
         if (savedAddress) {
           setAddress(savedAddress);
-          setSelectedItem(savedAddress);
+          handleSearch(savedAddress); // Automatically search for saved address
         }
       } catch (error) {
         console.error('Error reading address from localStorage:', error);
@@ -41,6 +40,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
     }
   }, [defaultAddress]);
 
+  // Fetch suggestions when address changes
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (address.trim().length < 3) {
@@ -89,21 +89,16 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
           display_name: result.display_name
         });
         setOpen(false);
-        setSelectedItem(result.display_name);
         localStorage.setItem('lastAddress', result.display_name); // Save the address
 
         // Success animation and feedback
         toast({
           title: "Адресът е намерен",
           description: (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2"
-            >
+            <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-green-500" />
               <span>Местоположението е маркирано на картата</span>
-            </motion.div>
+            </div>
           ),
         });
       }
@@ -129,20 +124,17 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
               value={address}
               onChange={(e) => {
                 setAddress(e.target.value);
-                setSelectedItem(null);
                 setOpen(true);
               }}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch(address)}
-              className={`flex-1 transition-all ${
-                selectedItem ? 'border-green-500 focus:ring-green-500/20' : ''
+              className={`flex-1 transition-colors ${
+                suggestions.length > 0 ? 'border-primary' : ''
               }`}
             />
             <Button 
               onClick={() => handleSearch(address)}
               disabled={isSearching}
-              className={`transition-all ${
-                isSearching ? 'bg-primary/80' : ''
-              }`}
+              className="transition-all"
             >
               <AnimatePresence mode="wait">
                 {isSearching ? (
@@ -177,7 +169,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
           <Command>
             <CommandInput 
               placeholder="Търсене на адрес..." 
-              value={address} 
+              value={address}
               onValueChange={setAddress}
               className="border-none focus:ring-0"
             />
