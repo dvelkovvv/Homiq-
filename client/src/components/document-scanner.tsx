@@ -7,6 +7,7 @@ import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
+import { DataComparison } from "@/lib/dataComparison";
 import * as PDFJS from 'pdfjs-dist';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -19,9 +20,17 @@ interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
   expectedType?: 'notary_act' | 'sketch' | 'tax_assessment';
   propertyId?: number;
+  formData?: {
+    address?: string;
+    squareMeters?: number;
+    type?: string;
+    rooms?: number;
+    floor?: number;
+    totalFloors?: number;
+  };
 }
 
-export function DocumentScanner({ onScanComplete, expectedType, propertyId }: DocumentScannerProps) {
+export function DocumentScanner({ onScanComplete, expectedType, propertyId, formData }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
@@ -116,13 +125,13 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId }: Do
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(40);
+              setProgress(20);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
-              setProgress(60);
+              setProgress(40);
             } else if (progress.status === 'recognizing text') {
               setCurrentStep('Разпознаване на текст');
-              setProgress(80);
+              setProgress(60);
             }
           }
         });
@@ -130,13 +139,14 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId }: Do
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
+        setProgress(70);
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '1',
-          tessedit_enable_doc_dict: '1'
+          tessedit_pageseg_mode: '3',  // Fully automatic page segmentation, but no OSD
+          tessedit_enable_doc_dict: '1',
         });
 
         let allText = '';
@@ -167,6 +177,11 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId }: Do
             throw new Error(`Очаква се ${getDocumentTypeName(expectedType)}, но документът изглежда като ${getDocumentTypeName(extractedData.documentType || 'other')}`);
           }
 
+          // Compare data if form data is available
+          if (formData) {
+            DataComparison.compareData(formData, extractedData);
+          }
+
           // Save to database
           if (propertyId) {
             const documentData = {
@@ -176,11 +191,11 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId }: Do
                 filename: file.name,
                 fileUrl: URL.createObjectURL(file),
                 rawText: processedText,
-                confidence: 0.8, // TODO: Calculate actual confidence
+                confidence: 0.8,
               },
               extractedData: {
                 ...extractedData,
-                documentId: 0, // Will be set by the backend
+                documentId: 0,
               },
             };
 
