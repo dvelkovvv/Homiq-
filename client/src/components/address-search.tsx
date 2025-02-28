@@ -8,15 +8,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { motion } from "framer-motion";
 import { LocationAnalysis } from "./location-analysis";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import axios from 'axios';
 
 interface AddressSearchProps {
   onLocationFound: (location: { lat: number; lng: number; display_name: string }) => void;
   defaultAddress?: string;
   onAddressChange?: (address: string) => void;
+  onContinue?: () => void;
 }
 
-export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressChange }: AddressSearchProps) {
+export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressChange, onContinue }: AddressSearchProps) {
   const [address, setAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
@@ -30,7 +32,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     location?: { lat: number; lng: number };
   }>>([]);
 
-  // Load saved address on mount
   useEffect(() => {
     if (!defaultAddress) {
       const savedAddress = localStorage.getItem('lastAddress');
@@ -47,7 +48,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     setIsValidated(false);
     onAddressChange?.(value);
 
-    // Clear previous timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
@@ -60,7 +60,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
 
     setIsSearching(true);
 
-    // Set new timeout for search
     const newTimeout = setTimeout(async () => {
       try {
         const { data } = await axios.get('/api/geocode', {
@@ -120,7 +119,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       setOpen(false);
       setIsValidated(true);
 
-      // Save for later use
       localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({
         lat: location.lat,
@@ -249,7 +247,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
         </TooltipProvider>
       </div>
 
-      {/* Helper card when no input */}
       {!address && !isValidated && (
         <Card className="p-4 bg-muted/50">
           <div className="flex items-start gap-3">
@@ -266,15 +263,19 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       )}
 
       {isValidated && address && (
-        <LocationAnalysis 
-          address={address}
-          onComplete={() => {
-            toast({
-              title: "Анализ завършен",
-              description: "Можете да продължите към следващата стъпка",
-            });
-          }}
-        />
+        <>
+          <LocationAnalysis 
+            address={address}
+            onComplete={() => {
+              toast({
+                title: "Анализ завършен",
+                description: "Можете да продължите към следващата стъпка",
+              });
+              onContinue?.();
+            }}
+          />
+          <Button onClick={onContinue}>Продължи</Button>
+        </>
       )}
     </div>
   );
