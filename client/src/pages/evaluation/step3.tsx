@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Logo } from "@/components/logo";
 import { motion } from "framer-motion";
 import { ProgressSteps } from "@/components/progress-steps";
-import { Home, Calendar, Star, BadgeCheck } from "lucide-react";
+import { Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield } from "lucide-react";
 
 const STEPS = [
   {
@@ -36,11 +36,14 @@ export default function Step3() {
 
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
 
-  // Basic mock data
+  // Enhanced mock data
   const mockEvaluation = {
     estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
     confidence: Math.random() * (0.95 - 0.75) + 0.75,
-    currency: "EUR"
+    currency: "EUR",
+    pricePerSqm: Math.floor(Math.random() * (2000 - 1000) + 1000),
+    locationScore: 8.5,
+    conditionScore: 7.8
   };
 
   const formatCurrency = (value: number) => {
@@ -100,6 +103,32 @@ export default function Step3() {
                   <span className="text-base sm:text-lg">
                     {Math.round(mockEvaluation.confidence * 100)}% точност на оценката
                   </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                  <div className="p-4 bg-white/10 rounded-lg text-center">
+                    <Building2 className="h-5 w-5 mx-auto mb-2 text-blue-400" />
+                    <div className="text-lg sm:text-xl font-bold">{propertyData.squareMeters}м²</div>
+                    <div className="text-sm text-gray-300">Площ</div>
+                  </div>
+
+                  <div className="p-4 bg-white/10 rounded-lg text-center">
+                    <TrendingUp className="h-5 w-5 mx-auto mb-2 text-green-400" />
+                    <div className="text-lg sm:text-xl font-bold">{formatCurrency(mockEvaluation.pricePerSqm)}/м²</div>
+                    <div className="text-sm text-gray-300">Цена на кв.м</div>
+                  </div>
+
+                  <div className="p-4 bg-white/10 rounded-lg text-center">
+                    <MapPin className="h-5 w-5 mx-auto mb-2 text-red-400" />
+                    <div className="text-lg sm:text-xl font-bold">{mockEvaluation.locationScore}/10</div>
+                    <div className="text-sm text-gray-300">Локация</div>
+                  </div>
+
+                  <div className="p-4 bg-white/10 rounded-lg text-center">
+                    <Shield className="h-5 w-5 mx-auto mb-2 text-purple-400" />
+                    <div className="text-lg sm:text-xl font-bold">{mockEvaluation.conditionScore}/10</div>
+                    <div className="text-sm text-gray-300">Състояние</div>
+                  </div>
                 </div>
               </div>
             </CardContent>
