@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { motion } from "framer-motion";
 import { ProgressSteps } from "@/components/progress-steps";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 
 const STEPS = [
   {
@@ -22,9 +33,9 @@ const STEPS = [
 ];
 
 export default function Step3() {
+  const [activeTab, setActiveTab] = useState("overview");
   const [, navigate] = useLocation();
 
-  // Get property data from localStorage with safer parsing
   const propertyData = (() => {
     try {
       return JSON.parse(localStorage.getItem('propertyData') || '{}');
@@ -45,6 +56,16 @@ export default function Step3() {
     locationScore: 8.5,
     conditionScore: 7.8
   };
+
+  // Price history data
+  const priceHistoryData = [
+    { month: "Септ", value: mockEvaluation.estimatedValue * 0.90 },
+    { month: "Окт", value: mockEvaluation.estimatedValue * 0.92 },
+    { month: "Ное", value: mockEvaluation.estimatedValue * 0.95 },
+    { month: "Дек", value: mockEvaluation.estimatedValue * 0.97 },
+    { month: "Яну", value: mockEvaluation.estimatedValue * 0.98 },
+    { month: "Фев", value: mockEvaluation.estimatedValue }
+  ];
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('bg-BG', {
@@ -133,6 +154,55 @@ export default function Step3() {
               </div>
             </CardContent>
           </Card>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2 p-3">
+                <Home className="h-5 w-5" />
+                Обобщение
+              </TabsTrigger>
+              <TabsTrigger value="market" className="flex items-center gap-2 p-3">
+                <TrendingUp className="h-5 w-5" />
+                Пазарен анализ
+              </TabsTrigger>
+              <TabsTrigger value="location" className="flex items-center gap-2 p-3">
+                <MapPin className="h-5 w-5" />
+                Локация
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="market">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Пазарен анализ</CardTitle>
+                  <CardDescription>Динамика на цените през последните 6 месеца</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] sm:h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={priceHistoryData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}K €`} />
+                        <Tooltip
+                          formatter={(value: any) => [`${formatCurrency(value)}`, "Стойност"]}
+                          labelStyle={{ color: '#666' }}
+                          contentStyle={{ background: 'white', border: '1px solid #ddd' }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#003366"
+                          strokeWidth={2}
+                          dot={{ fill: "#003366" }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <Button 
