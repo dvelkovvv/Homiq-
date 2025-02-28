@@ -145,51 +145,106 @@ export default function Step3() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Анализ на локацията</CardTitle>
-              <CardDescription>Детайлна оценка на местоположението</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
-                  <Bus className="h-6 w-6 text-blue-500" />
-                  <div className="flex-1">
-                    <h4 className="font-medium">Транспорт</h4>
-                    <Progress value={mockEvaluation.locationMetrics.transport} className="mt-2" />
-                  </div>
-                  <span className="font-medium">{mockEvaluation.locationMetrics.transport}%</span>
-                </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2 p-3">
+                <Home className="h-5 w-5" />
+                Обобщение
+              </TabsTrigger>
+              <TabsTrigger value="location" className="flex items-center gap-2 p-3">
+                <MapPin className="h-5 w-5" />
+                Локация
+              </TabsTrigger>
+            </TabsList>
 
-                <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
-                  <School className="h-6 w-6 text-green-500" />
-                  <div className="flex-1">
-                    <h4 className="font-medium">Образование</h4>
-                    <Progress value={mockEvaluation.locationMetrics.education} className="mt-2" />
-                  </div>
-                  <span className="font-medium">{mockEvaluation.locationMetrics.education}%</span>
-                </div>
+            <TabsContent value="overview">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ключови показатели</CardTitle>
+                  <CardDescription>Обобщена информация за имота</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gradient-to-br from-blue-50 to-white rounded-xl border">
+                      <div className="text-center">
+                        <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                          <Building2 className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="font-semibold text-xl text-blue-600">
+                          {propertyData.squareMeters}м²
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Обща площ
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
-                  <ShoppingBag className="h-6 w-6 text-purple-500" />
-                  <div className="flex-1">
-                    <h4 className="font-medium">Търговски обекти</h4>
-                    <Progress value={mockEvaluation.locationMetrics.shopping} className="mt-2" />
+                    <div className="p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border">
+                      <div className="text-center">
+                        <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                          <TrendingUp className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="font-semibold text-xl text-green-600">
+                          {formatCurrency(mockEvaluation.pricePerSqm)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Цена на кв.м
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span className="font-medium">{mockEvaluation.locationMetrics.shopping}%</span>
-                </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
-                  <Trees className="h-6 w-6 text-yellow-500" />
-                  <div className="flex-1">
-                    <h4 className="font-medium">Зони за отдих</h4>
-                    <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
+            <TabsContent value="location">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Анализ на локацията</CardTitle>
+                  <CardDescription>Детайлна оценка на местоположението</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+                      <Bus className="h-6 w-6 text-blue-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Транспорт</h4>
+                        <Progress value={mockEvaluation.locationMetrics.transport} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.transport}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
+                      <School className="h-6 w-6 text-green-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Образование</h4>
+                        <Progress value={mockEvaluation.locationMetrics.education} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.education}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
+                      <ShoppingBag className="h-6 w-6 text-purple-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Търговски обекти</h4>
+                        <Progress value={mockEvaluation.locationMetrics.shopping} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.shopping}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
+                      <Trees className="h-6 w-6 text-yellow-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Зони за отдих</h4>
+                        <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.recreation}%</span>
+                    </div>
                   </div>
-                  <span className="font-medium">{mockEvaluation.locationMetrics.recreation}%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <Button
