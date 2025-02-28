@@ -11,77 +11,73 @@ import { motion, AnimatePresence } from "framer-motion";
 interface AddressSearchProps {
   onLocationFound: (location: { lat: number; lng: number; display_name: string }) => void;
   defaultAddress?: string;
+  onAddressChange?: (address: string) => void;
 }
 
-interface Suggestion {
-  display_name: string;
-  lat: string;
-  lon: string;
-  place_id: string; // Added for unique keys
+interface Prediction {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
 }
 
-export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressSearchProps) {
+export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressChange }: AddressSearchProps) {
   const [address, setAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
 
-  // Sync with localStorage on mount
+  useEffect(() => {
+    if (window.google && !autocompleteService) {
+      setAutocompleteService(new google.maps.places.AutocompleteService());
+    }
+  }, []);
+
   useEffect(() => {
     if (!defaultAddress) {
       try {
         const savedAddress = localStorage.getItem('lastAddress');
         if (savedAddress) {
           setAddress(savedAddress);
-          handleSearch(savedAddress); // Automatically search for saved address
+          onAddressChange?.(savedAddress);
         }
       } catch (error) {
         console.error('Error reading address from localStorage:', error);
       }
     }
-  }, [defaultAddress]);
+  }, [defaultAddress, onAddressChange]);
 
-  // Fetch suggestions when address changes with debouncing
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    if (address.trim().length < 3) {
-      setSuggestions([]);
+    if (!address.trim() || !autocompleteService) {
+      setPredictions([]);
       setOpen(false);
       return;
     }
 
-    const newTimeout = setTimeout(async () => {
+    const fetchPredictions = async () => {
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=bg&limit=5`
-        );
-
-        if (!response.ok) throw new Error('Failed to fetch suggestions');
-
-        const data = await response.json();
-        setSuggestions(data);
-        setOpen(data.length > 0);
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
-        setSuggestions([]);
-        setOpen(false);
-        toast({
-          title: "Грешка при търсене",
-          description: "Не успяхме да заредим предложения за адреси",
-          variant: "destructive"
+        const result = await autocompleteService.getPlacePredictions({
+          input: address,
+          componentRestrictions: { country: 'bg' },
+          types: ['address'],
+          language: 'bg'
         });
-      }
-    }, 300); // Debounce delay
 
-    setSearchTimeout(newTimeout);
-    return () => {
-      if (newTimeout) clearTimeout(newTimeout);
+        setPredictions(result.predictions);
+        setOpen(result.predictions.length > 0);
+      } catch (error) {
+        console.error('Error fetching predictions:', error);
+        setPredictions([]);
+        setOpen(false);
+      }
     };
-  }, [address]);
+
+    const timeoutId = setTimeout(fetchPredictions, 300);
+    return () => clearTimeout(timeoutId);
+  }, [address, autocompleteService]);
 
   const handleSearch = async (searchAddress: string) => {
     if (!searchAddress.trim()) {
@@ -104,6 +100,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
         });
         setOpen(false);
         localStorage.setItem('lastAddress', result.display_name);
+        onAddressChange?.(result.display_name);
 
         toast({
           title: "Адресът е намерен",
@@ -127,6 +124,12 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
     }
   };
 
+  const handleAddressSelect = (prediction: Prediction) => {
+    setAddress(prediction.description);
+    onAddressChange?.(prediction.description);
+    handleSearch(prediction.description);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -136,7 +139,9 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
               placeholder="Въведете адрес..."
               value={address}
               onChange={(e) => {
-                setAddress(e.target.value);
+                const newAddress = e.target.value;
+                setAddress(newAddress);
+                onAddressChange?.(newAddress);
                 setOpen(true);
               }}
               onKeyDown={(e) => {
@@ -146,7 +151,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
                 }
               }}
               className={`flex-1 transition-colors ${
-                suggestions.length > 0 ? 'border-primary' : ''
+                predictions.length > 0 ? 'border-primary' : ''
               }`}
             />
             <Button 
@@ -196,9 +201,9 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
             </CommandEmpty>
             <CommandGroup>
               <AnimatePresence>
-                {suggestions.map((suggestion) => (
+                {predictions.map((prediction) => (
                   <motion.div
-                    key={suggestion.place_id}
+                    key={prediction.place_id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ 
                       opacity: 1, 
@@ -207,14 +212,14 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
                     }}
                   >
                     <CommandItem
-                      onSelect={() => {
-                        setAddress(suggestion.display_name);
-                        handleSearch(suggestion.display_name);
-                      }}
+                      onSelect={() => handleAddressSelect(prediction)}
                       className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
                     >
                       <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="truncate">{suggestion.display_name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{prediction.structured_formatting.main_text}</span>
+                        <span className="text-sm text-muted-foreground">{prediction.structured_formatting.secondary_text}</span>
+                      </div>
                     </CommandItem>
                   </motion.div>
                 ))}

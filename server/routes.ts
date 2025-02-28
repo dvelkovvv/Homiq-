@@ -5,6 +5,10 @@ import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } fr
 import { log } from "./vite";
 import fetch from "node-fetch";
 
+const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  return Promise.resolve(fn(req, res, next)).catch(next);
+};
+
 // Proxy for Google Maps API calls
 async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -33,6 +37,7 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
     if (data.status !== 'OK') {
       console.error(`Google Maps API returned non-OK status: ${data.status}`);
       console.error('Error message:', data.error_message);
+      throw new Error(`Google Maps API returned error: ${data.error_message}`); 
     }
 
     return data;
@@ -59,15 +64,15 @@ export async function registerRoutes(app: Express) {
     next();
   });
 
-  // API Health check
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  // Add new route to serve Maps API key
+  app.get("/api/maps/config", (_req, res) => {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.error('Google Maps API key is not configured');
+      return res.status(500).json({ error: "API key not configured" });
+    }
+    res.json({ apiKey });
   });
-
-  // Wrap async route handlers to catch errors
-  const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
-    return Promise.resolve(fn(req, res, next)).catch(next);
-  };
 
   // Google Maps API Proxy Routes
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
@@ -96,7 +101,7 @@ export async function registerRoutes(app: Express) {
       res.json(data);
     } catch (error) {
       console.error('Geocoding error:', error);
-      res.status(500).json({ error: "Failed to geocode address" });
+      res.status(500).json({ error: "Failed to geocode address", details: error.message}); 
     }
   }));
 
@@ -117,11 +122,11 @@ export async function registerRoutes(app: Express) {
       res.json(data);
     } catch (error) {
       console.error('Places API error:', error);
-      res.status(500).json({ error: "Failed to fetch nearby places" });
+      res.status(500).json({ error: "Failed to fetch nearby places", details: error.message }); 
     }
   }));
 
-  // Original routes remain unchanged
+  // Original routes
   app.post("/api/properties", asyncHandler(async (req: Request, res: Response) => {
     const result = insertPropertySchema.safeParse(req.body);
     if (!result.success) {
@@ -155,7 +160,6 @@ export async function registerRoutes(app: Express) {
 
     res.json(property);
   }));
-
 
   app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
     const result = insertDocumentSchema.safeParse(req.body.document);
@@ -223,16 +227,6 @@ export async function registerRoutes(app: Express) {
     log(`Created evaluation with ID: ${evaluation.id}`);
     res.status(201).json(evaluation);
   }));
-
-  // Add new route to serve Maps API key
-  app.get("/api/maps/config", (_req, res) => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      console.error('Google Maps API key is not configured');
-      return res.status(500).json({ error: "API key not configured" });
-    }
-    res.json({ apiKey });
-  });
 
   const httpServer = createServer(app);
   return httpServer;

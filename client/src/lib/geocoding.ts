@@ -52,7 +52,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
     console.error('Geocoding error:', error);
     toast({
       title: "Грешка при търсене на адрес",
-      description: "Не успяхме да намерим координатите на този адрес",
+      description: "Моля, опитайте отново по-късно",
       variant: "destructive"
     });
     return null;
