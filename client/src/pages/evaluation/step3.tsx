@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 import { motion } from "framer-motion";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield } from "lucide-react";
+import { Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield, ArrowUpCircle } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -54,7 +54,8 @@ export default function Step3() {
     currency: "EUR",
     pricePerSqm: Math.floor(Math.random() * (2000 - 1000) + 1000),
     locationScore: 8.5,
-    conditionScore: 7.8
+    conditionScore: 7.8,
+    demandLevel: 85
   };
 
   // Price history data
@@ -156,7 +157,7 @@ export default function Step3() {
           </Card>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <TabsList className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <TabsTrigger value="overview" className="flex items-center gap-2 p-3">
                 <Home className="h-5 w-5" />
                 Обобщение
@@ -170,6 +171,62 @@ export default function Step3() {
                 Локация
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ключови показатели</CardTitle>
+                  <CardDescription>Обобщена информация за имота</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border">
+                        <div className="text-center">
+                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                            <ArrowUpCircle className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="font-semibold text-xl text-green-600">
+                            {mockEvaluation.demandLevel}%
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Ниво на търсене
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-white rounded-xl border">
+                        <div className="text-center">
+                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                            <TrendingUp className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="font-semibold text-xl text-blue-600">
+                            {formatCurrency(mockEvaluation.pricePerSqm)}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Цена на кв.м
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-purple-50 to-white rounded-xl border">
+                        <div className="text-center">
+                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100">
+                            <Building2 className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="font-semibold text-xl text-purple-600">
+                            {propertyData.squareMeters}м²
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Обща площ
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="market">
               <Card>
@@ -198,6 +255,20 @@ export default function Step3() {
                         />
                       </LineChart>
                     </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="location">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Локация и достъпност</CardTitle>
+                  <CardDescription>Анализ на местоположението</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center text-muted-foreground">
+                    Предстои скоро...
                   </div>
                 </CardContent>
               </Card>
