@@ -4,7 +4,6 @@ interface GeocodingResult {
   lat: number;
   lng: number;
   display_name: string;
-  boundingbox?: [string, string, string, string];
 }
 
 // Cache for geocoding requests
@@ -18,9 +17,8 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
       return cachedResult;
     }
 
-    const encodedAddress = encodeURIComponent(address);
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=bg`
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${process.env.GOOGLE_MAPS_API_KEY}&components=country:BG`
     );
 
     if (!response.ok) {
@@ -29,13 +27,12 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
 
     const data = await response.json();
 
-    if (data && data.length > 0) {
-      const result = data[0];
+    if (data.status === 'OK' && data.results.length > 0) {
+      const result = data.results[0];
       const geoResult = {
-        lat: parseFloat(result.lat),
-        lng: parseFloat(result.lon),
-        display_name: result.display_name,
-        boundingbox: result.boundingbox
+        lat: result.geometry.location.lat,
+        lng: result.geometry.location.lng,
+        display_name: result.formatted_address
       };
 
       // Save to cache
@@ -49,9 +46,32 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
     console.error('Geocoding error:', error);
     toast({
       title: "Грешка при търсене на адрес",
-      description: "Не успяхме да намерим координатите на този адрес.",
+      description: "Не успяхме да намерим координатите на този адрес",
       variant: "destructive"
     });
+    return null;
+  }
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.GOOGLE_MAPS_API_KEY}&language=bg`
+    );
+
+    if (!response.ok) {
+      throw new Error('Reverse geocoding request failed');
+    }
+
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results.length > 0) {
+      return data.results[0].formatted_address;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
     return null;
   }
 }

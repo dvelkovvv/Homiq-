@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, useMap, Circle, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import { Icon } from "leaflet";
+import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
 import { LocationAnalyzer, LocationPoint } from "@/lib/location-analysis";
 
-// Fix for default marker icon
-const defaultIcon = new Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
+const containerStyle = {
+  width: '100%',
+  height: '400px'
+};
+
+const defaultCenter = {
+  lat: 42.6977,
+  lng: 23.3219
+};
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -20,23 +20,7 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-function MapUpdater({ center, points }: { center: [number, number]; points?: LocationPoint[] }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map) return;
-
-    map.setView(center, map.getZoom(), {
-      animate: true,
-      duration: 0.8,
-      easeLinearity: 0.25
-    });
-  }, [center, map]);
-
-  return null;
-}
-
-const pointTypeIcons: Record<string, string> = {
+const markerIcons = {
   transport: "🚇",
   education: "🎓",
   shopping: "🏬",
@@ -44,36 +28,36 @@ const pointTypeIcons: Record<string, string> = {
 };
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(() => {
-    try {
-      const savedLocation = localStorage.getItem('lastLocation');
-      if (savedLocation) {
-        return JSON.parse(savedLocation);
-      }
-    } catch (error) {
-      console.error('Error reading location from localStorage:', error);
-    }
-    return initialLocation || { lat: 42.6977, lng: 23.3219 }; // София по подразбиране
-  });
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<LocationPoint | null>(null);
   const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
+  const [center, setCenter] = useState(initialLocation || defaultCenter);
 
-  const center = useMemo(() => 
-    [currentLocation.lat, currentLocation.lng] as [number, number],
-    [currentLocation.lat, currentLocation.lng]
-  );
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY!,
+    libraries: ['places']
+  });
 
   useEffect(() => {
-    if (currentLocation) {
-      LocationAnalyzer.getNearbyPoints(defaultAddress || '')
+    if (defaultAddress) {
+      LocationAnalyzer.getNearbyPoints(defaultAddress)
         .then(points => setNearbyPoints(points))
         .catch(console.error);
     }
-  }, [currentLocation, defaultAddress]);
+  }, [defaultAddress]);
+
+  const onLoad = (map: google.maps.Map) => {
+    setMap(map);
+  };
+
+  const onUnmount = () => {
+    setMap(null);
+  };
 
   const handleLocationFound = async (location: { lat: number; lng: number; display_name: string }) => {
-    setCurrentLocation(location);
-    onLocationSelect?.(location);
+    setCenter({ lat: location.lat, lng: location.lng });
+    onLocationSelect?.({ lat: location.lat, lng: location.lng });
 
     try {
       localStorage.setItem('lastAddress', location.display_name);
@@ -86,9 +70,9 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     }
   };
 
-  if (isLoading) {
+  if (!isLoaded) {
     return (
-      <div className="w-full h-[300px] rounded-md border flex items-center justify-center bg-accent/5">
+      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
@@ -101,92 +85,93 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     <div className="space-y-4">
       <AddressSearch 
         onLocationFound={handleLocationFound}
-        defaultAddress={defaultAddress || (() => {
-          try {
-            return localStorage.getItem('lastAddress') || '';
-          } catch {
-            return '';
-          }
-        })()}
+        defaultAddress={defaultAddress}
       />
       <div className="relative w-full h-[400px] border rounded-md overflow-hidden">
-        <MapContainer
+        <GoogleMap
+          mapContainerStyle={containerStyle}
           center={center}
           zoom={14}
-          className="w-full h-full"
-          whenReady={() => setIsLoading(false)}
-          scrollWheelZoom={true}
-          zoomControl={true}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          options={{
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false
+          }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker 
+          {/* Main marker */}
+          <Marker
             position={center}
-            icon={defaultIcon}
             draggable={true}
-            eventHandlers={{
-              dragend: (e) => {
-                const marker = e.target;
-                const position = marker.getLatLng();
+            onDragEnd={(e) => {
+              if (e.latLng) {
+                const lat = e.latLng.lat();
+                const lng = e.latLng.lng();
                 handleLocationFound({
-                  lat: position.lat,
-                  lng: position.lng,
+                  lat,
+                  lng,
                   display_name: 'Избрана локация'
                 });
-              },
+              }
             }}
           >
-            <Popup>
+            <InfoWindow>
               <div className="text-sm">
                 <div className="font-medium">Избрана локация</div>
                 <div className="text-muted-foreground mt-1">
                   Преместете маркера за прецизиране на локацията
                 </div>
               </div>
-            </Popup>
+            </InfoWindow>
           </Marker>
 
-          {nearbyPoints.map((point, index) => (
-            <Marker
-              key={index}
-              position={[
-                center[0] + (Math.random() - 0.5) * 0.01, // Random offset for visualization
-                center[1] + (Math.random() - 0.5) * 0.01
-              ]}
-              icon={new Icon({
-                iconUrl: defaultIcon.options.iconUrl,
-                iconSize: [20, 33],
-                iconAnchor: [10, 33]
-              })}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>{pointTypeIcons[point.type]}</span>
-                    <span className="font-medium">{point.name}</span>
-                  </div>
-                  <div className="text-muted-foreground mt-1">
-                    {point.distance}м разстояние
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {/* Nearby points */}
+          {nearbyPoints.map((point, index) => {
+            const position = {
+              lat: center.lat + (Math.random() - 0.5) * 0.01,
+              lng: center.lng + (Math.random() - 0.5) * 0.01
+            };
 
+            return (
+              <Marker
+                key={index}
+                position={position}
+                icon={{
+                  url: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><text y="18">${markerIcons[point.type]}</text></svg>`,
+                  anchor: new google.maps.Point(12, 12),
+                }}
+                onClick={() => setSelectedMarker(point)}
+              >
+                {selectedMarker === point && (
+                  <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
+                    <div className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span>{markerIcons[point.type]}</span>
+                        <span className="font-medium">{point.name}</span>
+                      </div>
+                      <div className="text-muted-foreground mt-1">
+                        {point.distance}м разстояние
+                      </div>
+                    </div>
+                  </InfoWindow>
+                )}
+              </Marker>
+            );
+          })}
+
+          {/* 500m radius circle */}
           <Circle
             center={center}
             radius={500}
-            pathOptions={{ 
-              color: 'blue', 
-              fillColor: 'blue', 
+            options={{
+              fillColor: '#4299e1',
               fillOpacity: 0.1,
-              weight: 1
+              strokeColor: '#4299e1',
+              strokeWeight: 1
             }}
           />
-          <MapUpdater center={center} points={nearbyPoints} />
-        </MapContainer>
+        </GoogleMap>
       </div>
     </div>
   );
