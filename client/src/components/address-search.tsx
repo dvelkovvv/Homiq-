@@ -18,6 +18,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
   const [address, setAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [placesService, setPlacesService] = useState<google.maps.places.AutocompleteService | null>(null);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
@@ -41,13 +42,17 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
   }, [defaultAddress, onAddressChange]);
 
   useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
     if (!address.trim() || !placesService) {
       setPredictions([]);
       setOpen(false);
       return;
     }
 
-    const getPredictions = async () => {
+    const newTimeout = setTimeout(async () => {
       try {
         const request: google.maps.places.AutocompletionRequest = {
           input: address,
@@ -61,26 +66,23 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
         setOpen(response.predictions.length > 0);
       } catch (error) {
         console.error('Error getting predictions:', error);
-        toast({
-          title: "Грешка при търсене",
-          description: "Не успяхме да получим предложения за адреси",
-          variant: "destructive"
-        });
+        setPredictions([]);
+        setOpen(false);
       }
-    };
+    }, 300);
 
-    const timeoutId = setTimeout(getPredictions, 300);
-    return () => clearTimeout(timeoutId);
+    setSearchTimeout(newTimeout);
+    return () => clearTimeout(newTimeout);
   }, [address, placesService]);
 
-  const handleSearch = async (searchAddress: string) => {
+  const handleAddressValidation = async (searchAddress: string) => {
     if (!searchAddress.trim()) {
       toast({
         title: "Въведете адрес",
         description: "Моля, въведете адрес за търсене",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     setIsSearching(true);
@@ -126,13 +128,16 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
           </div>
         ),
       });
+
+      return true;
     } catch (error) {
-      console.error('Error searching address:', error);
+      console.error('Error validating address:', error);
       toast({
         title: "Грешка при търсене",
         description: "Не успяхме да намерим този адрес. Моля, опитайте отново.",
         variant: "destructive"
       });
+      return false;
     } finally {
       setIsSearching(false);
     }
@@ -140,8 +145,10 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
 
   const handlePredictionSelect = async (prediction: google.maps.places.AutocompletePrediction) => {
     setAddress(prediction.description);
-    onAddressChange?.(prediction.description);
-    await handleSearch(prediction.description);
+    const success = await handleAddressValidation(prediction.description);
+    if (success) {
+      onAddressChange?.(prediction.description);
+    }
   };
 
   return (
@@ -156,12 +163,14 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
                 const newAddress = e.target.value;
                 setAddress(newAddress);
                 onAddressChange?.(newAddress);
-                setOpen(true);
+                if (newAddress.trim()) {
+                  setOpen(true);
+                }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !open) {
                   e.preventDefault();
-                  handleSearch(address);
+                  handleAddressValidation(address);
                 }
               }}
               className={`flex-1 transition-colors ${
@@ -169,7 +178,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
               }`}
             />
             <Button 
-              onClick={() => handleSearch(address)}
+              onClick={() => handleAddressValidation(address)}
               disabled={isSearching}
               className="transition-all"
             >

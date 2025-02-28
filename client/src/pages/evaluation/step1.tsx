@@ -21,6 +21,57 @@ import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 
+// Placeholder for AddressSearch component -  replace with your actual implementation
+const AddressSearch = ({ onLocationFound, defaultAddress, onAddressChange }: any) => {
+  const [address, setAddress] = useState(defaultAddress || "");
+  const handleAddressChange = (e: any) => {
+    setAddress(e.target.value);
+    onAddressChange(e.target.value);
+  };
+
+
+  const handleSubmit = async () => {
+    // Simulate geocoding - Replace with your actual geocoding logic
+    const geocodedLocation = await geocodeAddress(address);
+    if(geocodedLocation){
+      onLocationFound(geocodedLocation);
+    } else {
+      toast({
+        title: "Невалиден адрес",
+        description: "Моля, въведете валиден адрес.",
+        variant: "destructive"
+      });
+    }
+  }
+
+
+  return (
+    <div>
+      <Input
+        type="text"
+        value={address}
+        onChange={handleAddressChange}
+        placeholder="Въведете адрес"
+        className="bg-white"
+      />
+      <Button onClick={handleSubmit}>Търси</Button>
+    </div>
+  );
+};
+
+const geocodeAddress = async (address: string) => {
+  // Replace with your actual geocoding API call
+  // This is a placeholder, it always returns a valid location for demonstration purposes.
+  //  In a real application, you would make an API call to a geocoding service (e.g., Google Maps Geocoding API).
+
+  if(address.trim().length === 0){
+    return null;
+  }
+
+  return { lat: 42.6977, lng: 23.3219, display_name: address };
+};
+
+
 const propertyTypeIcons = {
   apartment: Building2,
   house: Home,
@@ -55,6 +106,7 @@ const STEPS = [
 export default function Step1() {
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addressValidated, setAddressValidated] = useState(false);
   const [showFields, setShowFields] = useState({
     rooms: false,
     floor: false,
@@ -142,7 +194,26 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
+      if (!addressValidated) {
+        toast({
+          title: "Невалиден адрес",
+          description: "Моля, изберете адрес от предложенията в търсачката",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsSubmitting(true);
+
+      // Validate location data
+      if (!data.location || !data.location.lat || !data.location.lng) {
+        toast({
+          title: "Непълни данни за локацията",
+          description: "Моля, изберете точен адрес от картата",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const formData = {
         ...data,
@@ -154,7 +225,7 @@ export default function Step1() {
 
       toast({
         title: "Успешно запазени данни",
-        description: "Продължете към следващата стъпка за качване на снимки и документи.",
+        description: "Продължете към следващата стъпка за избор на тип оценка.",
       });
 
       setLocation('/evaluation/step2');
@@ -202,6 +273,13 @@ export default function Step1() {
     // Clear any existing steps when starting from step 1
     localStorage.removeItem('currentStep');
   }, []);
+
+  // Handle address validation from Google Maps component
+  const handleLocationSelect = (location: { lat: number; lng: number; display_name: string }) => {
+    form.setValue('location', { lat: location.lat, lng: location.lng });
+    form.setValue('address', location.display_name);
+    setAddressValidated(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -271,11 +349,19 @@ export default function Step1() {
                       <FormItem>
                         <FormLabel>Адрес</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Въведете адрес"
-                            {...field}
-                            className="bg-white"
-                          />
+                          <div className="space-y-4">
+                            <Input
+                              {...field}
+                              placeholder="Въведете адрес"
+                              className="bg-white"
+                              readOnly
+                            />
+                            <AddressSearch
+                              onLocationFound={handleLocationSelect}
+                              defaultAddress={field.value}
+                              onAddressChange={(address) => field.onChange(address)}
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -572,7 +658,7 @@ export default function Step1() {
                         <FormLabel>Местоположение на имота</FormLabel>
                         <FormControl>
                           <GoogleMaps
-                            onLocationSelect={(location) => field.onChange(location)}
+                            onLocationSelect={handleLocationSelect}
                             initialLocation={field.value}
                           />
                         </FormControl>
@@ -591,7 +677,7 @@ export default function Step1() {
                   <Button
                     type="submit"
                     className="bg-[#003366] hover:bg-[#002244]"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !addressValidated}
                   >
                     {isSubmitting ? (
                       <>
