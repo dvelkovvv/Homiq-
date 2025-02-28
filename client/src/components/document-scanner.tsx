@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, CheckCircle } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data: any) => void;
@@ -58,10 +57,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         const { data: { text } } = await worker.recognize(file);
         await worker.terminate();
 
-        if (text.trim().length === 0) {
-          throw new Error("Не беше открит текст в документа");
-        }
-
         const data = {
           documentType: expectedType,
           text: text.trim()
@@ -95,44 +90,42 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   });
 
   return (
-    <div className="space-y-4">
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-          transition-colors
-          ${isDragActive ? 'border-primary bg-primary/5' : 'border-border'}
-          ${scanning ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:bg-primary/5'}
-        `}
-      >
-        <input {...getInputProps()} />
-        {scanning ? (
-          <div className="space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <div>
-              <p className="font-medium">{currentStep}</p>
-              <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
-            </div>
-            <Progress value={progress} className="h-2" />
+    <div
+      {...getRootProps()}
+      className={`
+        border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+        transition-colors
+        ${isDragActive ? 'border-primary bg-primary/5' : 'border-border'}
+        ${scanning ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:bg-primary/5'}
+      `}
+    >
+      <input {...getInputProps()} />
+      {scanning ? (
+        <div className="space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <div>
+            <p className="font-medium">{currentStep}</p>
+            <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <FileText className="h-8 w-8 mx-auto text-primary" />
-            <div>
-              <p className="font-medium">
-                {isDragActive 
-                  ? "Пуснете документа тук" 
-                  : expectedType 
-                    ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
-                    : "Качете или плъзнете документ"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Поддържани формати: PNG, JPG (ясни копии на документи)
-              </p>
-            </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <FileText className="h-8 w-8 mx-auto text-primary" />
+          <div>
+            <p className="font-medium">
+              {isDragActive 
+                ? "Пуснете документа тук" 
+                : expectedType 
+                  ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
+                  : "Качете или плъзнете документ"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Поддържани формати: PNG, JPG (ясни копии на документи)
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
