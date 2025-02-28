@@ -11,15 +11,6 @@ import {
   Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield,
   ArrowUpCircle, Bus, School, ShoppingBag, Trees
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
 
 const STEPS = [
   {
@@ -51,7 +42,6 @@ export default function Step3() {
 
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
 
-  // Enhanced mock data
   const mockEvaluation = {
     estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
     confidence: Math.random() * (0.95 - 0.75) + 0.75,
@@ -59,7 +49,6 @@ export default function Step3() {
     pricePerSqm: Math.floor(Math.random() * (2000 - 1000) + 1000),
     locationScore: 8.5,
     conditionScore: 7.8,
-    demandLevel: 85,
     locationMetrics: {
       transport: 85,
       education: 90,
@@ -67,16 +56,6 @@ export default function Step3() {
       recreation: 80
     }
   };
-
-  // Price history data
-  const priceHistoryData = [
-    { month: "Септ", value: mockEvaluation.estimatedValue * 0.90 },
-    { month: "Окт", value: mockEvaluation.estimatedValue * 0.92 },
-    { month: "Ное", value: mockEvaluation.estimatedValue * 0.95 },
-    { month: "Дек", value: mockEvaluation.estimatedValue * 0.97 },
-    { month: "Яну", value: mockEvaluation.estimatedValue * 0.98 },
-    { month: "Фев", value: mockEvaluation.estimatedValue }
-  ];
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('bg-BG', {
@@ -166,158 +145,51 @@ export default function Step3() {
             </CardContent>
           </Card>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <TabsTrigger value="overview" className="flex items-center gap-2 p-3">
-                <Home className="h-5 w-5" />
-                Обобщение
-              </TabsTrigger>
-              <TabsTrigger value="market" className="flex items-center gap-2 p-3">
-                <TrendingUp className="h-5 w-5" />
-                Пазарен анализ
-              </TabsTrigger>
-              <TabsTrigger value="location" className="flex items-center gap-2 p-3">
-                <MapPin className="h-5 w-5" />
-                Локация
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ключови показатели</CardTitle>
-                  <CardDescription>Обобщена информация за имота</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="p-4 bg-gradient-to-br from-green-50 to-white rounded-xl border">
-                        <div className="text-center">
-                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
-                            <ArrowUpCircle className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div className="font-semibold text-xl text-green-600">
-                            {mockEvaluation.demandLevel}%
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Ниво на търсене
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-white rounded-xl border">
-                        <div className="text-center">
-                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
-                            <TrendingUp className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div className="font-semibold text-xl text-blue-600">
-                            {formatCurrency(mockEvaluation.pricePerSqm)}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Цена на кв.м
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-gradient-to-br from-purple-50 to-white rounded-xl border">
-                        <div className="text-center">
-                          <div className="mb-2 inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100">
-                            <Building2 className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div className="font-semibold text-xl text-purple-600">
-                            {propertyData.squareMeters}м²
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Обща площ
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Анализ на локацията</CardTitle>
+              <CardDescription>Детайлна оценка на местоположението</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+                  <Bus className="h-6 w-6 text-blue-500" />
+                  <div className="flex-1">
+                    <h4 className="font-medium">Транспорт</h4>
+                    <Progress value={mockEvaluation.locationMetrics.transport} className="mt-2" />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  <span className="font-medium">{mockEvaluation.locationMetrics.transport}%</span>
+                </div>
 
-            <TabsContent value="market">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Пазарен анализ</CardTitle>
-                  <CardDescription>Динамика на цените през последните 6 месеца</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] sm:h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={priceHistoryData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}K €`} />
-                        <Tooltip
-                          formatter={(value: any) => [`${formatCurrency(value)}`, "Стойност"]}
-                          labelStyle={{ color: '#666' }}
-                          contentStyle={{ background: 'white', border: '1px solid #ddd' }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#003366"
-                          strokeWidth={2}
-                          dot={{ fill: "#003366" }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
+                  <School className="h-6 w-6 text-green-500" />
+                  <div className="flex-1">
+                    <h4 className="font-medium">Образование</h4>
+                    <Progress value={mockEvaluation.locationMetrics.education} className="mt-2" />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  <span className="font-medium">{mockEvaluation.locationMetrics.education}%</span>
+                </div>
 
-            <TabsContent value="location">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Анализ на локацията</CardTitle>
-                  <CardDescription>Детайлна оценка на местоположението</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
-                      <Bus className="h-6 w-6 text-blue-500" />
-                      <div className="flex-1">
-                        <h4 className="font-medium">Транспорт</h4>
-                        <Progress value={mockEvaluation.locationMetrics.transport} className="mt-2" />
-                      </div>
-                      <span className="font-medium">{mockEvaluation.locationMetrics.transport}%</span>
-                    </div>
-
-                    <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
-                      <School className="h-6 w-6 text-green-500" />
-                      <div className="flex-1">
-                        <h4 className="font-medium">Образование</h4>
-                        <Progress value={mockEvaluation.locationMetrics.education} className="mt-2" />
-                      </div>
-                      <span className="font-medium">{mockEvaluation.locationMetrics.education}%</span>
-                    </div>
-
-                    <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
-                      <ShoppingBag className="h-6 w-6 text-purple-500" />
-                      <div className="flex-1">
-                        <h4 className="font-medium">Търговски обекти</h4>
-                        <Progress value={mockEvaluation.locationMetrics.shopping} className="mt-2" />
-                      </div>
-                      <span className="font-medium">{mockEvaluation.locationMetrics.shopping}%</span>
-                    </div>
-
-                    <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
-                      <Trees className="h-6 w-6 text-yellow-500" />
-                      <div className="flex-1">
-                        <h4 className="font-medium">Зони за отдих</h4>
-                        <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
-                      </div>
-                      <span className="font-medium">{mockEvaluation.locationMetrics.recreation}%</span>
-                    </div>
+                <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
+                  <ShoppingBag className="h-6 w-6 text-purple-500" />
+                  <div className="flex-1">
+                    <h4 className="font-medium">Търговски обекти</h4>
+                    <Progress value={mockEvaluation.locationMetrics.shopping} className="mt-2" />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  <span className="font-medium">{mockEvaluation.locationMetrics.shopping}%</span>
+                </div>
+
+                <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
+                  <Trees className="h-6 w-6 text-yellow-500" />
+                  <div className="flex-1">
+                    <h4 className="font-medium">Зони за отдих</h4>
+                    <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
+                  </div>
+                  <span className="font-medium">{mockEvaluation.locationMetrics.recreation}%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <Button
