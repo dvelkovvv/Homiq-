@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, Image as ImageIcon, MapPin, CheckCircle, Info } from "lucide-react";
+import { FileText, Image as ImageIcon, MapPin, CheckCircle, Info, Clock, Building2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
@@ -85,7 +85,6 @@ export default function Step2() {
 
   const handleContinue = () => {
     if (evaluationType === 'licensed') {
-      // Проверка за задължителни документи
       if (!documentsStatus.notary_act || !documentsStatus.sketch) {
         toast({
           title: "Липсващи документи",
@@ -95,7 +94,6 @@ export default function Step2() {
         return;
       }
 
-      // Проверка за снимки
       if (photos.length === 0) {
         toast({
           title: "Липсващи снимки",
@@ -105,7 +103,6 @@ export default function Step2() {
         return;
       }
 
-      // Запазване на снимките
       const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
       localStorage.setItem('propertyData', JSON.stringify({
         ...propertyData,
@@ -113,10 +110,8 @@ export default function Step2() {
       }));
     }
 
-    // Запазваме избрания тип
-    const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
     localStorage.setItem('propertyData', JSON.stringify({
-      ...propertyData,
+      ...JSON.parse(localStorage.getItem('propertyData') || '{}'),
       evaluationType
     }));
 
@@ -132,19 +127,19 @@ export default function Step2() {
       nextLabel={evaluationType === 'licensed' ? 'Продължи със документите' : 'Продължи към оценка'}
     >
       <Tabs value={evaluationType} onValueChange={(value: 'quick' | 'licensed') => setEvaluationType(value)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-auto p-1">
-          <TabsTrigger value="quick" className="flex flex-col items-center gap-2 py-3">
-            <MapPin className="h-5 w-5" />
-            <div>
-              <div className="font-medium">Бърза оценка</div>
-              <div className="text-xs text-muted-foreground">Безплатно</div>
+        <TabsList className="grid w-full grid-cols-2 h-24 p-2 gap-2">
+          <TabsTrigger value="quick" className="flex flex-col items-center gap-3 py-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <MapPin className="h-6 w-6" />
+            <div className="text-center">
+              <div className="font-medium text-base">Бърза оценка</div>
+              <div className="text-sm font-normal">Безплатно • Веднага</div>
             </div>
           </TabsTrigger>
-          <TabsTrigger value="licensed" className="flex flex-col items-center gap-2 py-3">
-            <FileText className="h-5 w-5" />
-            <div>
-              <div className="font-medium">Лицензирана оценка</div>
-              <div className="text-xs text-muted-foreground">199 лв.</div>
+          <TabsTrigger value="licensed" className="flex flex-col items-center gap-3 py-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <FileText className="h-6 w-6" />
+            <div className="text-center">
+              <div className="font-medium text-base">Лицензирана оценка</div>
+              <div className="text-sm font-normal">199 лв. • До 3 дни</div>
             </div>
           </TabsTrigger>
         </TabsList>
@@ -152,37 +147,40 @@ export default function Step2() {
         <TabsContent value="quick" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Бърза оценка на имота</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                Бърза автоматична оценка
+              </CardTitle>
               <CardDescription>
-                Автоматична оценка базирана на въведените данни
+                Получавате ориентировъчна оценка на база въведените данни и анализ на пазара
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+            <CardContent className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                   <div>
                     <div className="font-medium">Моментална оценка</div>
                     <div className="text-sm text-muted-foreground">
-                      Получавате оценката веднага след въвеждане на данните
+                      Резултат веднага след въвеждане на данните
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                   <div>
-                    <div className="font-medium">Анализ на локацията</div>
+                    <div className="font-medium">Пазарен анализ</div>
                     <div className="text-sm text-muted-foreground">
-                      Отчитаме развитието на района и близостта до ключови локации
+                      Сравнение с актуални цени на подобни имоти
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                   <div>
-                    <div className="font-medium">Пазарни данни</div>
+                    <div className="font-medium">Локация и инфраструктура</div>
                     <div className="text-sm text-muted-foreground">
-                      Сравняваме с актуални цени на подобни имоти в района
+                      Отчитане на местоположението и развитието на района
                     </div>
                   </div>
                 </div>
@@ -192,7 +190,7 @@ export default function Step2() {
                 <div className="flex items-start gap-2">
                   <Info className="h-5 w-5 text-blue-500 mt-0.5" />
                   <div>
-                    <div className="font-medium text-blue-900">Важно за бързата оценка</div>
+                    <div className="font-medium text-blue-900">Важно</div>
                     <div className="text-sm text-blue-700 mt-1">
                       Оценката е ориентировъчна. За официални цели (банков кредит, нотариус) е необходима лицензирана оценка.
                     </div>
@@ -206,15 +204,18 @@ export default function Step2() {
         <TabsContent value="licensed" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Документи за имота</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Документи за имота
+              </CardTitle>
               <CardDescription>
-                Качете необходимите документи за оценка
+                Качете необходимите документи за професионална оценка
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-3 gap-6">
-                <div className={`p-6 rounded-lg border ${documentsStatus.notary_act ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                  <div className="flex items-center justify-between mb-4">
+                <div className={`p-6 rounded-lg border transition-colors ${documentsStatus.notary_act ? 'bg-green-50 border-green-200' : 'border-border hover:border-primary'}`}>
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Нотариален акт</h3>
                     {documentsStatus.notary_act && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
@@ -226,8 +227,8 @@ export default function Step2() {
                   />
                 </div>
 
-                <div className={`p-6 rounded-lg border ${documentsStatus.sketch ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                  <div className="flex items-center justify-between mb-4">
+                <div className={`p-6 rounded-lg border transition-colors ${documentsStatus.sketch ? 'bg-green-50 border-green-200' : 'border-border hover:border-primary'}`}>
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Скица</h3>
                     {documentsStatus.sketch && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
@@ -239,8 +240,8 @@ export default function Step2() {
                   />
                 </div>
 
-                <div className={`p-6 rounded-lg border ${documentsStatus.tax_assessment ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                  <div className="flex items-center justify-between mb-4">
+                <div className={`p-6 rounded-lg border transition-colors ${documentsStatus.tax_assessment ? 'bg-green-50 border-green-200' : 'border-border hover:border-primary'}`}>
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Данъчна оценка</h3>
                     {documentsStatus.tax_assessment && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
@@ -257,12 +258,15 @@ export default function Step2() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Снимки на имота</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Снимки на имота
+              </CardTitle>
               <CardDescription>
-                Добавете качествени снимки на имота
+                Добавете качествени снимки за точна оценка
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <FileUploadZone
                 accept={{
                   'image/*': ['.png', '.jpg', '.jpeg']
@@ -273,7 +277,7 @@ export default function Step2() {
               />
 
               {photos.length > 0 && (
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {photos.map((photo, index) => (
                     <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
                       <img
@@ -295,6 +299,33 @@ export default function Step2() {
                   ))}
                 </div>
               )}
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-blue-900">Съвети за по-добра оценка</div>
+                    <ul className="text-sm text-blue-700 mt-2 space-y-1.5">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Снимайте при добра осветеност
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Включете всички основни помещения
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Покажете общото състояние на имота
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Добавете снимки на обзавеждането
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
