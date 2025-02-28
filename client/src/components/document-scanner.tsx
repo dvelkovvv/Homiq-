@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { createWorker } from 'tesseract.js';
-import { Card, CardContent } from "@/components/ui/card";
+import { createWorker, PSM } from 'tesseract.js';
 import { Progress } from "@/components/ui/progress";
 import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -39,7 +38,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2.0 }); // Увеличаваме мащаба за по-добро качество
+      const viewport = page.getViewport({ scale: 2.0 });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
@@ -98,10 +97,10 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '6', // Приемаме, че страницата е един унифициран блок текст
+          tessedit_pageseg_mode: PSM.AUTO,
           tessedit_enable_doc_dict: '1',
-          textord_heavy_nr: '1', // Подобрява разпознаването на номера
-          language_model_penalty_non_freq_dict_word: '0.5', // По-малко наказание за непознати думи
+          textord_heavy_nr: '1',
+          language_model_penalty_non_freq_dict_word: '0.5',
           language_model_penalty_non_dict_word: '0.5',
         });
 
@@ -140,27 +139,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setProgress(100);
         onScanComplete(processedText, data);
 
-        // Показване на извлечените данни
-        const extractedInfo = [];
-        if (data.squareMeters) extractedInfo.push(`Площ: ${data.squareMeters} кв.м`);
-        if (data.constructionYear) extractedInfo.push(`Година на строителство: ${data.constructionYear}`);
-        if (data.rooms) extractedInfo.push(`Брой стаи: ${data.rooms}`);
-        if (data.floor) extractedInfo.push(`Етаж: ${data.floor}`);
-        if (data.address) extractedInfo.push(`Адрес: ${data.address}`);
-
         toast({
           title: "Успешно сканиране",
-          description: (
-            <div className="space-y-2">
-              <p>Документът е обработен успешно</p>
-              {extractedInfo.map((info, index) => (
-                <p key={index} className="text-sm flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  {info}
-                </p>
-              ))}
-            </div>
-          ),
+          description: "Документът е обработен успешно. " + 
+            (data.squareMeters ? `Площ: ${data.squareMeters} кв.м. ` : '') +
+            (data.address ? `Адрес: ${data.address}` : '')
         });
 
       } catch (error) {
@@ -219,7 +202,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
                     : "Качете или плъзнете документ"}
               </p>
               <p className="text-sm text-muted-foreground">
-                Поддържани формати: PDF, PNG, JPG (ясни копия на документи)
+                Поддържани формати: PDF, PNG, JPG (ясни копии на документи)
               </p>
             </div>
           </div>
