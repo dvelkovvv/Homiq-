@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, CheckCircle, Settings2 } from "lucide-react";
+import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
@@ -18,58 +18,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
 
-  const preprocessImage = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-
-          // Set canvas size to match image
-          canvas.width = img.width;
-          canvas.height = img.height;
-
-          // Draw original image
-          ctx.drawImage(img, 0, 0);
-
-          // Get image data
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const data = imageData.data;
-
-          // Apply preprocessing
-          for (let i = 0; i < data.length; i += 4) {
-            // Convert to grayscale
-            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-
-            // Apply threshold for better contrast
-            const threshold = 128;
-            const value = avg > threshold ? 255 : 0;
-
-            data[i] = value;     // R
-            data[i + 1] = value; // G
-            data[i + 2] = value; // B
-          }
-
-          // Put processed image back
-          ctx.putImageData(imageData, 0, 0);
-
-          // Convert to data URL
-          resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  };
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
@@ -80,11 +28,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
       try {
         const file = acceptedFiles[0];
-
-        // Preprocess image
-        setCurrentStep('Обработка на изображението');
-        const processedImageUrl = await preprocessImage(file);
-        setProgress(20);
+        const imageUrl = URL.createObjectURL(file);
 
         toast({
           title: "Сканиране започна",
@@ -95,7 +39,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(30);
+              setProgress(20);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
               setProgress(40);
@@ -115,24 +59,26 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '6', // Assume uniform text block
+          tessedit_pageseg_mode: '1', // Automatic page segmentation
           tessedit_enable_doc_dict: '1',
-          textord_heavy_nr: '1', // Handle noisy images better
-          language_model_penalty_non_freq_dict_word: '0.5' // More permissive with non-dictionary words
+          tessedit_create_hocr: '1',    // Enable HOCR output for better structure analysis
+          tessedit_enable_bigram_correction: '1', // Enable context-based corrections
+          textord_heavy_nr: '0',       // Disable noise removal (better for clear scans)
+          tessedit_do_invert: '0'      // Don't invert colors
         });
 
         setCurrentStep('Извличане на текст');
-        const { data: { text } } = await worker.recognize(processedImageUrl);
-        setProgress(80);
+        const { data: { text, hocr } } = await worker.recognize(imageUrl);
+        setProgress(90);
 
         await worker.terminate();
-        URL.revokeObjectURL(processedImageUrl);
+        URL.revokeObjectURL(imageUrl);
 
         if (text && text.trim().length > 0) {
           const processedText = text
             .trim()
-            .replace(/\s+/g, ' ')
-            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '')
+            .replace(/\s+/g, ' ') // Normalize spaces
+            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '') // Remove special chars
             .trim();
 
           setCurrentStep('Анализ на данни');
@@ -226,10 +172,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
           {scanning ? (
             <div className="space-y-4">
-              <div className="relative mx-auto w-12 h-12">
-                <Loader2 className="animate-spin absolute inset-0 text-primary" />
-                <Settings2 className="animate-pulse absolute inset-0 text-primary opacity-50" />
-              </div>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
               <div>
                 <p className="font-medium">{currentStep}</p>
                 <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
@@ -255,20 +198,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
                     <Badge variant="outline">Данъчна оценка</Badge>
                   </div>
                 )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="p-4 border rounded-lg bg-gray-50">
-                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Автоматично разпознаване на текст</p>
-                </div>
-                <div className="p-4 border rounded-lg bg-gray-50">
-                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Извличане на важни данни</p>
-                </div>
-                <div className="p-4 border rounded-lg bg-gray-50">
-                  <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Попълване на формуляра</p>
-                </div>
               </div>
             </div>
           )}
