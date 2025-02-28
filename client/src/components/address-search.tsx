@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
+import { LocationAnalysis } from "./location-analysis";
 
 interface AddressSearchProps {
   onLocationFound: (location: { lat: number; lng: number; display_name: string }) => void;
@@ -139,86 +140,98 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <div className="relative">
-            <Input
-              placeholder="Въведете адрес..."
-              value={address}
-              onChange={(e) => {
-                const newAddress = e.target.value;
-                setAddress(newAddress);
-                setIsValidated(false);
-                onAddressChange?.(newAddress);
-                if (newAddress.trim()) {
-                  setOpen(true);
-                }
-              }}
-              className={`pr-10 ${isValidated ? 'border-green-500' : predictions.length > 0 ? 'border-primary' : ''}`}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              ) : isValidated ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              ) : (
-                <Search className="h-4 w-4 text-muted-foreground" />
-              )}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <Input
+                placeholder="Въведете адрес..."
+                value={address}
+                onChange={(e) => {
+                  const newAddress = e.target.value;
+                  setAddress(newAddress);
+                  setIsValidated(false);
+                  onAddressChange?.(newAddress);
+                  if (newAddress.trim()) {
+                    setOpen(true);
+                  }
+                }}
+                className={`pr-10 ${isValidated ? 'border-green-500' : predictions.length > 0 ? 'border-primary' : ''}`}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : isValidated ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
             </div>
-          </div>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="p-0 w-[calc(100vw-2rem)] sm:w-[500px]" 
-          align="start"
-          side="bottom"
-          sideOffset={4}
-        >
-          <Command>
-            <CommandInput 
-              placeholder="Търсене на адрес..." 
-              value={address}
-              onValueChange={(value) => {
-                setAddress(value);
-                setIsValidated(false);
-                if (value.trim()) {
-                  setOpen(true);
-                }
-              }}
-              className="border-none focus:ring-0"
-            />
-            <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-              Няма намерени адреси
-            </CommandEmpty>
-            <CommandGroup>
-              <AnimatePresence>
-                {predictions.map((prediction) => (
-                  <motion.div
-                    key={prediction.place_id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ 
-                      opacity: 1, 
-                      y: 0,
-                      transition: { delay: 0.05 }
-                    }}
-                  >
-                    <CommandItem
-                      onSelect={() => handleAddressValidation(prediction)}
-                      className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
+          </PopoverTrigger>
+          <PopoverContent 
+            className="p-0 w-[calc(100vw-2rem)] sm:w-[500px]" 
+            align="start"
+            side="bottom"
+            sideOffset={4}
+          >
+            <Command>
+              <CommandInput 
+                placeholder="Търсене на адрес..." 
+                value={address}
+                onValueChange={(value) => {
+                  setAddress(value);
+                  setIsValidated(false);
+                  if (value.trim()) {
+                    setOpen(true);
+                  }
+                }}
+                className="border-none focus:ring-0"
+              />
+              <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                Няма намерени адреси
+              </CommandEmpty>
+              <CommandGroup>
+                <AnimatePresence>
+                  {predictions.map((prediction) => (
+                    <motion.div
+                      key={prediction.place_id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: 0,
+                        transition: { delay: 0.05 }
+                      }}
                     >
-                      <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{prediction.structured_formatting.main_text}</span>
-                        <span className="text-sm text-muted-foreground">{prediction.structured_formatting.secondary_text}</span>
-                      </div>
-                    </CommandItem>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                      <CommandItem
+                        onSelect={() => handleAddressValidation(prediction)}
+                        className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
+                      >
+                        <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{prediction.structured_formatting.main_text}</span>
+                          <span className="text-sm text-muted-foreground">{prediction.structured_formatting.secondary_text}</span>
+                        </div>
+                      </CommandItem>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {isValidated && address && (
+        <LocationAnalysis 
+          address={address}
+          onComplete={(analysis) => {
+            // Save analysis data for later use in evaluation
+            localStorage.setItem('locationAnalysis', JSON.stringify(analysis));
+          }}
+        />
+      )}
     </div>
   );
 }
