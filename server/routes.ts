@@ -3,6 +3,27 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } from "@shared/schema";
 import { log } from "./vite";
+import fetch from "node-fetch";
+
+// Proxy for Google Maps API calls
+async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const url = `https://maps.googleapis.com/maps/api/${path}?${new URLSearchParams({
+    ...params,
+    key: apiKey || ''
+  })}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Google Maps API request failed: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Google Maps API error:', error);
+    throw error;
+  }
+}
 
 export async function registerRoutes(app: Express) {
   // API Health check
@@ -15,7 +36,45 @@ export async function registerRoutes(app: Express) {
     return Promise.resolve(fn(req, res, next)).catch(next);
   };
 
-  // Create property
+  // Google Maps API Proxy Routes
+  app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
+    const { address } = req.query;
+    if (!address) {
+      return res.status(400).json({ error: "Address parameter is required" });
+    }
+
+    try {
+      const data = await proxyGoogleMapsRequest('geocode/json', {
+        address: address as string,
+        components: 'country:BG',
+        language: 'bg'
+      });
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to geocode address" });
+    }
+  }));
+
+  app.get("/api/places/nearby", asyncHandler(async (req: Request, res: Response) => {
+    const { location, type, radius } = req.query;
+    if (!location) {
+      return res.status(400).json({ error: "Location parameter is required" });
+    }
+
+    try {
+      const data = await proxyGoogleMapsRequest('place/nearbysearch/json', {
+        location: location as string,
+        type: type as string,
+        radius: (radius || '1000') as string,
+        language: 'bg'
+      });
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch nearby places" });
+    }
+  }));
+
+  // Original routes remain unchanged
   app.post("/api/properties", asyncHandler(async (req: Request, res: Response) => {
     const result = insertPropertySchema.safeParse(req.body);
     if (!result.success) {
@@ -32,7 +91,6 @@ export async function registerRoutes(app: Express) {
     res.status(201).json(property);
   }));
 
-  // Get property by ID
   app.get("/api/properties/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -51,7 +109,7 @@ export async function registerRoutes(app: Express) {
     res.json(property);
   }));
 
-  // Create document with extracted data
+
   app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
     const result = insertDocumentSchema.safeParse(req.body.document);
     if (!result.success) {
@@ -72,7 +130,6 @@ export async function registerRoutes(app: Express) {
     res.status(201).json(document);
   }));
 
-  // Get documents by property ID
   app.get("/api/properties/:propertyId/documents", asyncHandler(async (req: Request, res: Response) => {
     const propertyId = parseInt(req.params.propertyId);
     if (isNaN(propertyId)) {
@@ -85,7 +142,6 @@ export async function registerRoutes(app: Express) {
     res.json(documents);
   }));
 
-  // Get evaluation by property ID
   app.get("/api/evaluations/property/:propertyId", asyncHandler(async (req: Request, res: Response) => {
     const propertyId = parseInt(req.params.propertyId);
     if (isNaN(propertyId)) {
@@ -105,7 +161,6 @@ export async function registerRoutes(app: Express) {
     res.json(evaluation);
   }));
 
-  // Create evaluation
   app.post("/api/evaluations", asyncHandler(async (req: Request, res: Response) => {
     const result = insertEvaluationSchema.safeParse(req.body);
     if (!result.success) {

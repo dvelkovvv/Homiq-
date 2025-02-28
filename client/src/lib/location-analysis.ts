@@ -1,4 +1,5 @@
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export interface LocationPoint {
   type: 'transport' | 'education' | 'shopping' | 'leisure';
@@ -17,13 +18,6 @@ export interface AreaAnalysis {
   infrastructureProjects: string[];
 }
 
-interface PlaceDetails {
-  name: string;
-  types: string[];
-  rating?: number;
-  distance: number;
-}
-
 export class LocationAnalyzer {
   static async getNearbyPoints(address: string, radius: number = 1000): Promise<LocationPoint[]> {
     try {
@@ -35,30 +29,39 @@ export class LocationAnalyzer {
         leisure: ['park', 'gym']
       };
 
+      // First get coordinates for the address
+      const geocodeResponse = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+      const geocodeData = await geocodeResponse.json();
+
+      if (geocodeData.status !== 'OK' || !geocodeData.results?.[0]?.geometry?.location) {
+        throw new Error('Failed to geocode address');
+      }
+
+      const location = geocodeData.results[0].geometry.location;
+      const locationString = `${location.lat},${location.lng}`;
+
+      // Fetch nearby points for each category
       for (const [type, placeTypes] of Object.entries(categories)) {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?` +
-          `location=${encodeURIComponent(address)}` +
-          `&radius=${radius}` +
-          `&types=${placeTypes.join('|')}` +
-          `&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}` +
-          `&language=bg`
-        );
+        for (const placeType of placeTypes) {
+          const response = await fetch(
+            `/api/places/nearby?location=${locationString}&type=${placeType}&radius=${radius}`
+          );
+          const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch nearby places');
-        }
-
-        const data = await response.json();
-
-        if (data.status === 'OK') {
-          for (const place of data.results) {
-            points.push({
-              type: type as 'transport' | 'education' | 'shopping' | 'leisure',
-              name: place.name,
-              distance: Math.round(place.distance),
-              rating: place.rating
-            });
+          if (data.status === 'OK') {
+            for (const place of data.results) {
+              points.push({
+                type: type as 'transport' | 'education' | 'shopping' | 'leisure',
+                name: place.name,
+                distance: Math.round(
+                  google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(location.lat, location.lng),
+                    new google.maps.LatLng(place.geometry.location.lat, place.geometry.location.lng)
+                  )
+                ),
+                rating: place.rating
+              });
+            }
           }
         }
       }
@@ -89,12 +92,12 @@ export class LocationAnalyzer {
       };
 
       return {
-        averagePrice: 2200, // EUR/m² - This should come from a real estate API
-        priceChange: 5.2, // % last year - This should come from a real estate API
         transportScore: calculateScore('transport'),
         educationScore: calculateScore('education'),
         shoppingScore: calculateScore('shopping'),
         leisureScore: calculateScore('leisure'),
+        averagePrice: 2200, // EUR/m² - This should come from a real estate API
+        priceChange: 5.2, // % last year - This should come from a real estate API
         infrastructureProjects: [
           'Разширение на метрото',
           'Нов парк',
