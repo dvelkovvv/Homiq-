@@ -2,11 +2,15 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Logo } from "@/components/logo";
 import { motion } from "framer-motion";
 import { ProgressSteps } from "@/components/progress-steps";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield, ArrowUpCircle } from "lucide-react";
+import {
+  Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield,
+  ArrowUpCircle, Bus, School, ShoppingBag, Park
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -55,7 +59,13 @@ export default function Step3() {
     pricePerSqm: Math.floor(Math.random() * (2000 - 1000) + 1000),
     locationScore: 8.5,
     conditionScore: 7.8,
-    demandLevel: 85
+    demandLevel: 85,
+    locationMetrics: {
+      transport: 85,
+      education: 90,
+      shopping: 75,
+      recreation: 80
+    }
   };
 
   // Price history data
@@ -263,12 +273,46 @@ export default function Step3() {
             <TabsContent value="location">
               <Card>
                 <CardHeader>
-                  <CardTitle>Локация и достъпност</CardTitle>
-                  <CardDescription>Анализ на местоположението</CardDescription>
+                  <CardTitle>Анализ на локацията</CardTitle>
+                  <CardDescription>Детайлна оценка на местоположението</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center text-muted-foreground">
-                    Предстои скоро...
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+                      <Bus className="h-6 w-6 text-blue-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Транспорт</h4>
+                        <Progress value={mockEvaluation.locationMetrics.transport} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.transport}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
+                      <School className="h-6 w-6 text-green-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Образование</h4>
+                        <Progress value={mockEvaluation.locationMetrics.education} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.education}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
+                      <ShoppingBag className="h-6 w-6 text-purple-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Търговски обекти</h4>
+                        <Progress value={mockEvaluation.locationMetrics.shopping} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.shopping}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
+                      <Park className="h-6 w-6 text-yellow-500" />
+                      <div className="flex-1">
+                        <h4 className="font-medium">Зони за отдих</h4>
+                        <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
+                      </div>
+                      <span className="font-medium">{mockEvaluation.locationMetrics.recreation}%</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -276,8 +320,8 @@ export default function Step3() {
           </Tabs>
 
           <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate("/evaluation/step2")}
               className="w-full sm:w-auto order-2 sm:order-1"
             >
