@@ -8,6 +8,7 @@ import { FileText, Image as ImageIcon, MapPin, CheckCircle, Info, Clock, Buildin
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
+import { LocationAnalysis } from "@/components/location-analysis";
 
 interface DocumentStatus {
   notary_act: boolean;
@@ -145,60 +146,67 @@ export default function Step2() {
         </TabsList>
 
         <TabsContent value="quick" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Бърза автоматична оценка
-              </CardTitle>
-              <CardDescription>
-                Получавате ориентировъчна оценка на база въведените данни и анализ на пазара
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
-                  <div>
-                    <div className="font-medium">Моментална оценка</div>
-                    <div className="text-sm text-muted-foreground">
-                      Резултат веднага след въвеждане на данните
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Бърза автоматична оценка
+                </CardTitle>
+                <CardDescription>
+                  Получавате ориентировъчна оценка на база въведените данни и анализ на пазара
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                    <div>
+                      <div className="font-medium">Моментална оценка</div>
+                      <div className="text-sm text-muted-foreground">
+                        Резултат веднага след въвеждане на данните
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                    <div>
+                      <div className="font-medium">Пазарен анализ</div>
+                      <div className="text-sm text-muted-foreground">
+                        Сравнение с актуални цени на подобни имоти
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                    <div>
+                      <div className="font-medium">Локация и инфраструктура</div>
+                      <div className="text-sm text-muted-foreground">
+                        Отчитане на местоположението и развитието на района
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
-                  <div>
-                    <div className="font-medium">Пазарен анализ</div>
-                    <div className="text-sm text-muted-foreground">
-                      Сравнение с актуални цени на подобни имоти
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
-                  <div>
-                    <div className="font-medium">Локация и инфраструктура</div>
-                    <div className="text-sm text-muted-foreground">
-                      Отчитане на местоположението и развитието на района
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-blue-900">Важно</div>
-                    <div className="text-sm text-blue-700 mt-1">
-                      Оценката е ориентировъчна. За официални цели (банков кредит, нотариус) е необходима лицензирана оценка.
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-blue-900">Важно</div>
+                      <div className="text-sm text-blue-700 mt-1">
+                        Оценката е ориентировъчна. За официални цели (банков кредит, нотариус) е необходима лицензирана оценка.
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            {evaluationType === 'quick' && (
+              <LocationAnalysis 
+                address={JSON.parse(localStorage.getItem('propertyData') || '{}').address || ''}
+              />
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="licensed" className="mt-6 space-y-6">
