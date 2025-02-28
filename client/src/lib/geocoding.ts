@@ -17,14 +17,23 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
       return cachedResult;
     }
 
-    // Initialize geocoder if needed
+    // Get API configuration
+    const configResponse = await fetch('/api/maps/config');
+    const { apiKey } = await configResponse.json();
+
+    if (!apiKey) {
+      throw new Error('Maps API key not configured');
+    }
+
+    // Make the geocoding request
     const geocoder = new google.maps.Geocoder();
 
     const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
       geocoder.geocode(
         { 
           address,
-          componentRestrictions: { country: 'BG' }
+          componentRestrictions: { country: 'BG' },
+          language: 'bg'
         },
         (results, status) => {
           if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
@@ -48,11 +57,14 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
     return geoResult;
   } catch (error) {
     console.error('Geocoding error:', error);
+
+    // Show user-friendly error message
     toast({
       title: "Грешка при търсене на адрес",
-      description: "Моля, опитайте с по-точен адрес",
+      description: "Моля, проверете адреса и опитайте отново",
       variant: "destructive"
     });
+
     return null;
   }
 }
@@ -60,11 +72,13 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
     const geocoder = new google.maps.Geocoder();
-    const latlng = { lat, lng };
 
     const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
       geocoder.geocode(
-        { location: latlng },
+        { 
+          location: { lat, lng },
+          language: 'bg'
+        },
         (results, status) => {
           if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
             resolve(results[0]);
@@ -78,6 +92,11 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
     return result.formatted_address;
   } catch (error) {
     console.error('Reverse geocoding error:', error);
+    toast({
+      title: "Грешка при определяне на адрес",
+      description: "Не успяхме да определим адреса на избраната локация",
+      variant: "destructive"
+    });
     return null;
   }
 }
