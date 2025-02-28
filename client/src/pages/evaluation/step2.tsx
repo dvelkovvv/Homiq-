@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, Image as ImageIcon, MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { FileText, MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const STEPS = [
@@ -86,8 +86,13 @@ export default function Step2() {
       evaluationType: selectedType
     }));
 
-    localStorage.setItem('currentStep', '3');
-    setLocation('/evaluation/step3');
+    // Ако е избрана лицензирана оценка, пренасочваме към качване на документи
+    if (selectedType === 'licensed') {
+      setLocation('/evaluation/step2a');
+    } else {
+      localStorage.setItem('currentStep', '3');
+      setLocation('/evaluation/step3');
+    }
   };
 
   return (
@@ -95,7 +100,7 @@ export default function Step2() {
       title="Изберете тип оценка"
       onBack={() => setLocation("/evaluation/step1")}
       onNext={handleContinue}
-      nextLabel="Продължи"
+      nextLabel={selectedType === 'licensed' ? 'Продължи към документи' : 'Продължи към оценка'}
     >
       <div className="grid md:grid-cols-2 gap-6">
         {EVALUATION_TYPES.map((type) => (
