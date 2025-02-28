@@ -99,14 +99,18 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
   };
 
   const handleAddressSelect = async (suggestion: typeof suggestions[0]) => {
+    if (!suggestion.location) {
+      toast({
+        title: "Грешка",
+        description: "Невалиден адрес",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSearching(true);
-    setIsValidated(false);
 
     try {
-      if (!suggestion.location) {
-        throw new Error('Няма информация за локацията');
-      }
-
       const location = {
         lat: suggestion.location.lat,
         lng: suggestion.location.lng,
@@ -119,21 +123,11 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       setOpen(false);
       setIsValidated(true);
 
-      localStorage.setItem('lastAddress', location.display_name);
-      localStorage.setItem('lastLocation', JSON.stringify({
-        lat: location.lat,
-        lng: location.lng
-      }));
-
       toast({
         title: "Адресът е избран",
-        description: (
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <span>Адресът е успешно валидиран</span>
-          </div>
-        ),
+        description: "Започваме анализ на локацията"
       });
+
     } catch (error) {
       console.error('Error validating address:', error);
       toast({
@@ -239,7 +233,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
                 <ul className="text-sm space-y-1 list-disc list-inside">
                   <li>Въведете улица и номер</li>
                   <li>Изберете от предложените адреси</li>
-                  <li>Уточнете локацията на картата</li>
+                  <li>Проверете данните за локацията</li>
                 </ul>
               </div>
             </TooltipContent>
@@ -263,19 +257,16 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       )}
 
       {isValidated && address && (
-        <>
-          <LocationAnalysis 
-            address={address}
-            onComplete={() => {
-              toast({
-                title: "Анализ завършен",
-                description: "Можете да продължите към следващата стъпка",
-              });
-              onContinue?.();
-            }}
-          />
-          <Button onClick={onContinue}>Продължи</Button>
-        </>
+        <LocationAnalysis 
+          address={address}
+          onComplete={() => {
+            toast({
+              title: "Анализът е готов",
+              description: "Можете да продължите към следващата стъпка",
+            });
+            onContinue?.();
+          }}
+        />
       )}
     </div>
   );
