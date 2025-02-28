@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { toast } from "@/hooks/use-toast";
 
 interface GeocodingResult {
@@ -11,6 +12,15 @@ const geocodingCache = new Map<string, GeocodingResult>();
 
 export async function geocodeAddress(address: string): Promise<GeocodingResult | null> {
   try {
+    if (!address.trim()) {
+      toast({
+        title: "Моля, въведете адрес",
+        description: "Адресното поле не може да бъде празно",
+        variant: "destructive"
+      });
+      return null;
+    }
+
     // Check cache first
     const cachedResult = geocodingCache.get(address);
     if (cachedResult) {
@@ -18,78 +28,60 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
     }
 
     // Get API configuration
-    const configResponse = await fetch('/api/maps/config');
-    const { apiKey } = await configResponse.json();
-
-    if (!apiKey) {
+    const { data: config } = await axios.get('/api/maps/config');
+    if (!config.apiKey) {
       throw new Error('Maps API key not configured');
     }
 
-    // Make the geocoding request
-    const geocoder = new google.maps.Geocoder();
-
-    const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
-      geocoder.geocode(
-        { 
-          address,
-          componentRestrictions: { country: 'BG' },
-          language: 'bg'
-        },
-        (results, status) => {
-          if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-            resolve(results[0]);
-          } else {
-            reject(new Error(`Geocoding failed: ${status}`));
-          }
-        }
-      );
+    // Make the geocoding request through our backend proxy
+    const { data } = await axios.get('/api/geocode', {
+      params: {
+        address: address
+      }
     });
 
-    const geoResult = {
-      lat: result.geometry.location.lat(),
-      lng: result.geometry.location.lng(),
-      display_name: result.formatted_address
-    };
+    if (data.status === 'OK' && data.results?.[0]) {
+      const result = data.results[0];
+      const geoResult = {
+        lat: result.geometry.location.lat,
+        lng: result.geometry.location.lng,
+        display_name: result.formatted_address
+      };
 
-    // Save to cache
-    geocodingCache.set(address, geoResult);
+      // Save to cache
+      geocodingCache.set(address, geoResult);
+      return geoResult;
+    }
 
-    return geoResult;
-  } catch (error) {
-    console.error('Geocoding error:', error);
-
-    // Show user-friendly error message
     toast({
-      title: "Грешка при търсене на адрес",
-      description: "Моля, проверете адреса и опитайте отново",
+      title: "Адресът не е намерен",
+      description: "Моля, опитайте с по-точен адрес",
       variant: "destructive"
     });
 
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    toast({
+      title: "Грешка при търсене на адрес",
+      description: error.response?.data?.error || "Моля, опитайте отново по-късно",
+      variant: "destructive"
+    });
     return null;
   }
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
-    const geocoder = new google.maps.Geocoder();
-
-    const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
-      geocoder.geocode(
-        { 
-          location: { lat, lng },
-          language: 'bg'
-        },
-        (results, status) => {
-          if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-            resolve(results[0]);
-          } else {
-            reject(new Error(`Reverse geocoding failed: ${status}`));
-          }
-        }
-      );
+    const { data } = await axios.get('/api/geocode', {
+      params: { latlng: `${lat},${lng}` }
     });
 
-    return result.formatted_address;
+    if (data.status === 'OK' && data.results?.[0]) {
+      return data.results[0].formatted_address;
+    }
+
+    return null;
   } catch (error) {
     console.error('Reverse geocoding error:', error);
     toast({

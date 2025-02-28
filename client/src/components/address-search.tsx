@@ -22,14 +22,12 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [placesService, setPlacesService] = useState<google.maps.places.AutocompleteService | null>(null);
 
-  // Initialize Google services
   useEffect(() => {
     if (window.google && !placesService) {
       setPlacesService(new google.maps.places.AutocompleteService());
     }
   }, []);
 
-  // Load saved address if exists
   useEffect(() => {
     if (!defaultAddress) {
       const savedAddress = localStorage.getItem('lastAddress');
@@ -41,7 +39,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     }
   }, [defaultAddress, onAddressChange]);
 
-  // Handle address search with debouncing
   useEffect(() => {
     if (!address.trim() || !placesService) {
       setPredictions([]);
@@ -51,15 +48,26 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
 
     const timeoutId = setTimeout(async () => {
       try {
-        const result = await placesService.getPlacePredictions({
-          input: address,
-          componentRestrictions: { country: 'bg' },
-          types: ['address'],
-          language: 'bg'
+        const { predictions } = await new Promise<google.maps.places.AutocompletePredictions>((resolve, reject) => {
+          placesService.getPlacePredictions(
+            {
+              input: address,
+              componentRestrictions: { country: 'bg' },
+              types: ['address'],
+              language: 'bg'
+            },
+            (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                resolve({ predictions: results });
+              } else {
+                reject(new Error(`Places API returned status: ${status}`));
+              }
+            }
+          );
         });
 
-        setPredictions(result.predictions);
-        setOpen(result.predictions.length > 0);
+        setPredictions(predictions);
+        setOpen(predictions.length > 0);
       } catch (error) {
         console.error('Error getting predictions:', error);
         setPredictions([]);
@@ -108,11 +116,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       }
     } catch (error) {
       console.error('Error validating address:', error);
-      toast({
-        title: "Грешка при валидация",
-        description: "Моля, опитайте с друг адрес",
-        variant: "destructive"
-      });
       setIsValidated(false);
     } finally {
       setIsSearching(false);
@@ -126,7 +129,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
           <PopoverTrigger asChild>
             <div className="relative">
               <Input
-                placeholder="Въведете адрес..."
+                placeholder="Въведете адрес за търсене..."
                 value={address}
                 onChange={(e) => {
                   const newAddress = e.target.value;
@@ -207,7 +210,6 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
         <LocationAnalysis 
           address={address}
           onComplete={(analysis) => {
-            // Save analysis data for later use in evaluation
             localStorage.setItem('locationAnalysis', JSON.stringify(analysis));
           }}
         />
