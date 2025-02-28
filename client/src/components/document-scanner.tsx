@@ -27,50 +27,36 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     const types: Record<string, string> = {
       'notary_act': 'Нотариален акт',
       'sketch': 'Скица',
-      'tax_assessment': 'Данъчна оценка',
-      'other': 'Друг документ'
+      'tax_assessment': 'Данъчна оценка'
     };
-    return types[type] || types.other;
+    return types[type] || 'Документ';
   };
 
   const convertPDFToImage = async (file: File): Promise<string[]> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
-      const imageUrls: string[] = [];
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+    const imageUrls: string[] = [];
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2.0 }); // Увеличаваме мащаба за по-добро качество
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-        if (!ctx) {
-          throw new Error('Неуспешно създаване на canvas контекст');
-        }
+      if (!ctx) throw new Error('Неуспешно създаване на canvas контекст');
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-        try {
-          await page.render({
-            canvasContext: ctx,
-            viewport: viewport
-          }).promise;
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport
+      }).promise;
 
-          const imageUrl = canvas.toDataURL('image/png', 1.0);
-          imageUrls.push(imageUrl);
-        } catch (error) {
-          console.error('Грешка при рендиране на PDF страница:', error);
-          throw new Error('Грешка при обработка на PDF страницата');
-        }
-      }
-
-      return imageUrls;
-    } catch (error) {
-      console.error('Грешка при конвертиране на PDF:', error);
-      throw new Error('Неуспешно конвертиране на PDF документа');
+      imageUrls.push(canvas.toDataURL('image/png', 1.0));
     }
+
+    return imageUrls;
   };
 
   const handleAutofill = () => {
@@ -93,47 +79,30 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
         if (file.type === 'application/pdf') {
           setCurrentStep('Конвертиране на PDF');
-          try {
-            imageUrls = await convertPDFToImage(file);
-            setProgress(20);
-          } catch (error) {
-            throw new Error('Грешка при обработка на PDF файла. Моля, опитайте с друг документ.');
-          }
+          imageUrls = await convertPDFToImage(file);
+          setProgress(20);
         } else {
           imageUrls = [URL.createObjectURL(file)];
         }
 
-        toast({
-          title: "Сканиране започна",
-          description: "Моля, изчакайте докато анализираме документа.",
-        });
+        const worker = await createWorker();
 
-        const worker = await createWorker({
-          logger: progress => {
-            if (progress.status === 'loading tesseract core') {
-              setCurrentStep('Зареждане на OCR модула');
-              setProgress(20);
-            } else if (progress.status === 'initializing api') {
-              setCurrentStep('Инициализация');
-              setProgress(40);
-            } else if (progress.status === 'recognizing text') {
-              setCurrentStep('Разпознаване на текст');
-              setProgress(60);
-            }
-          }
-        });
-
+        // Зареждане на български език
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(70);
+        setProgress(40);
 
+        // Оптимизирани параметри за по-добро разпознаване
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '3',
+          tessedit_pageseg_mode: '6', // Приемаме, че страницата е един унифициран блок текст
           tessedit_enable_doc_dict: '1',
+          textord_heavy_nr: '1', // Подобрява разпознаването на номера
+          language_model_penalty_non_freq_dict_word: '0.5', // По-малко наказание за непознати думи
+          language_model_penalty_non_dict_word: '0.5',
         });
 
         let allText = '';
@@ -141,63 +110,66 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           setCurrentStep(`Разпознаване на страница ${i + 1} от ${imageUrls.length}`);
           const { data: { text } } = await worker.recognize(imageUrls[i]);
           allText += text + '\n';
+          setProgress(40 + Math.floor((i + 1) * 40 / imageUrls.length));
         }
 
         await worker.terminate();
         imageUrls.forEach(url => {
-          if (url.startsWith('blob:')) {
-            URL.revokeObjectURL(url);
-          }
+          if (url.startsWith('blob:')) URL.revokeObjectURL(url);
         });
 
-        if (allText.trim().length > 0) {
-          const processedText = allText
-            .trim()
-            .replace(/\s+/g, ' ')
-            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()№]/g, '')
-            .trim();
-
-          setCurrentStep('Анализ на данни');
-          const data = DataComparison.extractDataFromDocument(processedText);
-
-          if (expectedType) {
-            data.documentType = expectedType;
-          }
-
-          setExtractedData(data);
-          setProgress(100);
-          onScanComplete(processedText, data);
-
-          // Показване на извлечените данни
-          const extractedInfo = [];
-          if (data.squareMeters) extractedInfo.push(`Площ: ${data.squareMeters} кв.м`);
-          if (data.constructionYear) extractedInfo.push(`Година на строителство: ${data.constructionYear}`);
-          if (data.rooms) extractedInfo.push(`Брой стаи: ${data.rooms}`);
-          if (data.floor) extractedInfo.push(`Етаж: ${data.floor}`);
-          if (data.address) extractedInfo.push(`Адрес: ${data.address}`);
-
-          toast({
-            title: "Успешно сканиране",
-            description: (
-              <div className="space-y-2">
-                <p>Документът е обработен успешно</p>
-                {extractedInfo.map((info, index) => (
-                  <p key={index} className="text-sm flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    {info}
-                  </p>
-                ))}
-              </div>
-            ),
-          });
-        } else {
+        if (allText.trim().length === 0) {
           throw new Error("Не беше открит текст в документа");
         }
+
+        // Почистване и нормализация на текста
+        const processedText = allText
+          .trim()
+          .replace(/\s+/g, ' ')
+          .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()№]/g, '')
+          .trim();
+
+        setCurrentStep('Анализ на данни');
+        const data = DataComparison.extractDataFromDocument(processedText);
+
+        if (expectedType) {
+          data.documentType = expectedType;
+        }
+
+        setExtractedData(data);
+        setProgress(100);
+        onScanComplete(processedText, data);
+
+        // Показване на извлечените данни
+        const extractedInfo = [];
+        if (data.squareMeters) extractedInfo.push(`Площ: ${data.squareMeters} кв.м`);
+        if (data.constructionYear) extractedInfo.push(`Година на строителство: ${data.constructionYear}`);
+        if (data.rooms) extractedInfo.push(`Брой стаи: ${data.rooms}`);
+        if (data.floor) extractedInfo.push(`Етаж: ${data.floor}`);
+        if (data.address) extractedInfo.push(`Адрес: ${data.address}`);
+
+        toast({
+          title: "Успешно сканиране",
+          description: (
+            <div className="space-y-2">
+              <p>Документът е обработен успешно</p>
+              {extractedInfo.map((info, index) => (
+                <p key={index} className="text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  {info}
+                </p>
+              ))}
+            </div>
+          ),
+        });
+
       } catch (error) {
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: error instanceof Error ? error.message : "Моля, опитайте с друг документ.",
+          description: error instanceof Error 
+            ? error.message 
+            : "Моля, опитайте с друг документ или проверете качеството на изображението.",
           variant: "destructive"
         });
       } finally {
@@ -240,12 +212,14 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             <FileText className="h-8 w-8 mx-auto text-primary" />
             <div>
               <p className="font-medium">
-                {isDragActive ? "Пуснете документа тук" : expectedType 
-                  ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
-                  : "Качете или плъзнете документ"}
+                {isDragActive 
+                  ? "Пуснете документа тук" 
+                  : expectedType 
+                    ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
+                    : "Качете или плъзнете документ"}
               </p>
               <p className="text-sm text-muted-foreground">
-                Поддържани формати: PDF, PNG, JPG
+                Поддържани формати: PDF, PNG, JPG (ясни копия на документи)
               </p>
             </div>
           </div>
