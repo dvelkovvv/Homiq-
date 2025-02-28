@@ -26,6 +26,14 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
 }
 
 export async function registerRoutes(app: Express) {
+  // Enable CORS for the Google Maps API
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+  });
+
   // API Health check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -51,6 +59,7 @@ export async function registerRoutes(app: Express) {
       });
       res.json(data);
     } catch (error) {
+      console.error('Geocoding error:', error);
       res.status(500).json({ error: "Failed to geocode address" });
     }
   }));
@@ -70,6 +79,7 @@ export async function registerRoutes(app: Express) {
       });
       res.json(data);
     } catch (error) {
+      console.error('Places API error:', error);
       res.status(500).json({ error: "Failed to fetch nearby places" });
     }
   }));

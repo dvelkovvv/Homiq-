@@ -3,6 +3,7 @@ import { GoogleMap, LoadScript, Marker, Circle, InfoWindow } from "@react-google
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
 import { LocationAnalyzer, LocationPoint } from "@/lib/location-analysis";
+import { toast } from "@/hooks/use-toast";
 
 const containerStyle = {
   width: '100%',
@@ -27,6 +28,9 @@ const markerIcons = {
   leisure: "🌳"
 };
 
+// Libraries we need for the map
+const libraries: ("places" | "geometry")[] = ["places", "geometry"];
+
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<LocationPoint | null>(null);
@@ -47,13 +51,19 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           console.error('Error loading nearby points:', error);
           setError("Грешка при зареждане на точките на интерес");
           setLoadingPoints(false);
+          toast({
+            title: "Грешка при зареждане",
+            description: "Не успяхме да заредим информация за района",
+            variant: "destructive"
+          });
         });
     }
   }, [defaultAddress]);
 
   const handleMapLoad = (map: google.maps.Map) => {
+    console.log('Map loaded successfully');
     setMap(map);
-    // Set custom map options after load
+
     map.setOptions({
       streetViewControl: false,
       mapTypeControl: false,
@@ -69,15 +79,25 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     });
   };
 
+  const handleLoadError = (error: Error) => {
+    console.error('Error loading Google Maps:', error);
+    setError("Грешка при зареждане на картата");
+    toast({
+      title: "Грешка при зареждане",
+      description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
+      variant: "destructive"
+    });
+  };
+
   const handleMapUnmount = () => {
     setMap(null);
   };
 
   const handleLocationFound = async (location: { lat: number; lng: number; display_name: string }) => {
-    setCenter({ lat: location.lat, lng: location.lng });
-    onLocationSelect?.({ lat: location.lat, lng: location.lng });
-
     try {
+      setCenter({ lat: location.lat, lng: location.lng });
+      onLocationSelect?.({ lat: location.lat, lng: location.lng });
+
       localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
 
@@ -89,6 +109,11 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       console.error('Error processing location:', error);
       setError("Грешка при обработка на локацията");
       setLoadingPoints(false);
+      toast({
+        title: "Грешка",
+        description: "Възникна проблем при обработка на локацията",
+        variant: "destructive"
+      });
     }
   };
 
@@ -111,9 +136,10 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       />
       <div className="relative w-full h-[400px] border rounded-md overflow-hidden">
         <LoadScript
-          googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+          googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}
           language="bg"
-          libraries={["places", "geometry"]}
+          libraries={libraries}
+          onError={handleLoadError}
           loadingElement={
             <div className="w-full h-[400px] flex items-center justify-center bg-accent/5">
               <div className="flex flex-col items-center gap-2">
