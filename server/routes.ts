@@ -1,9 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } from "@shared/schema";
-import { log } from "./vite";
 import fetch from "node-fetch";
+import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } from "@shared/schema";
 
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   return Promise.resolve(fn(req, res, next)).catch(next);
@@ -25,19 +24,17 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
   try {
     console.log(`Making request to Google Maps API: ${path}`);
     const response = await fetch(url);
+    const data = await response.json();
 
     if (!response.ok) {
       console.error(`Google Maps API request failed with status: ${response.status}`);
       throw new Error(`Google Maps API request failed: ${response.statusText}`);
     }
 
-    const data = await response.json();
     console.log(`Google Maps API response status: ${data.status}`);
-
     if (data.status !== 'OK') {
       console.error(`Google Maps API returned non-OK status: ${data.status}`);
-      console.error('Error message:', data.error_message);
-      throw new Error(`Google Maps API returned error: ${data.error_message}`); 
+      throw new Error(data.error_message || 'Google Maps API returned error');
     }
 
     return data;
@@ -48,33 +45,27 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
 }
 
 export async function registerRoutes(app: Express) {
-  // Enable CORS for all routes
+  // CORS middleware
   app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-
-    // Handle preflight requests
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.method === 'OPTIONS') {
       return res.sendStatus(200);
     }
-
     next();
   });
 
-  // Add new route to serve Maps API key
+  // Maps API configuration endpoint
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      console.error('Google Maps API key is not configured');
       return res.status(500).json({ error: "API key not configured" });
     }
     res.json({ apiKey });
   });
 
-  // Google Maps API Proxy Routes
+  // Geocoding endpoint
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
     const { address, latlng } = req.query;
 
@@ -85,14 +76,12 @@ export async function registerRoutes(app: Express) {
     try {
       let data;
       if (address) {
-        console.log(`Geocoding address: ${address}`);
         data = await proxyGoogleMapsRequest('geocode/json', {
           address: address as string,
           components: 'country:BG',
           language: 'bg'
         });
       } else {
-        console.log(`Reverse geocoding coordinates: ${latlng}`);
         data = await proxyGoogleMapsRequest('geocode/json', {
           latlng: latlng as string,
           language: 'bg'
@@ -100,29 +89,34 @@ export async function registerRoutes(app: Express) {
       }
       res.json(data);
     } catch (error) {
-      console.error('Geocoding error:', error);
-      res.status(500).json({ error: "Failed to geocode address", details: error.message}); 
+      res.status(500).json({ 
+        error: "Failed to geocode address", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   }));
 
+  // Places nearby search endpoint
   app.get("/api/places/nearby", asyncHandler(async (req: Request, res: Response) => {
-    const { location, type, radius } = req.query;
+    const { location, type, radius = '1000' } = req.query;
+
     if (!location) {
       return res.status(400).json({ error: "Location parameter is required" });
     }
 
     try {
-      console.log(`Searching nearby places. Type: ${type}, Location: ${location}`);
       const data = await proxyGoogleMapsRequest('place/nearbysearch/json', {
         location: location as string,
         type: type as string,
-        radius: (radius || '1000') as string,
+        radius: radius as string,
         language: 'bg'
       });
       res.json(data);
     } catch (error) {
-      console.error('Places API error:', error);
-      res.status(500).json({ error: "Failed to fetch nearby places", details: error.message }); 
+      res.status(500).json({ 
+        error: "Failed to fetch nearby places",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   }));
 
@@ -139,7 +133,7 @@ export async function registerRoutes(app: Express) {
     }
 
     const property = await storage.createProperty(result.data);
-    log(`Created property with ID: ${property.id}`);
+    console.log(`Created property with ID: ${property.id}`);
     res.status(201).json(property);
   }));
 
@@ -177,7 +171,7 @@ export async function registerRoutes(app: Express) {
       req.body.extractedData
     );
 
-    log(`Created document with ID: ${document.id} for property ID: ${document.propertyId}`);
+    console.log(`Created document with ID: ${document.id} for property ID: ${document.propertyId}`);
     res.status(201).json(document);
   }));
 
@@ -208,7 +202,7 @@ export async function registerRoutes(app: Express) {
       });
     }
 
-    log(`Retrieved evaluation for property ID: ${propertyId}`);
+    console.log(`Retrieved evaluation for property ID: ${propertyId}`);
     res.json(evaluation);
   }));
 
@@ -224,7 +218,7 @@ export async function registerRoutes(app: Express) {
     }
 
     const evaluation = await storage.createEvaluation(result.data);
-    log(`Created evaluation with ID: ${evaluation.id}`);
+    console.log(`Created evaluation with ID: ${evaluation.id}`);
     res.status(201).json(evaluation);
   }));
 

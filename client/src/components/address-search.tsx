@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { motion } from "framer-motion";
 import { LocationAnalysis } from "./location-analysis";
 import { Card } from "@/components/ui/card";
+import axios from 'axios';
 
 interface AddressSearchProps {
   onLocationFound: (location: { lat: number; lng: number; display_name: string }) => void;
@@ -41,7 +42,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     }
   }, [defaultAddress, onAddressChange]);
 
-  const handleAddressChange = (value: string) => {
+  const handleAddressChange = async (value: string) => {
     setAddress(value);
     setIsValidated(false);
     onAddressChange?.(value);
@@ -62,26 +63,27 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     // Set new timeout for search
     const newTimeout = setTimeout(async () => {
       try {
-        // Mock API call - replace with real API in production
-        const mockSuggestions = [
-          {
-            place_id: '1',
-            description: value + ', София',
-            main_text: value,
-            secondary_text: 'София',
-            location: { lat: 42.6977, lng: 23.3219 }
-          },
-          {
-            place_id: '2',
-            description: value + ', Пловдив',
-            main_text: value,
-            secondary_text: 'Пловдив',
-            location: { lat: 42.1354, lng: 24.7453 }
-          }
-        ];
+        const { data } = await axios.get('/api/geocode', {
+          params: { address: value }
+        });
 
-        setSuggestions(mockSuggestions);
-        setOpen(true);
+        if (data.results && data.results.length > 0) {
+          const suggestions = data.results.map((result: any) => ({
+            place_id: result.place_id,
+            description: result.formatted_address,
+            main_text: result.address_components[0].long_name,
+            secondary_text: result.formatted_address.split(',').slice(1).join(',').trim(),
+            location: {
+              lat: result.geometry.location.lat,
+              lng: result.geometry.location.lng
+            }
+          }));
+
+          setSuggestions(suggestions);
+          setOpen(true);
+        } else {
+          setSuggestions([]);
+        }
       } catch (error) {
         console.error('Error fetching suggestions:', error);
         toast({
@@ -102,9 +104,13 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     setIsValidated(false);
 
     try {
-      const location = suggestion.location || {
-        lat: 42.6977,
-        lng: 23.3219,
+      if (!suggestion.location) {
+        throw new Error('Няма информация за локацията');
+      }
+
+      const location = {
+        lat: suggestion.location.lat,
+        lng: suggestion.location.lng,
         display_name: suggestion.description
       };
 
