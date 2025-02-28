@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data: any) => void;
@@ -14,6 +15,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -28,7 +30,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        // Проверка за минимален размер
         if (img.width < 800 || img.height < 600) {
           toast({
             title: "Недостатъчна резолюция",
@@ -45,13 +46,19 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     });
   };
 
+  const handleRemoveImage = () => {
+    if (uploadedImage) {
+      URL.revokeObjectURL(uploadedImage);
+      setUploadedImage(null);
+    }
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
 
       const file = acceptedFiles[0];
 
-      // Проверка за размер на файла (максимум 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "Твърде голям файл",
@@ -61,10 +68,13 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         return;
       }
 
-      // Валидация на изображението
       if (!(await validateImage(file))) {
         return;
       }
+
+      // Създаваме URL за преглед на изображението
+      const imageUrl = URL.createObjectURL(file);
+      setUploadedImage(imageUrl);
 
       setScanning(true);
       setProgress(0);
@@ -94,7 +104,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         const { data: { text } } = await worker.recognize(file);
         await worker.terminate();
 
-        // Валидация на извлечения текст
         if (!text || text.trim().length < 50) {
           throw new Error("Не беше открит достатъчно текст в документа. Моля, проверете качеството на изображението.");
         }
@@ -120,6 +129,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             : "Възникна проблем при обработката на документа. Моля, проверете качеството на изображението и опитайте отново.",
           variant: "destructive"
         });
+        handleRemoveImage();
       } finally {
         setScanning(false);
         setProgress(0);
@@ -134,42 +144,64 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   });
 
   return (
-    <div
-      {...getRootProps()}
-      className={`
-        border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-        transition-colors
-        ${isDragActive ? 'border-primary bg-primary/5' : 'border-border'}
-        ${scanning ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:bg-primary/5'}
-      `}
-    >
-      <input {...getInputProps()} />
-      {scanning ? (
-        <div className="space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <div>
-            <p className="font-medium">{currentStep}</p>
-            <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
+    <div className="space-y-4">
+      <div
+        {...getRootProps()}
+        className={`
+          border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+          transition-colors
+          ${isDragActive ? 'border-primary bg-primary/5' : 'border-border'}
+          ${scanning ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:bg-primary/5'}
+        `}
+      >
+        <input {...getInputProps()} />
+        {scanning ? (
+          <div className="space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <div>
+              <p className="font-medium">{currentStep}</p>
+              <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
+            </div>
+            <Progress value={progress} className="h-2" />
           </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <FileText className="h-8 w-8 mx-auto text-primary" />
-          <div>
-            <p className="font-medium">
-              {isDragActive 
-                ? "Пуснете документа тук" 
-                : expectedType 
-                  ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
-                  : "Качете или плъзнете документ"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Поддържани формати: PNG, JPG (ясни копии на документи)
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Минимална резолюция: 800x600 | Максимален размер: 10MB
-            </p>
+        ) : (
+          <div className="space-y-4">
+            <FileText className="h-8 w-8 mx-auto text-primary" />
+            <div>
+              <p className="font-medium">
+                {isDragActive 
+                  ? "Пуснете документа тук" 
+                  : expectedType 
+                    ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
+                    : "Качете или плъзнете документ"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Поддържани формати: PNG, JPG (ясни копии на документи)
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Минимална резолюция: 800x600 | Максимален размер: 10MB
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {uploadedImage && (
+        <div className="relative aspect-video rounded-lg overflow-hidden group">
+          <img 
+            src={uploadedImage} 
+            alt="Качен документ" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+              onClick={handleRemoveImage}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}
