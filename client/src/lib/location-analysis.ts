@@ -8,12 +8,12 @@ export interface LocationPoint {
 }
 
 export interface AreaAnalysis {
-  averagePrice: number;
-  priceChange: number;
   transportScore: number;
   educationScore: number;
   shoppingScore: number;
   leisureScore: number;
+  averagePrice: number;
+  priceChange: number;
   infrastructureProjects: string[];
 }
 
@@ -41,7 +41,7 @@ export class LocationAnalyzer {
           `location=${encodeURIComponent(address)}` +
           `&radius=${radius}` +
           `&types=${placeTypes.join('|')}` +
-          `&key=${process.env.GOOGLE_MAPS_API_KEY}` +
+          `&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}` +
           `&language=bg`
         );
 
