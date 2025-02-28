@@ -57,18 +57,41 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
-          tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
+          // Character whitelist for Bulgarian documents
+          tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
+
+          // Preserve word spacing for better text analysis
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '1', // Automatic page segmentation
+
+          // Use PSM 3 for more accurate page layout analysis
+          tessedit_pageseg_mode: '3',  // Fully automatic page segmentation, but no OSD
+
+          // Enable document dictionary for better word recognition
           tessedit_enable_doc_dict: '1',
-          tessedit_create_hocr: '1',    // Enable HOCR output for better structure analysis
-          tessedit_enable_bigram_correction: '1', // Enable context-based corrections
-          textord_heavy_nr: '0',       // Disable noise removal (better for clear scans)
-          tessedit_do_invert: '0'      // Don't invert colors
+
+          // Better handling of structured documents
+          tessedit_create_hocr: '1',
+
+          // Language model tuning
+          language_model_penalty_non_dict_word: '0.8',  // More permissive for non-dictionary words
+          language_model_penalty_non_freq_dict_word: '0.1',
+
+          // Improve character segmentation
+          chop_enable: '1',
+          use_new_state_cost: '1',
+          segment_penalty_dict_nonword: '1.24',
+          segment_penalty_garbage: '1.5',
+
+          // Stability improvements
+          stopper_nondict_certainty_base: '-2.5',
+
+          // Quality and speed balance
+          tessdata_fast_mode: '0',
+          tessedit_fast_mode: '0'
         });
 
         setCurrentStep('Извличане на текст');
-        const { data: { text, hocr } } = await worker.recognize(imageUrl);
+        const { data: { text, hocr, tsv } } = await worker.recognize(imageUrl);
         setProgress(90);
 
         await worker.terminate();
@@ -77,14 +100,13 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         if (text && text.trim().length > 0) {
           const processedText = text
             .trim()
-            .replace(/\s+/g, ' ') // Normalize spaces
-            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()]/g, '') // Remove special chars
+            .replace(/\s+/g, ' ')
+            .replace(/[^\wабвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ\s.,\-_()№]/g, '')
             .trim();
 
           setCurrentStep('Анализ на данни');
           const extractedData = await DocumentAnalyzer.analyzeDocument(processedText);
 
-          // Verify document type if expected type is provided
           if (expectedType && extractedData.documentType !== expectedType) {
             throw new Error(`Очаква се ${getDocumentTypeName(expectedType)}, но документът изглежда като ${getDocumentTypeName(extractedData.documentType || 'other')}`);
           }
@@ -92,7 +114,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           setProgress(100);
           onScanComplete(processedText, extractedData);
 
-          // Show results
           const documentType = extractedData.documentType 
             ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
             : "Документът е сканиран успешно";
