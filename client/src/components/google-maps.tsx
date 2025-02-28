@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, useMap, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, Circle, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
+import { LocationAnalyzer, LocationPoint } from "@/lib/location-analysis";
 
 // Fix for default marker icon
 const defaultIcon = new Icon({
@@ -19,17 +20,12 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-function MapUpdater({ center }: { center: [number, number] }) {
+function MapUpdater({ center, points }: { center: [number, number]; points?: LocationPoint[] }) {
   const map = useMap();
-  console.log("MapUpdater rendered, map instance:", !!map);
 
   useEffect(() => {
-    if (!map) {
-      console.log("No map instance available");
-      return;
-    }
+    if (!map) return;
 
-    console.log("Updating map view to:", center);
     map.setView(center, map.getZoom(), {
       animate: true,
       duration: 0.8,
@@ -40,11 +36,15 @@ function MapUpdater({ center }: { center: [number, number] }) {
   return null;
 }
 
-export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
-  console.log("GoogleMaps component rendering");
+const pointTypeIcons: Record<string, string> = {
+  transport: "🚇",
+  education: "🎓",
+  shopping: "🏬",
+  leisure: "🌳"
+};
 
+export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState(() => {
     try {
       const savedLocation = localStorage.getItem('lastLocation');
@@ -56,51 +56,35 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     }
     return initialLocation || { lat: 42.6977, lng: 23.3219 }; // София по подразбиране
   });
+  const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
 
-  // Мемоизация на центъра на картата
   const center = useMemo(() => 
     [currentLocation.lat, currentLocation.lng] as [number, number],
     [currentLocation.lat, currentLocation.lng]
   );
 
   useEffect(() => {
-    setMapError(null);
-    console.log("Map component mounted");
-  }, []);
+    if (currentLocation) {
+      LocationAnalyzer.getNearbyPoints(defaultAddress || '')
+        .then(points => setNearbyPoints(points))
+        .catch(console.error);
+    }
+  }, [currentLocation, defaultAddress]);
 
-  const handleMapLoad = () => {
-    console.log("Map loaded successfully");
-    setIsLoading(false);
-  };
-
-  const handleLocationFound = (location: { lat: number; lng: number; display_name: string }) => {
-    console.log("New location found:", location);
+  const handleLocationFound = async (location: { lat: number; lng: number; display_name: string }) => {
     setCurrentLocation(location);
     onLocationSelect?.(location);
 
     try {
       localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
+
+      const points = await LocationAnalyzer.getNearbyPoints(location.display_name);
+      setNearbyPoints(points);
     } catch (error) {
-      console.error('Error saving location to localStorage:', error);
+      console.error('Error processing location:', error);
     }
   };
-
-  if (mapError) {
-    return (
-      <div className="w-full h-[300px] rounded-md border flex items-center justify-center bg-destructive/5">
-        <div className="text-center p-4">
-          <p className="text-sm text-destructive">Грешка при зареждане на картата</p>
-          <button 
-            className="mt-2 text-sm text-primary hover:underline"
-            onClick={() => window.location.reload()}
-          >
-            Опитайте отново
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -125,16 +109,14 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           }
         })()}
       />
-      <div className="relative w-full h-[300px] border rounded-md overflow-hidden">
+      <div className="relative w-full h-[400px] border rounded-md overflow-hidden">
         <MapContainer
           center={center}
-          zoom={13}
+          zoom={14}
           className="w-full h-full"
-          whenReady={handleMapLoad}
+          whenReady={() => setIsLoading(false)}
           scrollWheelZoom={true}
           zoomControl={true}
-          doubleClickZoom={true}
-          dragging={true}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -155,7 +137,44 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
                 });
               },
             }}
-          />
+          >
+            <Popup>
+              <div className="text-sm">
+                <div className="font-medium">Избрана локация</div>
+                <div className="text-muted-foreground mt-1">
+                  Преместете маркера за прецизиране на локацията
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+
+          {nearbyPoints.map((point, index) => (
+            <Marker
+              key={index}
+              position={[
+                center[0] + (Math.random() - 0.5) * 0.01, // Random offset for visualization
+                center[1] + (Math.random() - 0.5) * 0.01
+              ]}
+              icon={new Icon({
+                iconUrl: defaultIcon.options.iconUrl,
+                iconSize: [20, 33],
+                iconAnchor: [10, 33]
+              })}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <div className="flex items-center gap-2">
+                    <span>{pointTypeIcons[point.type]}</span>
+                    <span className="font-medium">{point.name}</span>
+                  </div>
+                  <div className="text-muted-foreground mt-1">
+                    {point.distance}м разстояние
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
           <Circle
             center={center}
             radius={500}
@@ -166,7 +185,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
               weight: 1
             }}
           />
-          <MapUpdater center={center} />
+          <MapUpdater center={center} points={nearbyPoints} />
         </MapContainer>
       </div>
     </div>
