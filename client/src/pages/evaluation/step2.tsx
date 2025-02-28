@@ -50,28 +50,6 @@ const STEPS = [
   }
 ];
 
-// Обновени типове стаи с новите икони
-const RESIDENTIAL_ROOM_TYPES = [
-  { id: "entrance", name: "Входна врата", icon: Home },
-  { id: "kitchen", name: "Кухня", icon: Store },
-  { id: "living", name: "Хол", icon: Building2 },
-  { id: "bathroom", name: "Баня", icon: Home },
-  { id: "bedroom", name: "Спалня", icon: Building2 }
-];
-
-const INDUSTRIAL_ROOM_TYPES = [
-  { id: "production", name: "Производствена зона", icon: Store },
-  { id: "storage", name: "Складова зона", icon: Warehouse },
-  { id: "loading", name: "Товаро-разтоварна зона", icon: Warehouse },
-  { id: "office", name: "Офис част", icon: Building2 }
-];
-
-const AGRICULTURAL_ROOM_TYPES = [
-  { id: "field", name: "Обработваема земя", icon: LandPlot },
-  { id: "irrigation", name: "Напоителна система", icon: Store },
-  { id: "storage", name: "Складови съоръжения", icon: Warehouse }
-];
-
 interface RoomPhotos {
   roomType: string;
   photos: File[];
@@ -80,92 +58,46 @@ interface RoomPhotos {
 
 export default function Step2() {
   const [, setLocation] = useLocation();
-  const [isScanning, setIsScanning] = useState(false);
-  const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
   const [documentsStatus, setDocumentsStatus] = useState<DocumentStatus>({
     notary_act: false,
     sketch: false,
     tax_assessment: false
   });
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
-  const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
-
-
-  // Get property data from localStorage instead of URL params
-  const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
-  const propertyType = propertyData.type || 'apartment';
-  const rooms = propertyData.rooms || 0;
-
-  const getRoomTypes = () => {
-    switch (propertyType) {
-      case 'apartment':
-      case 'house':
-      case 'villa':
-        return RESIDENTIAL_ROOM_TYPES;
-      case 'industrial':
-        return INDUSTRIAL_ROOM_TYPES;
-      case 'agricultural':
-        return AGRICULTURAL_ROOM_TYPES;
-      default:
-        return [];
-    }
-  };
-
-  useEffect(() => {
-    // Check if we have property data
-    if (!propertyData || !propertyData.type) {
-      setLocation('/evaluation/step1');
-      return;
-    }
-
-    // Initialize room photos array with appropriate room types
-    const roomTypes = getRoomTypes();
-    if (roomTypes.length > 0 && roomPhotos.length === 0) {
-      setRoomPhotos(
-        roomTypes.map(room => ({
-          roomType: room.id,
-          photos: [],
-          description: room.name
-        }))
-      );
-    }
-  }, []);
+  const [propertyData, setPropertyData] = useState<any>(() => 
+    JSON.parse(localStorage.getItem('propertyData') || '{}')
+  );
 
   const handleScanComplete = (text: string, data: any) => {
-    setIsScanning(false);
+    if (data) {
+      const updatedPropertyData = {
+        ...propertyData,
+        documents: [...(propertyData.documents || []), {
+          type: data.documentType,
+          extractedData: data,
+          text: text,
+          scannedAt: new Date().toISOString()
+        }]
+      };
 
-    // Get existing property data
-    const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+      setPropertyData(updatedPropertyData);
+      localStorage.setItem('propertyData', JSON.stringify(updatedPropertyData));
 
-    // Initialize or update documents array
-    const documents = propertyData.documents || [];
-    documents.push({
-      type: data.documentType,
-      extractedData: data,
-      text: text,
-      scannedAt: new Date().toISOString()
-    });
+      if (data.documentType) {
+        setDocumentsStatus(prev => ({
+          ...prev,
+          [data.documentType]: true
+        }));
+      }
 
-    // Update document status
-    if (data.documentType) {
-      setDocumentsStatus(prev => ({
-        ...prev,
-        [data.documentType]: true
-      }));
+      toast({
+        title: "Документът е сканиран успешно",
+        description: "Данните са извлечени и запазени.",
+      });
     }
-
-    // Save back to localStorage
-    localStorage.setItem('propertyData', JSON.stringify({
-      ...propertyData,
-      documents: documents
-    }));
-
-    toast({
-      title: "Документът е сканиран успешно",
-      description: "Текстът е извлечен от документа.",
-    });
   };
 
   const handleImagesAdded = (files: File[]) => {
@@ -182,10 +114,6 @@ export default function Step2() {
         ? { ...room, photos: [...room.photos, ...files] }
         : room
     ));
-    toast({
-      title: `Снимките за ${getRoomTypes().find(rt => rt.id === roomType)?.name} са качени успешно`,
-      description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`,
-    });
   };
 
   const handleRoomDescriptionChange = (roomType: string, description: string) => {
@@ -194,25 +122,6 @@ export default function Step2() {
         ? { ...room, description }
         : room
     ));
-  };
-
-  const handleDocumentsAdded = (files: File[]) => {
-    setUploadedDocuments(prev => [...prev, ...files]);
-    toast({
-      title: "Документите са качени успешно",
-      description: `${files.length} ${files.length === 1 ? 'документ е добавен' : 'документа са добавени'}`,
-    });
-  };
-
-  const handleDownload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleRemoveImage = (index: number) => {
@@ -227,18 +136,20 @@ export default function Step2() {
     ));
   };
 
-  const handleRemoveDocument = (index: number) => {
-    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
-  };
-
   const handleContinue = async () => {
     try {
       setIsSubmitting(true);
 
-      localStorage.setItem('currentStep', '3');
+      // Сохраняем все фотографии в propertyData
+      const updatedPropertyData = {
+        ...propertyData,
+        evaluationType,
+        images: uploadedImages,
+        roomPhotos
+      };
 
-      // Save evaluation type to localStorage
-      localStorage.setItem('evaluationType', evaluationType);
+      localStorage.setItem('propertyData', JSON.stringify(updatedPropertyData));
+      localStorage.setItem('currentStep', '3');
 
       toast({
         title: "Успешно запазени данни",
@@ -318,44 +229,6 @@ export default function Step2() {
                       </div>
                     </TabsTrigger>
                   </TabsList>
-                  <TabsContent value="quick">
-                    <div className="p-6 bg-blue-50 rounded-lg mt-4">
-                      <h3 className="text-lg font-semibold mb-2 text-blue-700">Бърза оценка на имота</h3>
-                      <ul className="space-y-2">
-                        <li className="flex items-center gap-2 text-sm text-blue-600">
-                          <Clock className="h-4 w-4" />
-                          Оценка до 24 часа
-                        </li>
-                        <li className="flex items-center gap-2 text-sm text-blue-600">
-                          <CheckCircle className="h-4 w-4" />
-                          Базирана на локация и основна информация
-                        </li>
-                        <li className="flex items-center gap-2 text-sm text-blue-600">
-                          <ImageIcon className="h-4 w-4" />
-                          Изисква само основни снимки
-                        </li>
-                      </ul>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="licensed">
-                    <div className="p-6 bg-green-50 rounded-lg mt-4">
-                      <h3 className="text-lg font-semibold mb-2 text-green-700">Лицензирана оценка на имота</h3>
-                      <ul className="space-y-2">
-                        <li className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          Подробен анализ от лицензиран оценител
-                        </li>
-                        <li className="flex items-center gap-2 text-sm text-green-600">
-                          <Home className="h-4 w-4" />
-                          Оценка на всички помещения
-                        </li>
-                        <li className="flex items-center gap-2 text-sm text-green-600">
-                          <ImageIcon className="h-4 w-4" />
-                          Включва анализ на документи и снимки
-                        </li>
-                      </ul>
-                    </div>
-                  </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
@@ -394,14 +267,6 @@ export default function Step2() {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-                              onClick={() => handleDownload(file)}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
                               onClick={() => handleRemoveImage(index)}
                             >
                               <X className="h-4 w-4" />
@@ -414,186 +279,62 @@ export default function Step2() {
                 </CardContent>
               </Card>
             ) : (
-              <>
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Документи за имота
-                    </CardTitle>
-                    <CardDescription>
-                      Качете необходимите документи за точна оценка
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className={`p-4 border rounded-lg ${documentsStatus.notary_act ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Нотариален акт</h4>
-                          {documentsStatus.notary_act && (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-4">Документ за собственост</p>
-                        <DocumentScanner
-                          onScanComplete={handleScanComplete}
-                          expectedType="notary_act"
-                        />
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Документи за имота
+                  </CardTitle>
+                  <CardDescription>
+                    Качете необходимите документи за точна оценка
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className={`p-4 border rounded-lg ${documentsStatus.notary_act ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">Нотариален акт</h4>
+                        {documentsStatus.notary_act && (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
                       </div>
-
-                      <div className={`p-4 border rounded-lg ${documentsStatus.sketch ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Скица</h4>
-                          {documentsStatus.sketch && (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-4">Официален документ от кадастъра</p>
-                        <DocumentScanner
-                          onScanComplete={handleScanComplete}
-                          expectedType="sketch"
-                        />
-                      </div>
-
-                      <div className={`p-4 border rounded-lg ${documentsStatus.tax_assessment ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Данъчна оценка</h4>
-                          {documentsStatus.tax_assessment && (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-4">Актуална данъчна оценка</p>
-                        <DocumentScanner
-                          onScanComplete={handleScanComplete}
-                          expectedType="tax_assessment"
-                        />
-                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Документ за собственост</p>
+                      <DocumentScanner
+                        onScanComplete={handleScanComplete}
+                        expectedType="notary_act"
+                      />
                     </div>
 
-                    {uploadedDocuments.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        {uploadedDocuments.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-gray-50">
-                            <span className="text-sm truncate">{file.name}</span>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8"
-                                onClick={() => handleDownload(file)}
-                              >
-                                <Download className="h-4 w-4 mr-1" />
-                                Изтегли
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8"
-                                onClick={() => handleRemoveDocument(index)}
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Премахни
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/*  This section remains largely unchanged */}
-                    {scannedText && (
-                      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h4 className="font-medium mb-2 text-blue-700">Извлечена информация</h4>
-                        <div className="space-y-2">
-                          {extractedData?.squareMeters && (
-                            <p className="text-sm text-blue-600">Квадратура: {extractedData.squareMeters} кв.м</p>
-                          )}
-                          {extractedData?.constructionYear && (
-                            <p className="text-sm text-blue-600">Година на строителство: {extractedData.constructionYear}</p>
-                          )}
-                          {extractedData?.address && (
-                            <p className="text-sm text-blue-600">Адрес: {extractedData.address}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {roomPhotos.length > 0 && getRoomTypes().map((roomType) => {
-                  const room = roomPhotos.find(r => r.roomType === roomType.id);
-                  if (!room) return null;
-
-                  const Icon = roomType.icon;
-
-                  return (
-                    <Card key={roomType.id} className="mb-6">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Icon className="h-5 w-5 text-primary" />
-                          {roomType.name}
-                        </CardTitle>
-                        <CardDescription>
-                          Качете снимки за {roomType.name.toLowerCase()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="mb-4">
-                          <input
-                            type="text"
-                            className="w-full p-2 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            value={room.description}
-                            onChange={(e) => handleRoomDescriptionChange(roomType.id, e.target.value)}
-                            placeholder={`Описание на ${roomType.name.toLowerCase()}`}
-                          />
-                        </div>
-
-                        <FileUploadZone
-                          accept={{
-                            'image/*': ['.png', '.jpg', '.jpeg']
-                          }}
-                          maxFiles={5}
-                          onFilesAdded={(files) => handleRoomPhotosAdded(roomType.id, files)}
-                          fileType="image"
-                          roomType={roomType.id}
-                        />
-
-                        {room.photos.length > 0 && (
-                          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {room.photos.map((file, photoIndex) => (
-                              <div key={photoIndex} className="relative group aspect-square rounded-lg overflow-hidden border bg-accent/5">
-                                <img
-                                  src={URL.createObjectURL(file)}
-                                  alt={`${roomType.name} снимка ${photoIndex + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-                                    onClick={() => handleDownload(file)}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-                                    onClick={() => handleRemoveRoomPhoto(roomType.id, photoIndex)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                    <div className={`p-4 border rounded-lg ${documentsStatus.sketch ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">Скица</h4>
+                        {documentsStatus.sketch && (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
                         )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Официален документ от кадастъра</p>
+                      <DocumentScanner
+                        onScanComplete={handleScanComplete}
+                        expectedType="sketch"
+                      />
+                    </div>
+
+                    <div className={`p-4 border rounded-lg ${documentsStatus.tax_assessment ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">Данъчна оценка</h4>
+                        {documentsStatus.tax_assessment && (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Актуална данъчна оценка</p>
+                      <DocumentScanner
+                        onScanComplete={handleScanComplete}
+                        expectedType="tax_assessment"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             <div className="mt-6 flex justify-between">
@@ -603,7 +344,7 @@ export default function Step2() {
               <Button
                 onClick={handleContinue}
                 className="bg-[#003366] hover:bg-[#002244]"
-                disabled={isScanning || isSubmitting}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
