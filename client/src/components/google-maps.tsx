@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { GoogleMap, LoadScript, Marker, Circle, InfoWindow } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, Circle } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
-import { LocationAnalyzer, LocationPoint } from "@/lib/location-analysis";
 import { toast } from "@/hooks/use-toast";
 
 const containerStyle = {
@@ -25,12 +24,8 @@ type Libraries = ("places" | "geometry")[];
 const libraries: Libraries = ["places", "geometry"];
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [selectedMarker, setSelectedMarker] = useState<LocationPoint | null>(null);
-  const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [error, setError] = useState<string | null>(null);
-  const [loadingPoints, setLoadingPoints] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,62 +49,15 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       });
   }, []);
 
-  useEffect(() => {
-    if (defaultAddress) {
-      setLoadingPoints(true);
-      LocationAnalyzer.getNearbyPoints(defaultAddress)
-        .then(points => {
-          setNearbyPoints(points);
-          setLoadingPoints(false);
-        })
-        .catch(error => {
-          console.error('Error loading nearby points:', error);
-          setError("Грешка при зареждане на точките на интерес");
-          setLoadingPoints(false);
-          toast({
-            title: "Грешка при зареждане",
-            description: "Не успяхме да заредим информация за района",
-            variant: "destructive"
-          });
-        });
-    }
-  }, [defaultAddress]);
-
-  const handleMapLoad = (map: google.maps.Map) => {
-    console.log('Map loaded successfully');
-    setMap(map);
-  };
-
-  const handleLoadError = (error: Error) => {
-    console.error('Error loading Google Maps:', error);
-    setError("Грешка при зареждане на картата");
-    toast({
-      title: "Грешка при зареждане",
-      description: "Не успяхме да заредим картата. Моля, проверете конзолата за повече информация.",
-      variant: "destructive"
-    });
-  };
-
-  const handleMapUnmount = () => {
-    setMap(null);
-  };
-
-  const handleLocationFound = async (location: { lat: number; lng: number; display_name: string }) => {
+  const handleLocationFound = (location: { lat: number; lng: number; display_name: string }) => {
     try {
       setCenter({ lat: location.lat, lng: location.lng });
       onLocationSelect?.({ lat: location.lat, lng: location.lng });
 
-      localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
-
-      setLoadingPoints(true);
-      const points = await LocationAnalyzer.getNearbyPoints(location.display_name);
-      setNearbyPoints(points);
-      setLoadingPoints(false);
     } catch (error) {
       console.error('Error processing location:', error);
       setError("Грешка при обработка на локацията");
-      setLoadingPoints(false);
       toast({
         title: "Грешка",
         description: "Възникна проблем при обработка на локацията",
@@ -151,16 +99,11 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           googleMapsApiKey={apiKey}
           language="bg"
           libraries={libraries}
-          onLoad={() => console.log('Script loaded successfully')}
-          onError={handleLoadError}
-          
         >
           <GoogleMap
             mapContainerStyle={containerStyle}
             center={center}
             zoom={14}
-            onLoad={handleMapLoad}
-            onUnmount={handleMapUnmount}
             options={{
               streetViewControl: false,
               mapTypeControl: false,
@@ -189,50 +132,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
                   });
                 }
               }}
-            >
-              <InfoWindow>
-                <div className="text-sm">
-                  <div className="font-medium">Избрана локация</div>
-                  <div className="text-muted-foreground mt-1">
-                    Преместете маркера за прецизиране на локацията
-                  </div>
-                </div>
-              </InfoWindow>
-            </Marker>
-
-            {!loadingPoints && nearbyPoints.map((point, index) => {
-              const position = {
-                lat: center.lat + (Math.random() - 0.5) * 0.01,
-                lng: center.lng + (Math.random() - 0.5) * 0.01
-              };
-
-              return (
-                <Marker
-                  key={index}
-                  position={position}
-                  icon={{
-                    url: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><text y="18">${markerIcons[point.type]}</text></svg>`,
-                    anchor: new google.maps.Point(12, 12),
-                  }}
-                  onClick={() => setSelectedMarker(point)}
-                >
-                  {selectedMarker === point && (
-                    <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                      <div className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <span>{markerIcons[point.type]}</span>
-                          <span className="font-medium">{point.name}</span>
-                        </div>
-                        <div className="text-muted-foreground mt-1">
-                          {point.distance}м разстояние
-                        </div>
-                      </div>
-                    </InfoWindow>
-                  )}
-                </Marker>
-              );
-            })}
-
+            />
             <Circle
               center={center}
               radius={500}
@@ -249,10 +149,3 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     </div>
   );
 }
-
-const markerIcons = {
-  transport: "🚇",
-  education: "🎓",
-  shopping: "🏬",
-  leisure: "🌳"
-};

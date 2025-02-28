@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, MapPin } from "lucide-react";
-import { geocodeAddress } from "@/lib/geocoding";
+import { Search, Loader2, MapPin, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,14 +16,13 @@ interface AddressSearchProps {
 export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressChange }: AddressSearchProps) {
   const [address, setAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
+  const [isValidated, setIsValidated] = useState(false);
   const [open, setOpen] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [placesService, setPlacesService] = useState<google.maps.places.AutocompleteService | null>(null);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
 
   useEffect(() => {
-    // Initialize Google services
     if (window.google && !placesService) {
       setPlacesService(new google.maps.places.AutocompleteService());
       setGeocoder(new google.maps.Geocoder());
@@ -36,23 +34,20 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       const savedAddress = localStorage.getItem('lastAddress');
       if (savedAddress) {
         setAddress(savedAddress);
+        setIsValidated(true);
         onAddressChange?.(savedAddress);
       }
     }
   }, [defaultAddress, onAddressChange]);
 
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
     if (!address.trim() || !placesService) {
       setPredictions([]);
       setOpen(false);
       return;
     }
 
-    const newTimeout = setTimeout(async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         const request: google.maps.places.AutocompletionRequest = {
           input: address,
@@ -71,21 +66,21 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       }
     }, 300);
 
-    setSearchTimeout(newTimeout);
-    return () => clearTimeout(newTimeout);
+    return () => clearTimeout(timeoutId);
   }, [address, placesService]);
 
-  const handleAddressValidation = async (searchAddress: string) => {
-    if (!searchAddress.trim()) {
+  const handleAddressValidation = async (prediction: google.maps.places.AutocompletePrediction) => {
+    if (!prediction) {
       toast({
-        title: "Въведете адрес",
-        description: "Моля, въведете адрес за търсене",
+        title: "Изберете адрес",
+        description: "Моля, изберете адрес от предложенията",
         variant: "destructive"
       });
-      return false;
+      return;
     }
 
     setIsSearching(true);
+    setIsValidated(false);
 
     try {
       if (!geocoder) {
@@ -95,8 +90,8 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
       const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
         geocoder.geocode(
           { 
-            address: searchAddress,
-            componentRestrictions: { country: 'BG' }
+            placeId: prediction.place_id,
+            language: 'bg'
           }, 
           (results, status) => {
             if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
@@ -114,40 +109,32 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
         display_name: result.formatted_address
       };
 
+      setAddress(location.display_name);
       onLocationFound(location);
       localStorage.setItem('lastAddress', location.display_name);
       onAddressChange?.(location.display_name);
       setOpen(false);
+      setIsValidated(true);
 
       toast({
-        title: "Адресът е намерен",
+        title: "Адресът е избран",
         description: (
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-500" />
-            <span>Местоположението е маркирано на картата</span>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span>Адресът е успешно валидиран</span>
           </div>
         ),
       });
-
-      return true;
     } catch (error) {
       console.error('Error validating address:', error);
       toast({
-        title: "Грешка при търсене",
-        description: "Не успяхме да намерим този адрес. Моля, опитайте отново.",
+        title: "Грешка при валидация",
+        description: "Моля, опитайте с друг адрес",
         variant: "destructive"
       });
-      return false;
+      setIsValidated(false);
     } finally {
       setIsSearching(false);
-    }
-  };
-
-  const handlePredictionSelect = async (prediction: google.maps.places.AutocompletePrediction) => {
-    setAddress(prediction.description);
-    const success = await handleAddressValidation(prediction.description);
-    if (success) {
-      onAddressChange?.(prediction.description);
     }
   };
 
@@ -155,55 +142,30 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     <div className="flex flex-col gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <div className="flex gap-2">
+          <div className="relative">
             <Input
               placeholder="Въведете адрес..."
               value={address}
               onChange={(e) => {
                 const newAddress = e.target.value;
                 setAddress(newAddress);
+                setIsValidated(false);
                 onAddressChange?.(newAddress);
                 if (newAddress.trim()) {
                   setOpen(true);
                 }
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !open) {
-                  e.preventDefault();
-                  handleAddressValidation(address);
-                }
-              }}
-              className={`flex-1 transition-colors ${
-                predictions.length > 0 ? 'border-primary' : ''
-              }`}
+              className={`pr-10 ${isValidated ? 'border-green-500' : predictions.length > 0 ? 'border-primary' : ''}`}
             />
-            <Button 
-              onClick={() => handleAddressValidation(address)}
-              disabled={isSearching}
-              className="transition-all"
-            >
-              <AnimatePresence mode="wait">
-                {isSearching ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                  >
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="search"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                  >
-                    <Search className="h-4 w-4" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Button>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {isSearching ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : isValidated ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <Search className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
           </div>
         </PopoverTrigger>
         <PopoverContent 
@@ -216,11 +178,17 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
             <CommandInput 
               placeholder="Търсене на адрес..." 
               value={address}
-              onValueChange={setAddress}
+              onValueChange={(value) => {
+                setAddress(value);
+                setIsValidated(false);
+                if (value.trim()) {
+                  setOpen(true);
+                }
+              }}
               className="border-none focus:ring-0"
             />
             <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-              Няма намерени адреси.
+              Няма намерени адреси
             </CommandEmpty>
             <CommandGroup>
               <AnimatePresence>
@@ -235,7 +203,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
                     }}
                   >
                     <CommandItem
-                      onSelect={() => handlePredictionSelect(prediction)}
+                      onSelect={() => handleAddressValidation(prediction)}
                       className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
                     >
                       <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
