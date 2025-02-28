@@ -1,0 +1,134 @@
+const express = require('express');
+const { Pool } = require('pg');
+const axios = require('axios');
+require('dotenv').config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+app.use(express.static('public'));
+app.use(express.json());
+
+// Инициализация на базата
+async function initDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS properties (
+      id SERIAL PRIMARY KEY,
+      address VARCHAR(255),
+      lat FLOAT,
+      lng FLOAT,
+      metro_distance FLOAT,
+      park_count INT,
+      school_count INT,
+      hospital_count INT,
+      supermarket_count INT
+    );
+  `);
+}
+initDatabase();
+
+// Търсене и анализ на локация
+app.get('/search-location', async (req, res) => {
+  const { address } = req.query;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+  try {
+    // Geocoding за координати
+    const geoResponse = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
+    const location = geoResponse.data.results[0]?.geometry.location;
+    if (!location) throw new Error('Адресът не е намерен');
+
+    const { lat, lng } = location;
+
+    // Places API за обекти
+    const types = ['subway_station', 'park', 'school', 'hospital', 'supermarket'];
+    const results = {};
+
+    for (const type of types) {
+      const placesResponse = await axios.get(`https://maps.googleapis.com/maps/api/place/nearbysearch/json`, {
+        params: {
+          location: `${lat},${lng}`,
+          radius: 5000,
+          type,
+          key: apiKey
+        }
+      });
+      results[type] = placesResponse.data.results;
+    }
+
+    // Анализ на данни
+    const metro = results['subway_station'][0];
+    const metroDistance = metro ? calculateDistance(lat, lng, metro.geometry.location.lat, metro.geometry.location.lng) : null;
+    const parkCount = results['park'].length;
+    const schoolCount = results['school'].length;
+    const hospitalCount = results['hospital'].length;
+    const supermarketCount = results['supermarket'].length;
+
+    res.json({
+      lat,
+      lng,
+      metroDistance,
+      parkCount,
+      schoolCount,
+      hospitalCount,
+      supermarketCount,
+      formattedAddress: geoResponse.data.results[0].formatted_address,
+      places: results
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Функция за изчисляване на разстояние
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Запазване на имот
+app.post('/save-property', async (req, res) => {
+  const { address, lat, lng, metroDistance, parkCount, schoolCount, hospitalCount, supermarketCount } = req.body;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO properties (address, lat, lng, metro_distance, park_count, school_count, hospital_count, supermarket_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [address, lat, lng, metroDistance, parkCount, schoolCount, hospitalCount, supermarketCount]
+    );
+    res.json({ success: true, propertyId: result.rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Примерен анализ за оценка
+app.get('/analyze/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const property = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+    const data = property.rows[0];
+
+    let baseValue = 2000; // Примерна цена на кв.м в лева
+    let value = baseValue;
+    if (data.metro_distance && data.metro_distance < 1000) value *= 1.1; // +10% за метро под 1 км
+    if (data.park_count > 2) value *= 1.05; // +5% за повече паркове
+
+    res.json({ property: data, estimatedValue: value });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(port, () => console.log(`Server running on port ${port}`));

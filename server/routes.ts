@@ -1,57 +1,27 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import fetch from "node-fetch";
 import { insertPropertySchema } from "@shared/schema";
+import fetch from "node-fetch";
 
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   return Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('Google Maps API key is not configured');
-  }
+// Функция за изчисляване на разстояние в метри
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371e3; // радиус на Земята в метри
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
 
-  const url = `https://maps.googleapis.com/maps/api/${path}?${new URLSearchParams({
-    ...params,
-    key: apiKey
-  })}`;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  const response = await fetch(url);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(`Google Maps API request failed: ${response.statusText}`);
-  }
-
-  if (data.status !== 'OK') {
-    throw new Error(data.error_message || 'Google Maps API returned error');
-  }
-
-  return data;
-}
-
-// Calculate price range based on location and area
-function calculatePriceRange(metroDistance: number | null, greenZones: number, area: number) {
-  // Base price per square meter
-  let basePrice = 1000;
-
-  // Adjust for metro proximity
-  if (metroDistance) {
-    if (metroDistance < 500) basePrice *= 1.3;
-    else if (metroDistance < 1000) basePrice *= 1.2;
-    else if (metroDistance < 1500) basePrice *= 1.1;
-  }
-
-  // Adjust for green zones
-  basePrice *= (1 + (greenZones * 0.05));
-
-  return {
-    min: Math.round(basePrice * 0.9),
-    max: Math.round(basePrice * 1.1)
-  };
+  return R * c;
 }
 
 export async function registerRoutes(app: Express) {
@@ -93,11 +63,27 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      const data = await proxyGoogleMapsRequest('geocode/json', {
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        throw new Error('Google Maps API key is not configured');
+      }
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?${new URLSearchParams({
         ...(address ? { address: address as string } : { latlng: latlng as string }),
         components: 'country:BG',
-        language: 'bg'
-      });
+        language: 'bg',
+        key: apiKey
+      })}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`Google Maps API request failed: ${response.statusText}`);
+      }
+
+      if (data.status !== 'OK') {
+        throw new Error(data.error_message || 'Google Maps API returned error');
+      }
       res.json(data);
     } catch (error) {
       res.status(500).json({ 
@@ -116,12 +102,28 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      const data = await proxyGoogleMapsRequest('place/nearbysearch/json', {
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        throw new Error('Google Maps API key is not configured');
+      }
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${new URLSearchParams({
         location: location as string,
         type: type as string,
         radius: radius as string,
-        language: 'bg'
-      });
+        language: 'bg',
+        key: apiKey
+      })}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`Google Maps API request failed: ${response.statusText}`);
+      }
+
+      if (data.status !== 'OK') {
+        throw new Error(data.error_message || 'Google Maps API returned error');
+      }
       res.json(data);
     } catch (error) {
       res.status(500).json({ 
@@ -164,12 +166,10 @@ export async function registerRoutes(app: Express) {
       let metroDistance = null;
       if (metroData.results?.[0]) {
         const station = metroData.results[0];
-        metroDistance = google.maps.geometry.spherical.computeDistanceBetween(
-          new google.maps.LatLng(result.data.location.lat, result.data.location.lng),
-          new google.maps.LatLng(
-            station.geometry.location.lat,
-            station.geometry.location.lng
-          )
+        metroDistance = calculateDistance(
+          result.data.location.lat, result.data.location.lng,
+          station.geometry.location.lat,
+          station.geometry.location.lng
         );
       }
 
@@ -229,6 +229,81 @@ export async function registerRoutes(app: Express) {
   app.get("/api/properties", asyncHandler(async (_req, res) => {
     const properties = await storage.getProperties();
     res.json(properties);
+  }));
+
+  // Търсене и анализ на локация
+  app.get('/api/search-location', asyncHandler(async (req: Request, res: Response) => {
+    const { address } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+    if (!address) {
+      return res.status(400).json({ error: "Адресът е задължителен" });
+    }
+
+    try {
+      // Geocoding за координати
+      const geoResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}`
+      );
+      const geoData = await geoResponse.json();
+
+      const location = geoData.results[0]?.geometry.location;
+      if (!location) {
+        return res.status(404).json({ error: 'Адресът не е намерен' });
+      }
+
+      const { lat, lng } = location;
+
+      // Places API за близки обекти
+      const types = ['subway_station', 'park', 'school', 'hospital'];
+      const results = {};
+
+      for (const type of types) {
+        const placesResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=${type}&key=${apiKey}`
+        );
+        const placesData = await placesResponse.json();
+        results[type] = placesData.results;
+      }
+
+      // Анализ на данните
+      const analysis = {
+        metro: results['subway_station']?.[0] ? {
+          name: results['subway_station'][0].name,
+          distance: calculateDistance(
+            lat, lng,
+            results['subway_station'][0].geometry.location.lat,
+            results['subway_station'][0].geometry.location.lng
+          )
+        } : null,
+        parks: results['park']?.length || 0,
+        schools: results['school']?.length || 0,
+        hospitals: results['hospital']?.length || 0,
+        coordinates: { lat, lng },
+        formatted_address: geoData.results[0].formatted_address
+      };
+
+      // Запазване в базата данни
+      const property = await storage.createProperty({
+        address: analysis.formatted_address,
+        location: analysis.coordinates,
+        area: 0, // ще се попълни по-късно от потребителя
+        metro_distance: analysis.metro?.distance || null,
+        green_zones: analysis.parks
+      });
+
+      res.json({
+        property_id: property.id,
+        analysis
+      });
+
+    } catch (err) {
+      console.error('Error analyzing location:', err);
+      res.status(500).json({ 
+        error: "Грешка при анализ на локацията",
+        details: err instanceof Error ? err.message : 'Unknown error'
+      });
+    }
   }));
 
   app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
@@ -297,6 +372,52 @@ export async function registerRoutes(app: Express) {
     console.log(`Created evaluation with ID: ${evaluation.id}`);
     res.status(201).json(evaluation);
   }));
+
+  // Calculate price range based on location and area
+  function calculatePriceRange(metroDistance: number | null, greenZones: number, area: number) {
+    // Base price per square meter
+    let basePrice = 1000;
+
+    // Adjust for metro proximity
+    if (metroDistance) {
+      if (metroDistance < 500) basePrice *= 1.3;
+      else if (metroDistance < 1000) basePrice *= 1.2;
+      else if (metroDistance < 1500) basePrice *= 1.1;
+    }
+
+    // Adjust for green zones
+    basePrice *= (1 + (greenZones * 0.05));
+
+    return {
+      min: Math.round(basePrice * 0.9),
+      max: Math.round(basePrice * 1.1)
+    };
+  }
+
+  async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      throw new Error('Google Maps API key is not configured');
+    }
+
+    const url = `https://maps.googleapis.com/maps/api/${path}?${new URLSearchParams({
+      ...params,
+      key: apiKey
+    })}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Google Maps API request failed: ${response.statusText}`);
+    }
+
+    if (data.status !== 'OK') {
+      throw new Error(data.error_message || 'Google Maps API returned error');
+    }
+
+    return data;
+  }
 
   const httpServer = createServer(app);
   return httpServer;
