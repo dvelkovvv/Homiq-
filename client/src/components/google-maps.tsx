@@ -33,20 +33,40 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
   const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPoints, setLoadingPoints] = useState(false);
 
   useEffect(() => {
     if (defaultAddress) {
+      setLoadingPoints(true);
       LocationAnalyzer.getNearbyPoints(defaultAddress)
-        .then(points => setNearbyPoints(points))
+        .then(points => {
+          setNearbyPoints(points);
+          setLoadingPoints(false);
+        })
         .catch(error => {
           console.error('Error loading nearby points:', error);
           setError("Грешка при зареждане на точките на интерес");
+          setLoadingPoints(false);
         });
     }
   }, [defaultAddress]);
 
   const handleMapLoad = (map: google.maps.Map) => {
     setMap(map);
+    // Set custom map options after load
+    map.setOptions({
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false,
+      zoomControl: true,
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
   };
 
   const handleMapUnmount = () => {
@@ -61,11 +81,14 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       localStorage.setItem('lastAddress', location.display_name);
       localStorage.setItem('lastLocation', JSON.stringify({ lat: location.lat, lng: location.lng }));
 
+      setLoadingPoints(true);
       const points = await LocationAnalyzer.getNearbyPoints(location.display_name);
       setNearbyPoints(points);
+      setLoadingPoints(false);
     } catch (error) {
       console.error('Error processing location:', error);
       setError("Грешка при обработка на локацията");
+      setLoadingPoints(false);
     }
   };
 
@@ -106,19 +129,6 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
             zoom={14}
             onLoad={handleMapLoad}
             onUnmount={handleMapUnmount}
-            options={{
-              streetViewControl: false,
-              mapTypeControl: false,
-              fullscreenControl: false,
-              zoomControl: true,
-              styles: [
-                {
-                  featureType: "poi",
-                  elementType: "labels",
-                  stylers: [{ visibility: "off" }]
-                }
-              ]
-            }}
           >
             <Marker
               position={center}
@@ -145,7 +155,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
               </InfoWindow>
             </Marker>
 
-            {nearbyPoints.map((point, index) => {
+            {!loadingPoints && nearbyPoints.map((point, index) => {
               const position = {
                 lat: center.lat + (Math.random() - 0.5) * 0.01,
                 lng: center.lng + (Math.random() - 0.5) * 0.01
