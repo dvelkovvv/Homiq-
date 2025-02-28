@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, CheckCircle } from "lucide-react";
+import { Loader2, FileText, CheckCircle, Settings2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
@@ -18,14 +18,56 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
 
-  const getDocumentTypeName = (type: string): string => {
-    const types: Record<string, string> = {
-      'notary_act': 'Нотариален акт',
-      'sketch': 'Скица',
-      'tax_assessment': 'Данъчна оценка',
-      'other': 'Друг документ'
-    };
-    return types[type] || types.other;
+  const preprocessImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+
+          // Set canvas size to match image
+          canvas.width = img.width;
+          canvas.height = img.height;
+
+          // Draw original image
+          ctx.drawImage(img, 0, 0);
+
+          // Get image data
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+
+          // Apply preprocessing
+          for (let i = 0; i < data.length; i += 4) {
+            // Convert to grayscale
+            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+
+            // Apply threshold for better contrast
+            const threshold = 128;
+            const value = avg > threshold ? 255 : 0;
+
+            data[i] = value;     // R
+            data[i + 1] = value; // G
+            data[i + 2] = value; // B
+          }
+
+          // Put processed image back
+          ctx.putImageData(imageData, 0, 0);
+
+          // Convert to data URL
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -38,7 +80,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
       try {
         const file = acceptedFiles[0];
-        const imageUrl = URL.createObjectURL(file);
+
+        // Preprocess image
+        setCurrentStep('Обработка на изображението');
+        const processedImageUrl = await preprocessImage(file);
+        setProgress(20);
 
         toast({
           title: "Сканиране започна",
@@ -49,7 +95,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(20);
+              setProgress(30);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
               setProgress(40);
@@ -63,22 +109,24 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(80);
+        setProgress(70);
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_() ',
           preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '1',
-          tessedit_enable_doc_dict: '1'
+          tessedit_pageseg_mode: '6', // Assume uniform text block
+          tessedit_enable_doc_dict: '1',
+          textord_heavy_nr: '1', // Handle noisy images better
+          language_model_penalty_non_freq_dict_word: '0.5' // More permissive with non-dictionary words
         });
 
         setCurrentStep('Извличане на текст');
-        const { data: { text } } = await worker.recognize(imageUrl);
-        setProgress(90);
+        const { data: { text } } = await worker.recognize(processedImageUrl);
+        setProgress(80);
 
         await worker.terminate();
-        URL.revokeObjectURL(imageUrl);
+        URL.revokeObjectURL(processedImageUrl);
 
         if (text && text.trim().length > 0) {
           const processedText = text
@@ -98,6 +146,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           setProgress(100);
           onScanComplete(processedText, extractedData);
 
+          // Show results
           const documentType = extractedData.documentType 
             ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
             : "Документът е сканиран успешно";
@@ -140,7 +189,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         });
       } finally {
         setScanning(false);
-        setProgress(100);
+        setProgress(0);
         setCurrentStep('');
       }
     },
@@ -150,6 +199,16 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     maxFiles: 1,
     multiple: false
   });
+
+  const getDocumentTypeName = (type: string): string => {
+    const types: Record<string, string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка',
+      'other': 'Друг документ'
+    };
+    return types[type] || types.other;
+  };
 
   return (
     <Card>
@@ -167,7 +226,10 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
           {scanning ? (
             <div className="space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <div className="relative mx-auto w-12 h-12">
+                <Loader2 className="animate-spin absolute inset-0 text-primary" />
+                <Settings2 className="animate-pulse absolute inset-0 text-primary opacity-50" />
+              </div>
               <div>
                 <p className="font-medium">{currentStep}</p>
                 <p className="text-sm text-muted-foreground">Моля, изчакайте</p>
