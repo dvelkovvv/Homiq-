@@ -33,28 +33,43 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   };
 
   const convertPDFToImage = async (file: File): Promise<string[]> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
-    const imageUrls: string[] = [];
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+      const imageUrls: string[] = [];
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+        if (!ctx) {
+          throw new Error('Неуспешно създаване на canvas контекст');
+        }
 
-      await page.render({
-        canvasContext: context!,
-        viewport: viewport
-      }).promise;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
 
-      imageUrls.push(canvas.toDataURL('image/png'));
+        try {
+          await page.render({
+            canvasContext: ctx,
+            viewport: viewport
+          }).promise;
+
+          const imageUrl = canvas.toDataURL('image/png', 1.0);
+          imageUrls.push(imageUrl);
+        } catch (error) {
+          console.error('Грешка при рендиране на PDF страница:', error);
+          throw new Error('Грешка при обработка на PDF страницата');
+        }
+      }
+
+      return imageUrls;
+    } catch (error) {
+      console.error('Грешка при конвертиране на PDF:', error);
+      throw new Error('Неуспешно конвертиране на PDF документа');
     }
-
-    return imageUrls;
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -71,8 +86,12 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
         if (file.type === 'application/pdf') {
           setCurrentStep('Конвертиране на PDF');
-          imageUrls = await convertPDFToImage(file);
-          setProgress(20);
+          try {
+            imageUrls = await convertPDFToImage(file);
+            setProgress(20);
+          } catch (error) {
+            throw new Error('Грешка при обработка на PDF файла. Моля, опитайте с друг документ.');
+          }
         } else {
           imageUrls = [URL.createObjectURL(file)];
         }
@@ -117,7 +136,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         }
 
         await worker.terminate();
-        imageUrls.forEach(URL.revokeObjectURL);
+        imageUrls.forEach(url => {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
 
         if (allText.trim().length > 0) {
           const processedText = allText
