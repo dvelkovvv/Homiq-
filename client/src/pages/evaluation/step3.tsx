@@ -58,7 +58,7 @@ export default function Step3() {
 
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
 
-  // Basic mock data
+  // Mock data for evaluation
   const mockEvaluation = {
     estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
     confidence: Math.random() * (0.95 - 0.75) + 0.75,
@@ -68,6 +68,16 @@ export default function Step3() {
     infrastructureScore: 8.7,
     marketScore: 8.2
   };
+
+  // Price history data
+  const priceHistoryData = [
+    { month: "Септ", value: mockEvaluation.estimatedValue * 0.90 },
+    { month: "Окт", value: mockEvaluation.estimatedValue * 0.92 },
+    { month: "Ное", value: mockEvaluation.estimatedValue * 0.95 },
+    { month: "Дек", value: mockEvaluation.estimatedValue * 0.97 },
+    { month: "Яну", value: mockEvaluation.estimatedValue * 0.98 },
+    { month: "Фев", value: mockEvaluation.estimatedValue }
+  ];
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('bg-BG', {
@@ -154,25 +164,25 @@ export default function Step3() {
                   <CardDescription>Обобщена информация за имота</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <Building2 className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-                      <div className="text-2xl font-bold">{propertyData.squareMeters}м²</div>
+                      <div className="text-xl sm:text-2xl font-bold">{propertyData.squareMeters}м²</div>
                       <div className="text-sm text-gray-600">Площ</div>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <MapPin className="h-6 w-6 mx-auto mb-2 text-red-500" />
-                      <div className="text-2xl font-bold">{mockEvaluation.locationScore}</div>
+                      <div className="text-xl sm:text-2xl font-bold">{mockEvaluation.locationScore}</div>
                       <div className="text-sm text-gray-600">Локация</div>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <TrendingUp className="h-6 w-6 mx-auto mb-2 text-green-500" />
-                      <div className="text-2xl font-bold">{mockEvaluation.marketScore}</div>
+                      <div className="text-xl sm:text-2xl font-bold">{mockEvaluation.marketScore}</div>
                       <div className="text-sm text-gray-600">Пазарен индекс</div>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <ChartBar className="h-6 w-6 mx-auto mb-2 text-purple-500" />
-                      <div className="text-2xl font-bold">{mockEvaluation.infrastructureScore}</div>
+                      <div className="text-xl sm:text-2xl font-bold">{mockEvaluation.infrastructureScore}</div>
                       <div className="text-sm text-gray-600">Инфраструктура</div>
                     </div>
                   </div>
@@ -187,7 +197,7 @@ export default function Step3() {
                   <CardDescription>Динамика на цените през последните 6 месеца</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[400px]">
+                  <div className="h-[300px] sm:h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={priceHistoryData}>
                         <CartesianGrid strokeDasharray="3 3" />
