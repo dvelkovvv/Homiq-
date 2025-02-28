@@ -21,8 +21,8 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-// Libraries we need for the map
-const libraries: ("places" | "geometry")[] = ["places", "geometry"];
+type Libraries = ("places" | "geometry")[];
+const libraries: Libraries = ["places", "geometry"];
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -63,7 +63,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     setError("Грешка при зареждане на картата");
     toast({
       title: "Грешка при зареждане",
-      description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
+      description: "Не успяхме да заредим картата. Моля, проверете конзолата за повече информация.",
       variant: "destructive"
     });
   };
@@ -107,6 +107,19 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     );
   }
 
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    console.error('Google Maps API key is not configured');
+    return (
+      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-destructive/5">
+        <div className="text-center">
+          <p className="text-sm text-destructive">API ключът не е конфигуриран</p>
+          <p className="text-xs text-muted-foreground mt-1">Моля, проверете конфигурацията</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <AddressSearch 
@@ -115,9 +128,10 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
       />
       <div className="relative w-full h-[400px] border rounded-md overflow-hidden">
         <LoadScript
-          googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}
+          googleMapsApiKey={apiKey}
           language="bg"
           libraries={libraries}
+          onLoad={() => console.log('Script loaded successfully')}
           onError={handleLoadError}
           loadingElement={
             <div className="w-full h-[400px] flex items-center justify-center bg-accent/5">

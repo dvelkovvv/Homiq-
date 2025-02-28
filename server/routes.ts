@@ -9,6 +9,7 @@ import fetch from "node-fetch";
 async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
+    console.error('Google Maps API key is not configured');
     throw new Error('Google Maps API key is not configured');
   }
 
@@ -22,11 +23,17 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
     const response = await fetch(url);
 
     if (!response.ok) {
+      console.error(`Google Maps API request failed with status: ${response.status}`);
       throw new Error(`Google Maps API request failed: ${response.statusText}`);
     }
 
     const data = await response.json();
     console.log(`Google Maps API response status: ${data.status}`);
+
+    if (data.status !== 'OK') {
+      console.error(`Google Maps API returned non-OK status: ${data.status}`);
+      console.error('Error message:', data.error_message);
+    }
 
     return data;
   } catch (error) {
@@ -38,9 +45,11 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
 export async function registerRoutes(app: Express) {
   // Enable CORS for all routes
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    const origin = req.headers.origin;
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
 
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
