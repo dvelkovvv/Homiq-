@@ -21,13 +21,6 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-const markerIcons = {
-  transport: "🚇",
-  education: "🎓",
-  shopping: "🏬",
-  leisure: "🌳"
-};
-
 // Libraries we need for the map
 const libraries: ("places" | "geometry")[] = ["places", "geometry"];
 
@@ -70,7 +63,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     setError("Грешка при зареждане на картата");
     toast({
       title: "Грешка при зареждане",
-      description: "Проверете дали домейнът е добавен в Google Cloud Console",
+      description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
       variant: "destructive"
     });
   };
@@ -229,3 +222,10 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     </div>
   );
 }
+
+const markerIcons = {
+  transport: "🚇",
+  education: "🎓",
+  shopping: "🏬",
+  leisure: "🌳"
+};

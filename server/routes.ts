@@ -8,17 +8,27 @@ import fetch from "node-fetch";
 // Proxy for Google Maps API calls
 async function proxyGoogleMapsRequest(path: string, params: Record<string, string>) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('Google Maps API key is not configured');
+  }
+
   const url = `https://maps.googleapis.com/maps/api/${path}?${new URLSearchParams({
     ...params,
-    key: apiKey || ''
+    key: apiKey
   })}`;
 
   try {
+    console.log(`Making request to Google Maps API: ${path}`);
     const response = await fetch(url);
+
     if (!response.ok) {
       throw new Error(`Google Maps API request failed: ${response.statusText}`);
     }
-    return await response.json();
+
+    const data = await response.json();
+    console.log(`Google Maps API response status: ${data.status}`);
+
+    return data;
   } catch (error) {
     console.error('Google Maps API error:', error);
     throw error;
@@ -26,11 +36,17 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
 }
 
 export async function registerRoutes(app: Express) {
-  // Enable CORS for the Google Maps API
+  // Enable CORS for all routes
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
     next();
   });
 
@@ -52,6 +68,7 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
+      console.log(`Geocoding address: ${address}`);
       const data = await proxyGoogleMapsRequest('geocode/json', {
         address: address as string,
         components: 'country:BG',
@@ -71,6 +88,7 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
+      console.log(`Searching nearby places. Type: ${type}, Location: ${location}`);
       const data = await proxyGoogleMapsRequest('place/nearbysearch/json', {
         location: location as string,
         type: type as string,
