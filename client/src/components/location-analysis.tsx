@@ -2,66 +2,59 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { 
-  MapPin, 
-  Train, 
-  GraduationCap, 
-  Building2, 
-  Trees,
-  TrendingUp,
-  Construction,
-  Loader2,
-  ChevronsRight
-} from "lucide-react";
-import { LocationAnalyzer } from "@/lib/location-analysis";
-import { GoogleMaps } from "./google-maps";
+import { MapPin, Train, GraduationCap, Building2, Trees, ChevronsRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface LocationPoint {
   type: 'transport' | 'education' | 'shopping' | 'leisure';
   name: string;
   distance: number;
-  rating?: number;
-}
-
-interface AreaAnalysis {
-  transportScore: number;
-  educationScore: number;
-  shoppingScore: number;
-  leisureScore: number;
-  averagePrice: number;
-  priceChange: number;
-  infrastructureProjects?: string[];
 }
 
 interface LocationAnalysisProps {
   address: string;
-  onComplete?: (analysis: AreaAnalysis) => void;
+  onComplete?: () => void;
 }
 
 export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps) {
-  const [points, setPoints] = useState<LocationPoint[]>([]);
-  const [analysis, setAnalysis] = useState<AreaAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [points, setPoints] = useState<LocationPoint[]>([]);
+  const [scores, setScores] = useState({
+    transport: 0,
+    education: 0,
+    shopping: 0,
+    leisure: 0
+  });
 
   useEffect(() => {
-    const loadData = async () => {
+    const analyzeLocation = async () => {
       if (!address) return;
 
       setLoading(true);
       try {
-        const [pointsData, analysisData] = await Promise.all([
-          LocationAnalyzer.getNearbyPoints(address),
-          LocationAnalyzer.getAreaAnalysis(address)
-        ]);
-        setPoints(pointsData);
-        setAnalysis(analysisData);
-        onComplete?.(analysisData);
+        // Симулираме получаване на данни - в реална ситуация тук ще има API заявка
+        const mockPoints: LocationPoint[] = [
+          { type: 'transport', name: 'Метростанция', distance: 250 },
+          { type: 'education', name: 'Училище', distance: 500 },
+          { type: 'shopping', name: 'Търговски център', distance: 800 },
+          { type: 'leisure', name: 'Парк', distance: 400 }
+        ];
+
+        const mockScores = {
+          transport: 8.5,
+          education: 7.5,
+          shopping: 8.0,
+          leisure: 9.0
+        };
+
+        setPoints(mockPoints);
+        setScores(mockScores);
+
       } catch (error) {
-        console.error('Error loading location data:', error);
+        console.error('Error analyzing location:', error);
         toast({
           title: "Грешка при анализ",
-          description: "Не успяхме да анализираме района. Моля, опитайте отново.",
+          description: "Не успяхме да анализираме района",
           variant: "destructive"
         });
       } finally {
@@ -69,18 +62,19 @@ export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps)
       }
     };
 
-    loadData();
-  }, [address, onComplete]);
+    analyzeLocation();
+  }, [address]);
 
   if (!address) return null;
 
   if (loading) {
     return (
-      <Card>
+      <Card className="mt-4">
         <CardContent className="py-6">
           <div className="flex items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-            <span>Анализ на локацията...</span>
+            <div className="animate-pulse text-muted-foreground">
+              Анализиране на локацията...
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -88,7 +82,7 @@ export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps)
   }
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
@@ -98,8 +92,8 @@ export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps)
       <CardContent>
         <div className="space-y-6">
           <div>
-            <h3 className="font-medium mb-4">Близост до ключови локации</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="text-sm font-medium mb-4">Близост до ключови обекти</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {points.map((point, index) => (
                 <div key={index} className="flex items-center gap-3 p-3 rounded-lg border">
                   {point.type === 'transport' && <Train className="h-4 w-4 text-blue-500" />}
@@ -109,7 +103,7 @@ export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps)
                   <div>
                     <div className="font-medium">{point.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {point.distance}м разстояние
+                      {point.distance}м
                     </div>
                   </div>
                 </div>
@@ -117,80 +111,42 @@ export function LocationAnalysis({ address, onComplete }: LocationAnalysisProps)
             </div>
           </div>
 
-          {analysis && (
-            <>
+          <div>
+            <h3 className="text-sm font-medium mb-4">Оценка на района</h3>
+            <div className="space-y-3">
               <div>
-                <h3 className="font-medium mb-4">Пазарни данни</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        <span>Средна цена в района</span>
-                      </div>
-                      <span className="font-medium">{analysis.averagePrice} €/м²</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {analysis.priceChange > 0 ? '+' : ''}{analysis.priceChange}% за последната година
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm">Транспорт</span>
+                  <span className="text-sm font-medium">{scores.transport}/10</span>
                 </div>
+                <Progress value={scores.transport * 10} className="h-2" />
               </div>
-
               <div>
-                <h3 className="font-medium mb-4">Оценка на района</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Транспорт</span>
-                      <span className="text-sm font-medium">{analysis.transportScore}/10</span>
-                    </div>
-                    <Progress value={analysis.transportScore * 10} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Образование</span>
-                      <span className="text-sm font-medium">{analysis.educationScore}/10</span>
-                    </div>
-                    <Progress value={analysis.educationScore * 10} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Търговски обекти</span>
-                      <span className="text-sm font-medium">{analysis.shoppingScore}/10</span>
-                    </div>
-                    <Progress value={analysis.shoppingScore * 10} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Зелени площи</span>
-                      <span className="text-sm font-medium">{analysis.leisureScore}/10</span>
-                    </div>
-                    <Progress value={analysis.leisureScore * 10} className="h-2" />
-                  </div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm">Образование</span>
+                  <span className="text-sm font-medium">{scores.education}/10</span>
                 </div>
+                <Progress value={scores.education * 10} className="h-2" />
               </div>
-            </>
-          )}
-
-          {analysis?.infrastructureProjects && analysis.infrastructureProjects.length > 0 && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Construction className="h-5 w-5 text-blue-500 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-900">Инфраструктурни проекти в района</h4>
-                  <ul className="mt-2 space-y-1">
-                    {analysis.infrastructureProjects.map((project, index) => (
-                      <li key={index} className="text-sm text-blue-700">{project}</li>
-                    ))}
-                  </ul>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm">Търговски обекти</span>
+                  <span className="text-sm font-medium">{scores.shopping}/10</span>
                 </div>
+                <Progress value={scores.shopping * 10} className="h-2" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm">Зелени площи</span>
+                  <span className="text-sm font-medium">{scores.leisure}/10</span>
+                </div>
+                <Progress value={scores.leisure * 10} className="h-2" />
               </div>
             </div>
-          )}
+          </div>
 
           <Button
-            onClick={() => onComplete?.(analysis!)}
+            onClick={onComplete}
             className="w-full bg-primary/10 hover:bg-primary/20 text-primary"
           >
             Продължи с оценката
