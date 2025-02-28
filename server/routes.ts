@@ -33,7 +33,37 @@ async function proxyGoogleMapsRequest(path: string, params: Record<string, strin
   return data;
 }
 
+// Calculate price range based on location and area
+function calculatePriceRange(metroDistance: number | null, greenZones: number, area: number) {
+  // Base price per square meter
+  let basePrice = 1000;
+
+  // Adjust for metro proximity
+  if (metroDistance) {
+    if (metroDistance < 500) basePrice *= 1.3;
+    else if (metroDistance < 1000) basePrice *= 1.2;
+    else if (metroDistance < 1500) basePrice *= 1.1;
+  }
+
+  // Adjust for green zones
+  basePrice *= (1 + (greenZones * 0.05));
+
+  return {
+    min: Math.round(basePrice * 0.9),
+    max: Math.round(basePrice * 1.1)
+  };
+}
+
 export async function registerRoutes(app: Express) {
+  // Error handling middleware
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    console.error('Error:', err);
+    res.status(500).json({
+      error: "Internal server error",
+      message: err.message
+    });
+  });
+
   // CORS middleware
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -114,7 +144,7 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      // Get nearby points
+      // Get nearby metro stations and parks
       const [metroData, parksData] = await Promise.all([
         proxyGoogleMapsRequest('place/nearbysearch/json', {
           location: `${result.data.location.lat},${result.data.location.lng}`,
@@ -130,11 +160,32 @@ export async function registerRoutes(app: Express) {
         })
       ]);
 
+      // Calculate metro distance if any station found
+      let metroDistance = null;
+      if (metroData.results?.[0]) {
+        const station = metroData.results[0];
+        metroDistance = google.maps.geometry.spherical.computeDistanceBetween(
+          new google.maps.LatLng(result.data.location.lat, result.data.location.lng),
+          new google.maps.LatLng(
+            station.geometry.location.lat,
+            station.geometry.location.lng
+          )
+        );
+      }
+
+      // Calculate price range based on location analysis
+      const priceRange = calculatePriceRange(
+        metroDistance,
+        parksData.results.length,
+        result.data.area
+      );
+
       // Create property with analysis data
       const property = await storage.createProperty({
         ...result.data,
-        metro_distance: metroData.results[0]?.distance,
-        green_zones: parksData.results.length
+        metro_distance: metroDistance,
+        green_zones: parksData.results.length,
+        price_range: priceRange
       });
 
       res.status(201).json({
@@ -143,7 +194,8 @@ export async function registerRoutes(app: Express) {
           metro_stations: metroData.results.length,
           parks: parksData.results.length,
           nearest_metro: metroData.results[0]?.name,
-          nearest_park: parksData.results[0]?.name
+          nearest_park: parksData.results[0]?.name,
+          price_range: priceRange
         }
       });
     } catch (error) {
@@ -154,6 +206,7 @@ export async function registerRoutes(app: Express) {
     }
   }));
 
+  // Get property by ID
   app.get("/api/properties/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -171,6 +224,13 @@ export async function registerRoutes(app: Express) {
 
     res.json(property);
   }));
+
+  // Get all properties
+  app.get("/api/properties", asyncHandler(async (_req, res) => {
+    const properties = await storage.getProperties();
+    res.json(properties);
+  }));
+
   app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
     const result = insertDocumentSchema.safeParse(req.body.document);
     if (!result.success) {

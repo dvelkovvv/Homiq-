@@ -7,6 +7,7 @@ export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
   getProperty(id: number): Promise<Property | undefined>;
   getProperties(): Promise<Property[]>;
+  updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -16,12 +17,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProperty(id: number): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    const [property] = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, id));
     return property;
   }
 
   async getProperties(): Promise<Property[]> {
-    return await db.select().from(properties).orderBy(properties.created_at);
+    return await db
+      .select()
+      .from(properties)
+      .orderBy(properties.created_at);
+  }
+
+  async updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property> {
+    const [updatedProperty] = await db
+      .update(properties)
+      .set(property)
+      .where(eq(properties.id, id))
+      .returning();
+    return updatedProperty;
   }
 }
 

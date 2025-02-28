@@ -1,8 +1,8 @@
-import { pgTable, text, serial, integer, jsonb, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, timestamp, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Properties table
+// Property table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
   address: text("address").notNull(),
@@ -10,10 +10,11 @@ export const properties = pgTable("properties", {
   location: jsonb("location").$type<{lat: number, lng: number}>().notNull(),
   metro_distance: decimal("metro_distance"),
   green_zones: integer("green_zones"),
+  price_range: jsonb("price_range").$type<{min: number, max: number}>(),
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Property analysis schema
+// Property schema
 export const insertPropertySchema = createInsertSchema(properties, {
   address: z.string().min(3, "Адресът трябва да е поне 3 символа"),
   area: z.number().min(1, "Площта трябва да е поне 1 кв.м"),
@@ -23,6 +24,10 @@ export const insertPropertySchema = createInsertSchema(properties, {
   }),
   metro_distance: z.number().optional(),
   green_zones: z.number().optional(),
+  price_range: z.object({
+    min: z.number(),
+    max: z.number()
+  }).optional()
 }).omit({
   id: true,
   created_at: true,
