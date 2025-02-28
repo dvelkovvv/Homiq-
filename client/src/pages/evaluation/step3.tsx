@@ -58,7 +58,7 @@ export default function Step3() {
 
   const evaluationType = localStorage.getItem('evaluationType') || 'quick';
 
-  // Mock data for evaluation
+  // Basic mock data
   const mockEvaluation = {
     estimatedValue: Math.floor(Math.random() * (500000 - 100000) + 100000),
     confidence: Math.random() * (0.95 - 0.75) + 0.75,
@@ -68,16 +68,6 @@ export default function Step3() {
     infrastructureScore: 8.7,
     marketScore: 8.2
   };
-
-  // Price history data
-  const priceHistoryData = [
-    { month: "Септ", value: mockEvaluation.estimatedValue * 0.90 },
-    { month: "Окт", value: mockEvaluation.estimatedValue * 0.92 },
-    { month: "Ное", value: mockEvaluation.estimatedValue * 0.95 },
-    { month: "Дек", value: mockEvaluation.estimatedValue * 0.97 },
-    { month: "Яну", value: mockEvaluation.estimatedValue * 0.98 },
-    { month: "Фев", value: mockEvaluation.estimatedValue }
-  ];
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('bg-BG', {
@@ -95,43 +85,45 @@ export default function Step3() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
+          className="space-y-4 sm:space-y-8"
         >
-          <ProgressSteps steps={STEPS} currentStep={3} />
+          <div className="hidden sm:block">
+            <ProgressSteps steps={STEPS} currentStep={3} />
+          </div>
 
           <Card className="bg-gradient-to-br from-[#003366] to-[#002244] text-white overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Home className="h-6 w-6" />
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                <Home className="h-5 w-5 sm:h-6 sm:w-6" />
                 Оценка на имота
               </CardTitle>
-              <CardDescription className="text-gray-200 flex items-center gap-2">
+              <CardDescription className="text-gray-200 text-sm sm:text-base flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Генерирана на {new Date().toLocaleDateString('bg-BG')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
+              <div className="text-center py-6 sm:py-8 relative">
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2"
+                  className="absolute -top-4 right-0 sm:-right-4 bg-green-500 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2"
                 >
-                  <BadgeCheck className="h-4 w-4" />
+                  <BadgeCheck className="h-3 w-3 sm:h-4 sm:w-4" />
                   {evaluationType === 'licensed' ? 'Лицензирана оценка' : 'Бърза оценка'}
                 </motion.div>
 
-                <p className="text-6xl font-bold mb-2">{formatCurrency(mockEvaluation.estimatedValue)}</p>
-                <p className="text-xl text-gray-200">Приблизителна пазарна стойност</p>
+                <p className="text-4xl sm:text-6xl font-bold mb-2">{formatCurrency(mockEvaluation.estimatedValue)}</p>
+                <p className="text-lg sm:text-xl text-gray-200">Приблизителна пазарна стойност</p>
 
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  <Star className="h-6 w-6 text-yellow-400" />
-                  <span className="text-lg">
+                <div className="mt-6 sm:mt-8 flex items-center justify-center gap-2">
+                  <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400" />
+                  <span className="text-base sm:text-lg">
                     {Math.round(mockEvaluation.confidence * 100)}% точност на оценката
                   </span>
                 </div>
@@ -255,12 +247,16 @@ export default function Step3() {
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => navigate("/evaluation/step2")}>
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/evaluation/step2")}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Назад
             </Button>
             <Button
-              className="bg-[#003366] hover:bg-[#002244]"
+              className="w-full sm:w-auto bg-[#003366] hover:bg-[#002244] order-1 sm:order-2"
               onClick={() => navigate("/dashboard")}
             >
               Към начало
