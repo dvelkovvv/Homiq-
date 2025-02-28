@@ -7,7 +7,6 @@ import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
-import { ImagePreprocessor } from "@/lib/imagePreprocessor";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
@@ -39,26 +38,24 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
       try {
         const file = acceptedFiles[0];
-        const buffer = await file.arrayBuffer();
+        const imageUrl = URL.createObjectURL(file);
 
-        // Preprocess image
-        setCurrentStep('Обработка на изображението');
-        const processedBuffer = await ImagePreprocessor.preprocessImage(buffer);
-        const processedBlob = new Blob([processedBuffer], { type: 'image/png' });
-        const imageUrl = URL.createObjectURL(processedBlob);
-        setProgress(30);
+        toast({
+          title: "Сканиране започна",
+          description: "Моля, изчакайте докато анализираме документа.",
+        });
 
         const worker = await createWorker({
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(40);
+              setProgress(20);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
-              setProgress(50);
+              setProgress(40);
             } else if (progress.status === 'recognizing text') {
               setCurrentStep('Разпознаване на текст');
-              setProgress(70);
+              setProgress(60);
             }
           }
         });
@@ -66,35 +63,19 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(80);
+        setProgress(70);
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
-          // Bulgarian specific settings
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
           preserve_interword_spaces: '1',
-
-          // Page segmentation - optimized for scanned documents
           tessedit_pageseg_mode: '1',
-
-          // Quality settings
-          tessedit_do_invert: '0',
-          textord_heavy_nr: '1',
-
-          // Language settings
-          load_system_dawg: '1',
-          load_freq_dawg: '1',
-
-          // Confidence settings
-          tessedit_min_confidence: '65',
-          tessedit_reject_doc_percent: '50',
-
-          // Debug settings
-          tessedit_create_hocr: '1'
+          tessedit_enable_doc_dict: '1'
         });
 
         setCurrentStep('Извличане на текст');
-        const { data: { text, hocr } } = await worker.recognize(imageUrl);
+        const { data: { text } } = await worker.recognize(imageUrl);
+        setProgress(90);
 
         await worker.terminate();
         URL.revokeObjectURL(imageUrl);
@@ -141,7 +122,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       }
     },
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.tiff']
+      'image/*': ['.png', '.jpg', '.jpeg']
     },
     maxFiles: 1,
     multiple: false
@@ -179,7 +160,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
                     : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Поддържани формати: PNG, JPG, TIFF (ясни снимки на документи)
+                  Поддържани формати: PNG, JPG (ясни снимки на документи)
                 </p>
                 {!expectedType && (
                   <div className="flex gap-2 justify-center mt-2">
