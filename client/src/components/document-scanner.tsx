@@ -24,11 +24,48 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     return types[type] || 'Документ';
   };
 
+  const validateImage = async (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Проверка за минимален размер
+        if (img.width < 800 || img.height < 600) {
+          toast({
+            title: "Недостатъчна резолюция",
+            description: "Моля, използвайте изображение с по-висока резолюция (минимум 800x600)",
+            variant: "destructive"
+          });
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      };
+      img.onerror = () => resolve(false);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
 
       const file = acceptedFiles[0];
+
+      // Проверка за размер на файла (максимум 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Твърде голям файл",
+          description: "Моля, използвайте файл по-малък от 10MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Валидация на изображението
+      if (!(await validateImage(file))) {
+        return;
+      }
+
       setScanning(true);
       setProgress(0);
       setCurrentStep('Подготовка на документа');
@@ -57,6 +94,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         const { data: { text } } = await worker.recognize(file);
         await worker.terminate();
 
+        // Валидация на извлечения текст
+        if (!text || text.trim().length < 50) {
+          throw new Error("Не беше открит достатъчно текст в документа. Моля, проверете качеството на изображението.");
+        }
+
         const data = {
           documentType: expectedType,
           text: text.trim()
@@ -73,7 +115,9 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: error instanceof Error ? error.message : "Моля, опитайте с друг документ.",
+          description: error instanceof Error 
+            ? error.message 
+            : "Възникна проблем при обработката на документа. Моля, проверете качеството на изображението и опитайте отново.",
           variant: "destructive"
         });
       } finally {
@@ -122,6 +166,9 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             </p>
             <p className="text-sm text-muted-foreground">
               Поддържани формати: PNG, JPG (ясни копии на документи)
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Минимална резолюция: 800x600 | Максимален размер: 10MB
             </p>
           </div>
         </div>
