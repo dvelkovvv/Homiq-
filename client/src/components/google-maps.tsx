@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { AddressSearch } from "./address-search";
@@ -27,16 +27,19 @@ const markerIcons = {
   leisure: "🌳"
 };
 
+const libraries: ("places" | "geometry" | "drawing" | "localContext" | "visualization")[] = ["places"];
+
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<LocationPoint | null>(null);
   const [nearbyPoints, setNearbyPoints] = useState<LocationPoint[]>([]);
   const [center, setCenter] = useState(initialLocation || defaultCenter);
 
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places']
+  // Initialize Google Maps with the correct API key and libraries
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+    version: "weekly"
   });
 
   useEffect(() => {
@@ -70,6 +73,17 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     }
   };
 
+  if (loadError) {
+    return (
+      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-destructive/5">
+        <div className="text-center">
+          <p className="text-sm text-destructive">Грешка при зареждане на картата</p>
+          <p className="text-xs text-muted-foreground mt-1">Моля, проверете връзката си с интернет</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoaded) {
     return (
       <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-accent/5">
@@ -97,7 +111,15 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           options={{
             streetViewControl: false,
             mapTypeControl: false,
-            fullscreenControl: false
+            fullscreenControl: false,
+            zoomControl: true,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }]
+              }
+            ]
           }}
         >
           {/* Main marker */}
