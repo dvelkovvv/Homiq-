@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertEvaluationSchema } from "@shared/schema";
+import { insertPropertySchema, insertEvaluationSchema, insertDocumentSchema } from "@shared/schema";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express) {
@@ -49,6 +49,40 @@ export async function registerRoutes(app: Express) {
     }
 
     res.json(property);
+  }));
+
+  // Create document with extracted data
+  app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
+    const result = insertDocumentSchema.safeParse(req.body.document);
+    if (!result.success) {
+      return res.status(400).json({
+        error: {
+          message: "Невалидни данни за документ",
+          details: result.error.issues
+        }
+      });
+    }
+
+    const document = await storage.createDocumentWithData(
+      result.data,
+      req.body.extractedData
+    );
+
+    log(`Created document with ID: ${document.id} for property ID: ${document.propertyId}`);
+    res.status(201).json(document);
+  }));
+
+  // Get documents by property ID
+  app.get("/api/properties/:propertyId/documents", asyncHandler(async (req: Request, res: Response) => {
+    const propertyId = parseInt(req.params.propertyId);
+    if (isNaN(propertyId)) {
+      return res.status(400).json({
+        error: { message: "Invalid property ID" }
+      });
+    }
+
+    const documents = await storage.getPropertyDocuments(propertyId);
+    res.json(documents);
   }));
 
   // Get evaluation by property ID

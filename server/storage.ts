@@ -1,5 +1,5 @@
-import { type Property, type InsertProperty, type Evaluation, type InsertEvaluation } from "@shared/schema";
-import { properties, evaluations } from "@shared/schema";
+import { type Property, type InsertProperty, type Evaluation, type InsertEvaluation, type Document, type InsertDocument, type DocumentData, type InsertDocumentData } from "@shared/schema";
+import { properties, evaluations, documents, documentData } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -10,6 +10,9 @@ export interface IStorage {
   getEvaluation(id: number): Promise<Evaluation | undefined>;
   getPropertyEvaluation(propertyId: number): Promise<Evaluation | undefined>;
   getEvaluationHistory(): Promise<(Evaluation & { property: Property })[]>;
+  // New document methods
+  createDocumentWithData(document: InsertDocument, extractedData: InsertDocumentData): Promise<Document>;
+  getPropertyDocuments(propertyId: number): Promise<(Document & { data: DocumentData | null })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -24,7 +27,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvaluation(insertEvaluation: InsertEvaluation): Promise<Evaluation> {
-    const [evaluation] = await db.insert(evaluations).values([insertEvaluation]).returning();
+    const [evaluation] = await db.insert(evaluations).values([{
+      ...insertEvaluation,
+      confidence: String(insertEvaluation.confidence) // Convert to string for database
+    }]).returning();
     return evaluation;
   }
 
@@ -56,6 +62,49 @@ export class DatabaseStorage implements IStorage {
     return result.map(({ evaluation, property }) => ({
       ...evaluation,
       property,
+    }));
+  }
+
+  // New document methods implementation
+  async createDocumentWithData(insertDoc: InsertDocument, extractedData: InsertDocumentData): Promise<Document> {
+    return await db.transaction(async (tx) => {
+      // Insert document first
+      const [document] = await tx
+        .insert(documents)
+        .values([{
+          ...insertDoc,
+          processedDate: new Date(),
+          status: 'processed'
+        }])
+        .returning();
+
+      // Insert extracted data with the new document ID
+      if (extractedData) {
+        await tx
+          .insert(documentData)
+          .values([{
+            ...extractedData,
+            documentId: document.id
+          }]);
+      }
+
+      return document;
+    });
+  }
+
+  async getPropertyDocuments(propertyId: number): Promise<(Document & { data: DocumentData | null })[]> {
+    const results = await db
+      .select({
+        document: documents,
+        data: documentData
+      })
+      .from(documents)
+      .leftJoin(documentData, eq(documents.id, documentData.documentId))
+      .where(eq(documents.propertyId, propertyId));
+
+    return results.map(({ document, data }) => ({
+      ...document,
+      data: data || null
     }));
   }
 }

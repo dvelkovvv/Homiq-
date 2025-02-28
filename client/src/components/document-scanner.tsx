@@ -8,6 +8,9 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 import * as PDFJS from 'pdfjs-dist';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { InsertDocument, InsertDocumentData } from '@shared/schema';
 
 // Set the PDF.js worker from CDN
 PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
@@ -15,12 +18,20 @@ PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
   expectedType?: 'notary_act' | 'sketch' | 'tax_assessment';
+  propertyId?: number;
 }
 
-export function DocumentScanner({ onScanComplete, expectedType }: DocumentScannerProps) {
+export function DocumentScanner({ onScanComplete, expectedType, propertyId }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
+
+  const saveDocumentMutation = useMutation({
+    mutationFn: async (data: { document: InsertDocument; extractedData: InsertDocumentData }) => {
+      const res = await apiRequest('POST', '/api/documents', data);
+      return res.json();
+    },
+  });
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -154,6 +165,26 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
           if (expectedType && extractedData.documentType !== expectedType) {
             throw new Error(`Очаква се ${getDocumentTypeName(expectedType)}, но документът изглежда като ${getDocumentTypeName(extractedData.documentType || 'other')}`);
+          }
+
+          // Save to database
+          if (propertyId) {
+            const documentData = {
+              document: {
+                propertyId,
+                type: extractedData.documentType || 'other',
+                filename: file.name,
+                fileUrl: URL.createObjectURL(file),
+                rawText: processedText,
+                confidence: 0.8, // TODO: Calculate actual confidence
+              },
+              extractedData: {
+                ...extractedData,
+                documentId: 0, // Will be set by the backend
+              },
+            };
+
+            await saveDocumentMutation.mutateAsync(documentData);
           }
 
           setProgress(100);
