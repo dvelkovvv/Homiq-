@@ -9,7 +9,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Home, Calendar, Star, BadgeCheck, Building2, MapPin, TrendingUp, Shield,
-  ArrowUpCircle, Bus, School, ShoppingBag, Park
+  ArrowUpCircle, Bus, School, ShoppingBag, Trees
 } from "lucide-react";
 import {
   LineChart,
@@ -306,7 +306,7 @@ export default function Step3() {
                     </div>
 
                     <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
-                      <Park className="h-6 w-6 text-yellow-500" />
+                      <Trees className="h-6 w-6 text-yellow-500" />
                       <div className="flex-1">
                         <h4 className="font-medium">Зони за отдих</h4>
                         <Progress value={mockEvaluation.locationMetrics.recreation} className="mt-2" />
