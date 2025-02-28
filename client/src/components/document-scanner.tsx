@@ -101,9 +101,31 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
             : "Документът е сканиран успешно";
 
+          const extractedInfo = [];
+          if (extractedData.owner) extractedInfo.push(`Собственик: ${extractedData.owner}`);
+          if (extractedData.squareMeters) extractedInfo.push(`Площ: ${extractedData.squareMeters} кв.м`);
+          if (extractedData.identifier) extractedInfo.push(`Идентификатор: ${extractedData.identifier}`);
+          if (extractedData.price) extractedInfo.push(`Цена: ${extractedData.price.toLocaleString()} лв.`);
+          if (extractedData.documentDate) extractedInfo.push(`Дата: ${extractedData.documentDate}`);
+
           toast({
             title: "Успешно сканиране",
-            description: documentType,
+            description: (
+              <>
+                {documentType}
+                {extractedInfo.length > 0 && (
+                  <div className="mt-2 text-sm space-y-1">
+                    <p className="font-medium">Извлечени данни:</p>
+                    {extractedInfo.map((info, index) => (
+                      <p key={index} className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        {info}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </>
+            ),
           });
         } else {
           throw new Error("Не беше открит текст в документа");
