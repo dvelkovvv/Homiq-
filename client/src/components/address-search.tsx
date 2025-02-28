@@ -14,104 +14,118 @@ interface AddressSearchProps {
   onAddressChange?: (address: string) => void;
 }
 
-interface Prediction {
-  place_id: string;
-  description: string;
-  structured_formatting: {
-    main_text: string;
-    secondary_text: string;
-  };
-}
-
 export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressChange }: AddressSearchProps) {
   const [address, setAddress] = useState(defaultAddress);
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [placesService, setPlacesService] = useState<google.maps.places.AutocompleteService | null>(null);
+  const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
 
   useEffect(() => {
-    if (window.google && !autocompleteService) {
-      setAutocompleteService(new google.maps.places.AutocompleteService());
+    // Initialize Google services
+    if (window.google && !placesService) {
+      setPlacesService(new google.maps.places.AutocompleteService());
+      setGeocoder(new google.maps.Geocoder());
     }
   }, []);
 
   useEffect(() => {
     if (!defaultAddress) {
-      try {
-        const savedAddress = localStorage.getItem('lastAddress');
-        if (savedAddress) {
-          setAddress(savedAddress);
-          onAddressChange?.(savedAddress);
-        }
-      } catch (error) {
-        console.error('Error reading address from localStorage:', error);
+      const savedAddress = localStorage.getItem('lastAddress');
+      if (savedAddress) {
+        setAddress(savedAddress);
+        onAddressChange?.(savedAddress);
       }
     }
   }, [defaultAddress, onAddressChange]);
 
   useEffect(() => {
-    if (!address.trim() || !autocompleteService) {
+    if (!address.trim() || !placesService) {
       setPredictions([]);
       setOpen(false);
       return;
     }
 
-    const fetchPredictions = async () => {
+    const getPredictions = async () => {
       try {
-        const result = await autocompleteService.getPlacePredictions({
+        const request: google.maps.places.AutocompletionRequest = {
           input: address,
           componentRestrictions: { country: 'bg' },
           types: ['address'],
           language: 'bg'
-        });
+        };
 
-        setPredictions(result.predictions);
-        setOpen(result.predictions.length > 0);
+        const response = await placesService.getPlacePredictions(request);
+        setPredictions(response.predictions);
+        setOpen(response.predictions.length > 0);
       } catch (error) {
-        console.error('Error fetching predictions:', error);
-        setPredictions([]);
-        setOpen(false);
+        console.error('Error getting predictions:', error);
+        toast({
+          title: "Грешка при търсене",
+          description: "Не успяхме да получим предложения за адреси",
+          variant: "destructive"
+        });
       }
     };
 
-    const timeoutId = setTimeout(fetchPredictions, 300);
+    const timeoutId = setTimeout(getPredictions, 300);
     return () => clearTimeout(timeoutId);
-  }, [address, autocompleteService]);
+  }, [address, placesService]);
 
   const handleSearch = async (searchAddress: string) => {
     if (!searchAddress.trim()) {
       toast({
         title: "Въведете адрес",
-        description: "Моля, въведете адрес за търсене.",
+        description: "Моля, въведете адрес за търсене",
         variant: "destructive"
       });
       return;
     }
 
     setIsSearching(true);
-    try {
-      const result = await geocodeAddress(searchAddress);
-      if (result) {
-        onLocationFound({
-          lat: result.lat,
-          lng: result.lng,
-          display_name: result.display_name
-        });
-        setOpen(false);
-        localStorage.setItem('lastAddress', result.display_name);
-        onAddressChange?.(result.display_name);
 
-        toast({
-          title: "Адресът е намерен",
-          description: (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-green-500" />
-              <span>Местоположението е маркирано на картата</span>
-            </div>
-          ),
-        });
+    try {
+      if (!geocoder) {
+        throw new Error('Geocoder not initialized');
       }
+
+      const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
+        geocoder.geocode(
+          { 
+            address: searchAddress,
+            componentRestrictions: { country: 'BG' }
+          }, 
+          (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+              resolve(results[0]);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      const location = {
+        lat: result.geometry.location.lat(),
+        lng: result.geometry.location.lng(),
+        display_name: result.formatted_address
+      };
+
+      onLocationFound(location);
+      localStorage.setItem('lastAddress', location.display_name);
+      onAddressChange?.(location.display_name);
+      setOpen(false);
+
+      toast({
+        title: "Адресът е намерен",
+        description: (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-green-500" />
+            <span>Местоположението е маркирано на картата</span>
+          </div>
+        ),
+      });
     } catch (error) {
       console.error('Error searching address:', error);
       toast({
@@ -124,10 +138,10 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
     }
   };
 
-  const handleAddressSelect = (prediction: Prediction) => {
+  const handlePredictionSelect = async (prediction: google.maps.places.AutocompletePrediction) => {
     setAddress(prediction.description);
     onAddressChange?.(prediction.description);
-    handleSearch(prediction.description);
+    await handleSearch(prediction.description);
   };
 
   return (
@@ -212,7 +226,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "", onAddressC
                     }}
                   >
                     <CommandItem
-                      onSelect={() => handleAddressSelect(prediction)}
+                      onSelect={() => handlePredictionSelect(prediction)}
                       className="flex items-center gap-2 py-3 cursor-pointer hover:bg-accent"
                     >
                       <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
