@@ -7,6 +7,7 @@ import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
+import { ImagePreprocessor } from "@/lib/imagePreprocessor";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
@@ -18,6 +19,16 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
 
+  const getDocumentTypeName = (type: string): string => {
+    const types: Record<string, string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка',
+      'other': 'Друг документ'
+    };
+    return types[type] || types.other;
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
@@ -28,24 +39,26 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
       try {
         const file = acceptedFiles[0];
-        const imageUrl = URL.createObjectURL(file);
+        const buffer = await file.arrayBuffer();
 
-        toast({
-          title: "Сканиране започна",
-          description: "Моля, изчакайте докато анализираме документа.",
-        });
+        // Preprocess image
+        setCurrentStep('Обработка на изображението');
+        const processedBuffer = await ImagePreprocessor.preprocessImage(buffer);
+        const processedBlob = new Blob([processedBuffer], { type: 'image/png' });
+        const imageUrl = URL.createObjectURL(processedBlob);
+        setProgress(30);
 
         const worker = await createWorker({
           logger: progress => {
             if (progress.status === 'loading tesseract core') {
               setCurrentStep('Зареждане на OCR модула');
-              setProgress(20);
+              setProgress(40);
             } else if (progress.status === 'initializing api') {
               setCurrentStep('Инициализация');
-              setProgress(40);
+              setProgress(50);
             } else if (progress.status === 'recognizing text') {
               setCurrentStep('Разпознаване на текст');
-              setProgress(60);
+              setProgress(70);
             }
           }
         });
@@ -53,46 +66,35 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(70);
+        setProgress(80);
 
         setCurrentStep('Оптимизация на разпознаването');
         await worker.setParameters({
-          // Character whitelist for Bulgarian documents
+          // Bulgarian specific settings
           tessedit_char_whitelist: 'абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789.,-_()№ ',
-
-          // Preserve word spacing for better text analysis
           preserve_interword_spaces: '1',
 
-          // Use PSM 3 for more accurate page layout analysis
-          tessedit_pageseg_mode: '3',  // Fully automatic page segmentation, but no OSD
+          // Page segmentation - optimized for scanned documents
+          tessedit_pageseg_mode: '1',
 
-          // Enable document dictionary for better word recognition
-          tessedit_enable_doc_dict: '1',
+          // Quality settings
+          tessedit_do_invert: '0',
+          textord_heavy_nr: '1',
 
-          // Better handling of structured documents
-          tessedit_create_hocr: '1',
+          // Language settings
+          load_system_dawg: '1',
+          load_freq_dawg: '1',
 
-          // Language model tuning
-          language_model_penalty_non_dict_word: '0.8',  // More permissive for non-dictionary words
-          language_model_penalty_non_freq_dict_word: '0.1',
+          // Confidence settings
+          tessedit_min_confidence: '65',
+          tessedit_reject_doc_percent: '50',
 
-          // Improve character segmentation
-          chop_enable: '1',
-          use_new_state_cost: '1',
-          segment_penalty_dict_nonword: '1.24',
-          segment_penalty_garbage: '1.5',
-
-          // Stability improvements
-          stopper_nondict_certainty_base: '-2.5',
-
-          // Quality and speed balance
-          tessdata_fast_mode: '0',
-          tessedit_fast_mode: '0'
+          // Debug settings
+          tessedit_create_hocr: '1'
         });
 
         setCurrentStep('Извличане на текст');
-        const { data: { text, hocr, tsv } } = await worker.recognize(imageUrl);
-        setProgress(90);
+        const { data: { text, hocr } } = await worker.recognize(imageUrl);
 
         await worker.terminate();
         URL.revokeObjectURL(imageUrl);
@@ -118,31 +120,9 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             ? `Документът е разпознат като ${getDocumentTypeName(extractedData.documentType)}`
             : "Документът е сканиран успешно";
 
-          const extractedInfo = [];
-          if (extractedData.owner) extractedInfo.push(`Собственик: ${extractedData.owner}`);
-          if (extractedData.squareMeters) extractedInfo.push(`Площ: ${extractedData.squareMeters} кв.м`);
-          if (extractedData.identifier) extractedInfo.push(`Идентификатор: ${extractedData.identifier}`);
-          if (extractedData.price) extractedInfo.push(`Цена: ${extractedData.price.toLocaleString()} лв.`);
-          if (extractedData.documentDate) extractedInfo.push(`Дата: ${extractedData.documentDate}`);
-
           toast({
             title: "Успешно сканиране",
-            description: (
-              <>
-                {documentType}
-                {extractedInfo.length > 0 && (
-                  <div className="mt-2 text-sm space-y-1">
-                    <p className="font-medium">Извлечени данни:</p>
-                    {extractedInfo.map((info, index) => (
-                      <p key={index} className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        {info}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </>
-            ),
+            description: documentType,
           });
         } else {
           throw new Error("Не беше открит текст в документа");
@@ -161,21 +141,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       }
     },
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg']
+      'image/*': ['.png', '.jpg', '.jpeg', '.tiff']
     },
     maxFiles: 1,
     multiple: false
   });
-
-  const getDocumentTypeName = (type: string): string => {
-    const types: Record<string, string> = {
-      'notary_act': 'Нотариален акт',
-      'sketch': 'Скица',
-      'tax_assessment': 'Данъчна оценка',
-      'other': 'Друг документ'
-    };
-    return types[type] || types.other;
-  };
 
   return (
     <Card>
@@ -190,7 +160,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           `}
         >
           <input {...getInputProps()} />
-
           {scanning ? (
             <div className="space-y-4">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -210,7 +179,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
                     : "Качете или плъзнете документ"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Поддържани формати: PNG, JPG (ясни снимки на документи)
+                  Поддържани формати: PNG, JPG, TIFF (ясни снимки на документи)
                 </p>
                 {!expectedType && (
                   <div className="flex gap-2 justify-center mt-2">
