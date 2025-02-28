@@ -3,15 +3,13 @@ import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, CheckCircle } from "lucide-react";
+import { Loader2, FileText, CheckCircle, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentAnalyzer } from "@/lib/documentAnalyzer";
 import { DataComparison } from "@/lib/dataComparison";
 import * as PDFJS from 'pdfjs-dist';
-import { useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { InsertDocument, InsertDocumentData } from '@shared/schema';
+import { Button } from "@/components/ui/button";
 
 // Set the PDF.js worker from CDN
 PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
@@ -19,28 +17,13 @@ PDFJS.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface DocumentScannerProps {
   onScanComplete: (text: string, data?: any) => void;
   expectedType?: 'notary_act' | 'sketch' | 'tax_assessment';
-  propertyId?: number;
-  formData?: {
-    address?: string;
-    squareMeters?: number;
-    type?: string;
-    rooms?: number;
-    floor?: number;
-    totalFloors?: number;
-  };
 }
 
-export function DocumentScanner({ onScanComplete, expectedType, propertyId, formData }: DocumentScannerProps) {
+export function DocumentScanner({ onScanComplete, expectedType }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
-
-  const saveDocumentMutation = useMutation({
-    mutationFn: async (data: { document: InsertDocument; extractedData: InsertDocumentData }) => {
-      const res = await apiRequest('POST', '/api/documents', data);
-      return res.json();
-    },
-  });
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -89,6 +72,12 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId, form
     } catch (error) {
       console.error('Грешка при конвертиране на PDF:', error);
       throw new Error('Неуспешно конвертиране на PDF документа');
+    }
+  };
+
+  const handleAutofill = () => {
+    if (extractedData) {
+      DataComparison.autofillFormData(extractedData);
     }
   };
 
@@ -171,35 +160,11 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId, form
             .trim();
 
           setCurrentStep('Анализ на данни');
-          const extractedData = await DocumentAnalyzer.analyzeDocument(processedText);
+          const extractedData = DataComparison.extractDataFromDocument(processedText);
+          setExtractedData(extractedData);
 
           if (expectedType && extractedData.documentType !== expectedType) {
             throw new Error(`Очаква се ${getDocumentTypeName(expectedType)}, но документът изглежда като ${getDocumentTypeName(extractedData.documentType || 'other')}`);
-          }
-
-          // Compare data if form data is available
-          if (formData) {
-            DataComparison.compareData(formData, extractedData);
-          }
-
-          // Save to database
-          if (propertyId) {
-            const documentData = {
-              document: {
-                propertyId,
-                type: extractedData.documentType || 'other',
-                filename: file.name,
-                fileUrl: URL.createObjectURL(file),
-                rawText: processedText,
-                confidence: 0.8,
-              },
-              extractedData: {
-                ...extractedData,
-                documentId: 0,
-              },
-            };
-
-            await saveDocumentMutation.mutateAsync(documentData);
           }
 
           setProgress(100);
@@ -304,6 +269,17 @@ export function DocumentScanner({ onScanComplete, expectedType, propertyId, form
             </div>
           )}
         </div>
+
+        {extractedData && !scanning && (
+          <div className="mt-4">
+            <Button 
+              onClick={handleAutofill}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              Попълни формата автоматично
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

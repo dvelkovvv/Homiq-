@@ -7,9 +7,87 @@ interface PropertyData {
   rooms?: number;
   floor?: number;
   totalFloors?: number;
+  constructionYear?: number;
+  price?: number;
 }
 
 export class DataComparison {
+  static extractDataFromDocument(text: string): PropertyData {
+    const data: PropertyData = {};
+
+    // Извличане на адрес
+    const addressRegex = /(?:адрес|находящ се в|находящ се на)[:\s]+([^\n,.]+)/i;
+    const addressMatch = text.match(addressRegex);
+    if (addressMatch) {
+      data.address = addressMatch[1].trim();
+    }
+
+    // Извличане на квадратура
+    const areaRegex = /(\d+(?:[.,]\d+)?)\s*(?:кв\.м|кв\.метра|квадратни метра|м2)/i;
+    const areaMatch = text.match(areaRegex);
+    if (areaMatch) {
+      data.squareMeters = parseFloat(areaMatch[1].replace(',', '.'));
+    }
+
+    // Извличане на брой стаи
+    const roomsRegex = /(\d+)[-\s](?:стаен|стайно|стаи|стая)/i;
+    const roomsMatch = text.match(roomsRegex);
+    if (roomsMatch) {
+      data.rooms = parseInt(roomsMatch[1]);
+    }
+
+    // Извличане на етаж
+    const floorRegex = /(?:на\s)?(\d+)(?:[-.ия\s]+)?(?:етаж|ет)/i;
+    const floorMatch = text.match(floorRegex);
+    if (floorMatch) {
+      data.floor = parseInt(floorMatch[1]);
+    }
+
+    // Извличане на общ брой етажи
+    const totalFloorsRegex = /(?:в\s)?(\d+)[-\s]етажна|от\s(\d+)\sетажа/i;
+    const totalFloorsMatch = text.match(totalFloorsRegex);
+    if (totalFloorsMatch) {
+      data.totalFloors = parseInt(totalFloorsMatch[1] || totalFloorsMatch[2]);
+    }
+
+    // Извличане на година на строителство
+    const yearRegex = /(?:построен[а]?\s+(?:през)?\s*|строителство\s+от\s+)(\d{4})/i;
+    const yearMatch = text.match(yearRegex);
+    if (yearMatch) {
+      data.constructionYear = parseInt(yearMatch[1]);
+    }
+
+    // Извличане на цена
+    const priceRegex = /(?:цена|стойност|оценка)[:\s]+(?:лв\.|BGN|EUR|€)?\s*(\d+(?:[.,]\d+)?)/i;
+    const priceMatch = text.match(priceRegex);
+    if (priceMatch) {
+      data.price = parseFloat(priceMatch[1].replace(',', '.'));
+    }
+
+    return data;
+  }
+
+  static autofillFormData(documentData: PropertyData): void {
+    // Вземаме съществуващите данни от localStorage
+    const existingData = JSON.parse(localStorage.getItem('propertyData') || '{}');
+
+    // Сливаме новите данни със съществуващите
+    const mergedData = {
+      ...existingData,
+      ...documentData
+    };
+
+    // Запазваме обратно в localStorage
+    localStorage.setItem('propertyData', JSON.stringify(mergedData));
+
+    // Показваме съобщение за успешно попълване
+    toast({
+      title: "Данните са извлечени успешно",
+      description: "Формата е попълнена автоматично с данните от документа.",
+      variant: "success",
+    });
+  }
+
   static compareAddresses(address1: string, address2: string): number {
     // Remove special characters and extra spaces
     const normalize = (addr: string) => {
@@ -24,7 +102,7 @@ export class DataComparison {
     const addr2 = normalize(address2);
 
     // Simple Levenshtein distance implementation
-    const matrix = Array(addr1.length + 1).fill(null).map(() => 
+    const matrix = Array(addr1.length + 1).fill(null).map(() =>
       Array(addr2.length + 1).fill(null)
     );
 
@@ -65,7 +143,7 @@ export class DataComparison {
     if (formData.squareMeters && documentData.squareMeters) {
       const difference = Math.abs(formData.squareMeters - documentData.squareMeters);
       const percentDiff = (difference / formData.squareMeters) * 100;
-      
+
       if (percentDiff > 5) { // More than 5% difference
         discrepancies.push(`Разлика в площта:
           - Въведена: ${formData.squareMeters}м²
@@ -103,7 +181,7 @@ export class DataComparison {
   static calculateBaseEvaluation(formData: PropertyData, documentData: PropertyData): number {
     // Use the most reliable square meters value
     const squareMeters = documentData.squareMeters || formData.squareMeters || 0;
-    
+
     // Base price per square meter depending on property type
     const basePrices: Record<string, number> = {
       apartment: 1200,
