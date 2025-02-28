@@ -1,6 +1,12 @@
 import { Property, Evaluation } from "@shared/schema";
 
 export class PropertyAIAnalyzer {
+  // Evaluation weights
+  private static readonly DOCUMENTS_WEIGHT = 0.4;
+  private static readonly MANUAL_DATA_WEIGHT = 0.3;
+  private static readonly MARKET_TRENDS_WEIGHT = 0.2;
+  private static readonly PHOTOS_WEIGHT = 0.1;
+
   private static readonly CONFIDENCE_THRESHOLD = 0.75;
   private static instance: PropertyAIAnalyzer;
 
@@ -18,39 +24,44 @@ export class PropertyAIAnalyzer {
       // Validate input data
       this.validatePropertyData(property);
 
-      // Calculate base metrics
-      const baseMetrics = await this.calculateBaseMetrics(property);
+      // Calculate each component with weights
+      const documentsAnalysis = await this.analyzeDocuments(property);
+      const manualDataAnalysis = await this.analyzeManualData(property);
+      const marketAnalysis = await this.analyzeMarketTrends(property);
+      const photosAnalysis = await this.analyzePhotos(property);
 
-      // Calculate location score with more precise factors
-      const locationScore = await this.calculateLocationScore(property.location);
-
-      // Get market analysis data
-      const marketMetrics = await this.calculateMarketMetrics(property);
-
-      // Calculate final estimated value
-      const estimatedValue = this.calculateEstimatedValue(
-        property,
-        baseMetrics,
-        locationScore,
-        marketMetrics
+      // Calculate weighted final value
+      const estimatedValue = this.calculateWeightedValue(
+        documentsAnalysis.value,
+        manualDataAnalysis.value,
+        marketAnalysis.value,
+        photosAnalysis.value
       );
+
+      // Calculate overall confidence
+      const confidence = this.calculateOverallConfidence({
+        documents: documentsAnalysis.confidence,
+        manualData: manualDataAnalysis.confidence,
+        market: marketAnalysis.confidence,
+        photos: photosAnalysis.confidence
+      });
 
       return {
         estimatedValue,
-        confidence: this.calculateConfidence(baseMetrics, locationScore, marketMetrics),
+        confidence,
         evaluationType: "quick",
         status: "pending",
-        locationScore,
-        marketScore: marketMetrics.score,
-        infrastructureScore: marketMetrics.infrastructureScore,
-        buildingScore: baseMetrics.buildingScore,
-        amenitiesNearby: marketMetrics.amenities,
+        locationScore: manualDataAnalysis.locationScore,
+        marketScore: marketAnalysis.score,
+        infrastructureScore: marketAnalysis.infrastructureScore,
+        buildingScore: manualDataAnalysis.buildingScore,
+        amenitiesNearby: marketAnalysis.amenities,
         marketTrends: {
-          pricePerSqm: marketMetrics.pricePerSqm,
-          yearlyChange: marketMetrics.yearlyChange,
-          demandLevel: marketMetrics.demandLevel,
-          supplyLevel: marketMetrics.supplyLevel,
-          averageDaysOnMarket: marketMetrics.daysOnMarket
+          pricePerSqm: marketAnalysis.pricePerSqm,
+          yearlyChange: marketAnalysis.yearlyChange,
+          demandLevel: marketAnalysis.demandLevel,
+          supplyLevel: marketAnalysis.supplyLevel,
+          averageDaysOnMarket: marketAnalysis.daysOnMarket
         }
       };
     } catch (error) {
@@ -68,33 +79,97 @@ export class PropertyAIAnalyzer {
     }
   }
 
-  private async calculateBaseMetrics(property: Property) {
-    // Calculate base price per square meter based on property type and characteristics
-    const basePrice = this.calculateBasePrice(property);
-
-    // Calculate building quality score
-    const buildingScore = this.calculateBuildingScore(property);
-
-    // Calculate age factor
-    const ageFactor = this.calculateAgeFactor(property.yearBuilt);
-
+  private async analyzeDocuments(property: Property) {
+    // Mock document analysis for now
+    // This would be replaced with actual document processing logic
     return {
-      basePrice: basePrice * ageFactor,
-      buildingScore,
-      ageFactor
+      value: property.squareMeters * 1000, // Base value from documents
+      confidence: 0.85,
     };
   }
 
-  private calculateBasePrice(property: Property): number {
-    // Base prices per square meter for different property types
-    const basePrices = {
-      apartment: 1200,
-      house: 1000,
-      villa: 1500,
-      agricultural: 50
+  private async analyzeManualData(property: Property) {
+    const buildingScore = this.calculateBuildingScore(property);
+    const locationScore = await this.calculateLocationScore(property.location);
+    const basePrice = this.calculateBasePrice(property);
+
+    return {
+      value: basePrice * property.squareMeters * (locationScore / 5),
+      confidence: 0.9,
+      buildingScore,
+      locationScore
+    };
+  }
+
+  private async analyzeMarketTrends(property: Property) {
+    // Mock market analysis data
+    const marketTrends = {
+      pricePerSqm: 1200,
+      yearlyChange: 5.2,
+      demandLevel: 85,
+      supplyLevel: 70,
+      daysOnMarket: 45
     };
 
-    return basePrices[property.type] || 1000;
+    const amenities = {
+      schools: 85,
+      transport: 90,
+      shopping: 75,
+      healthcare: 80,
+      recreation: 85
+    };
+
+    const score = (marketTrends.demandLevel - marketTrends.supplyLevel) * 0.1;
+
+    return {
+      value: property.squareMeters * marketTrends.pricePerSqm,
+      confidence: 0.8,
+      score: Math.min(Math.max(score, 0), 10),
+      infrastructureScore: 8.5,
+      pricePerSqm: marketTrends.pricePerSqm,
+      yearlyChange: marketTrends.yearlyChange,
+      demandLevel: marketTrends.demandLevel,
+      supplyLevel: marketTrends.supplyLevel,
+      daysOnMarket: marketTrends.daysOnMarket,
+      amenities
+    };
+  }
+
+  private async analyzePhotos(property: Property) {
+    // Mock photo analysis for now
+    // This would be replaced with actual image processing logic
+    return {
+      value: property.squareMeters * 900, // Conservative estimate from photos
+      confidence: 0.7
+    };
+  }
+
+  private calculateWeightedValue(
+    documentsValue: number,
+    manualDataValue: number,
+    marketValue: number,
+    photosValue: number
+  ): number {
+    return Math.round(
+      documentsValue * PropertyAIAnalyzer.DOCUMENTS_WEIGHT +
+      manualDataValue * PropertyAIAnalyzer.MANUAL_DATA_WEIGHT +
+      marketValue * PropertyAIAnalyzer.MARKET_TRENDS_WEIGHT +
+      photosValue * PropertyAIAnalyzer.PHOTOS_WEIGHT
+    );
+  }
+
+  private calculateOverallConfidence(confidences: {
+    documents: number;
+    manualData: number;
+    market: number;
+    photos: number;
+  }): number {
+    return (
+      confidences.documents * PropertyAIAnalyzer.DOCUMENTS_WEIGHT +
+      confidences.manualData * PropertyAIAnalyzer.MANUAL_DATA_WEIGHT +
+      confidences.market * PropertyAIAnalyzer.MARKET_TRENDS_WEIGHT +
+      confidences.photos * PropertyAIAnalyzer.PHOTOS_WEIGHT
+    );
   }
 
   private calculateBuildingScore(property: Property): number {
@@ -122,26 +197,21 @@ export class PropertyAIAnalyzer {
       score += conditionScores[property.condition] || 0;
     }
 
-    // Ensure score is between 0 and 10
     return Math.min(Math.max(score, 0), 10);
   }
 
-  private calculateAgeFactor(yearBuilt?: number): number {
-    if (!yearBuilt) return 0.9;
+  private calculateBasePrice(property: Property): number {
+    const basePrices = {
+      apartment: 1200,
+      house: 1000,
+      villa: 1500,
+      agricultural: 50
+    };
 
-    const age = new Date().getFullYear() - yearBuilt;
-
-    if (age <= 5) return 1.2;  // New construction premium
-    if (age <= 10) return 1.1; // Nearly new
-    if (age <= 20) return 1.0; // Modern
-    if (age <= 40) return 0.9; // Middle-aged
-    if (age <= 60) return 0.8; // Older
-    return 0.7; // Historic
+    return basePrices[property.type] || 1000;
   }
 
   private async calculateLocationScore(location: { lat: number, lng: number }): Promise<number> {
-    // TODO: In the future, this will integrate with external APIs for location data
-    // For now, using mock data with realistic scoring
     const mockLocationData = {
       transportAccess: 0.85,  // 0-1 score for public transport
       amenities: 0.90,        // 0-1 score for nearby amenities
@@ -149,7 +219,6 @@ export class PropertyAIAnalyzer {
       development: 0.75       // 0-1 score for area development
     };
 
-    // Weighted average of location factors
     const weights = {
       transportAccess: 0.3,
       amenities: 0.25,
@@ -162,78 +231,7 @@ export class PropertyAIAnalyzer {
         return score + value * weights[key as keyof typeof weights];
       }, 0);
 
-    // Convert to 0-10 scale and round to 1 decimal
     return Math.round(weightedScore * 100) / 10;
-  }
-
-  private async calculateMarketMetrics(property: Property) {
-    // Mock market analysis data - to be replaced with real market data API
-    const marketTrends = {
-      pricePerSqm: 1200,
-      yearlyChange: 5.2,
-      demandLevel: 85,
-      supplyLevel: 70,
-      daysOnMarket: 45
-    };
-
-    const amenities = {
-      schools: 85,   // Score 0-100
-      transport: 90,
-      shopping: 75,
-      healthcare: 80,
-      recreation: 85
-    };
-
-    // Calculate overall market score
-    const score = (marketTrends.demandLevel - marketTrends.supplyLevel) * 0.1;
-
-    return {
-      score: Math.min(Math.max(score, 0), 10),
-      infrastructureScore: 8.5,
-      pricePerSqm: marketTrends.pricePerSqm,
-      yearlyChange: marketTrends.yearlyChange,
-      demandLevel: marketTrends.demandLevel,
-      supplyLevel: marketTrends.supplyLevel,
-      daysOnMarket: marketTrends.daysOnMarket,
-      amenities
-    };
-  }
-
-  private calculateEstimatedValue(
-    property: Property,
-    baseMetrics: { basePrice: number, buildingScore: number },
-    locationScore: number,
-    marketMetrics: { score: number }
-  ): number {
-    const locationFactor = (locationScore / 5) + 0.5; // Convert 0-10 score to 0.5-2.5 factor
-    const marketFactor = (marketMetrics.score / 5) + 0.5;
-    const buildingFactor = (baseMetrics.buildingScore / 5) + 0.5;
-
-    const adjustedPricePerSqm = baseMetrics.basePrice * 
-      locationFactor * 
-      marketFactor * 
-      buildingFactor;
-
-    return Math.round(adjustedPricePerSqm * property.squareMeters);
-  }
-
-  private calculateConfidence(
-    baseMetrics: { buildingScore: number },
-    locationScore: number,
-    marketMetrics: { score: number }
-  ): number {
-    const weights = {
-      building: 0.3,
-      location: 0.4,
-      market: 0.3
-    };
-
-    const confidence = 
-      (baseMetrics.buildingScore / 10 * weights.building) +
-      (locationScore / 10 * weights.location) +
-      (marketMetrics.score / 10 * weights.market);
-
-    return Math.min(Math.max(confidence, 0), 1);
   }
 }
 
