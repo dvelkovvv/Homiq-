@@ -68,7 +68,7 @@ export default function Step2() {
 
       toast({
         title: "Документът е обработен успешно",
-        description: "Данните са извлечени и запазени.",
+        description: "Данните са извлечени и запазени."
       });
     }
   };
