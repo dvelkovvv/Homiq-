@@ -17,6 +17,7 @@ interface Suggestion {
   display_name: string;
   lat: string;
   lon: string;
+  place_id: string; // Added for unique keys
 }
 
 export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressSearchProps) {
@@ -24,6 +25,7 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Sync with localStorage on mount
   useEffect(() => {
@@ -40,14 +42,19 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
     }
   }, [defaultAddress]);
 
-  // Fetch suggestions when address changes
+  // Fetch suggestions when address changes with debouncing
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (address.trim().length < 3) {
-        setSuggestions([]);
-        return;
-      }
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
 
+    if (address.trim().length < 3) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+
+    const newTimeout = setTimeout(async () => {
       try {
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=bg&limit=5`
@@ -62,11 +69,18 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
         setOpen(false);
+        toast({
+          title: "Грешка при търсене",
+          description: "Не успяхме да заредим предложения за адреси",
+          variant: "destructive"
+        });
       }
-    };
+    }, 300); // Debounce delay
 
-    const timeoutId = setTimeout(fetchSuggestions, 300);
-    return () => clearTimeout(timeoutId);
+    setSearchTimeout(newTimeout);
+    return () => {
+      if (newTimeout) clearTimeout(newTimeout);
+    };
   }, [address]);
 
   const handleSearch = async (searchAddress: string) => {
@@ -89,9 +103,8 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
           display_name: result.display_name
         });
         setOpen(false);
-        localStorage.setItem('lastAddress', result.display_name); // Save the address
+        localStorage.setItem('lastAddress', result.display_name);
 
-        // Success animation and feedback
         toast({
           title: "Адресът е намерен",
           description: (
@@ -126,7 +139,12 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
                 setAddress(e.target.value);
                 setOpen(true);
               }}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch(address)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !open) {
+                  e.preventDefault();
+                  handleSearch(address);
+                }
+              }}
               className={`flex-1 transition-colors ${
                 suggestions.length > 0 ? 'border-primary' : ''
               }`}
@@ -178,14 +196,14 @@ export function AddressSearch({ onLocationFound, defaultAddress = "" }: AddressS
             </CommandEmpty>
             <CommandGroup>
               <AnimatePresence>
-                {suggestions.map((suggestion, index) => (
+                {suggestions.map((suggestion) => (
                   <motion.div
-                    key={suggestion.display_name}
+                    key={suggestion.place_id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ 
                       opacity: 1, 
                       y: 0,
-                      transition: { delay: index * 0.05 }
+                      transition: { delay: 0.05 }
                     }}
                   >
                     <CommandItem
