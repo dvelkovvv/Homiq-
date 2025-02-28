@@ -2,24 +2,30 @@ import { pgTable, text, serial, integer, jsonb, timestamp, boolean, decimal } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Properties table (existing)
+// Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(),
   address: text("address").notNull(),
-  squareMeters: integer("square_meters").notNull(),
-  yearBuilt: integer("year_built").notNull(),
+  area: integer("area").notNull(),
   location: jsonb("location").$type<{lat: number, lng: number}>().notNull(),
-  rooms: integer("rooms"),
-  floor: integer("floor"),
-  totalFloors: integer("total_floors"),
-  heating: text("heating"),
-  parking: boolean("parking"),
-  photos: text("photos").array().notNull().default([]),
-  condition: text("condition"),
-  renovationYear: integer("renovation_year"),
-  buildingType: text("building_type"),
-  createdAt: timestamp("created_at").defaultNow(),
+  metro_distance: decimal("metro_distance"),
+  green_zones: integer("green_zones"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Property analysis schema
+export const insertPropertySchema = createInsertSchema(properties, {
+  address: z.string().min(3, "Адресът трябва да е поне 3 символа"),
+  area: z.number().min(1, "Площта трябва да е поне 1 кв.м"),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number()
+  }),
+  metro_distance: z.number().optional(),
+  green_zones: z.number().optional(),
+}).omit({
+  id: true,
+  created_at: true,
 });
 
 // Documents table for OCR processed files
@@ -63,7 +69,7 @@ export const documentData = pgTable("document_data", {
   extractedAt: timestamp("extracted_at").defaultNow(),
 });
 
-// Evaluations table (existing)
+// Evaluations table
 export const evaluations = pgTable("evaluations", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull().references(() => properties.id),
@@ -122,23 +128,8 @@ export const insertDocumentDataSchema = createInsertSchema(documentData, {
   extractedAt: true,
 });
 
+
 // Existing property and evaluation schemas
-export const insertPropertySchema = createInsertSchema(properties, {
-  type: z.enum(["apartment", "house", "villa", "agricultural", "industrial"]),
-  address: z.string().min(3, "Address must be at least 3 characters"),
-  squareMeters: z.number().min(1, "Area must be at least 1 sq.m"),
-  yearBuilt: z.number().min(1800).max(new Date().getFullYear()),
-  location: z.object({
-    lat: z.number(),
-    lng: z.number()
-  }),
-  condition: z.enum(["excellent", "good", "needs_repair", "needs_renovation"]).optional(),
-  buildingType: z.enum(["brick", "panel", "concrete", "wooden"]).optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-  photos: true,
-});
 
 export const insertEvaluationSchema = createInsertSchema(evaluations, {
   estimatedValue: z.number().min(0),
