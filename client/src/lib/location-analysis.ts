@@ -1,4 +1,3 @@
-```typescript
 import { toast } from "@/hooks/use-toast";
 
 export interface LocationPoint {
@@ -67,4 +66,3 @@ export class LocationAnalyzer {
     }
   }
 }
-```
