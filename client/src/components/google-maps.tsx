@@ -31,6 +31,28 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [error, setError] = useState<string | null>(null);
   const [loadingPoints, setLoadingPoints] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch API key from backend
+    fetch('/api/maps/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setApiKey(data.apiKey);
+      })
+      .catch(error => {
+        console.error('Error fetching Maps API key:', error);
+        setError("Грешка при зареждане на конфигурацията");
+        toast({
+          title: "Грешка при зареждане",
+          description: "Не успяхме да заредим конфигурацията на картата",
+          variant: "destructive"
+        });
+      });
+  }, []);
 
   useEffect(() => {
     if (defaultAddress) {
@@ -107,14 +129,12 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
     );
   }
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    console.error('Google Maps API key is not configured');
     return (
-      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-destructive/5">
-        <div className="text-center">
-          <p className="text-sm text-destructive">API ключът не е конфигуриран</p>
-          <p className="text-xs text-muted-foreground mt-1">Моля, проверете конфигурацията</p>
+      <div className="w-full h-[400px] rounded-md border flex items-center justify-center bg-accent/5">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Зареждане на конфигурацията...</p>
         </div>
       </div>
     );
@@ -133,14 +153,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           libraries={libraries}
           onLoad={() => console.log('Script loaded successfully')}
           onError={handleLoadError}
-          loadingElement={
-            <div className="w-full h-[400px] flex items-center justify-center bg-accent/5">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
-              </div>
-            </div>
-          }
+          
         >
           <GoogleMap
             mapContainerStyle={containerStyle}
