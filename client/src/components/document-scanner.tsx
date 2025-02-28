@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { DataComparison } from "@/lib/dataComparison";
@@ -17,6 +17,15 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
   const [extractedData, setExtractedData] = useState<any>(null);
+
+  const getDocumentTypeName = (type: string): string => {
+    const types: Record<string, string> = {
+      'notary_act': 'Нотариален акт',
+      'sketch': 'Скица',
+      'tax_assessment': 'Данъчна оценка'
+    };
+    return types[type] || 'Документ';
+  };
 
   const handleAutofill = () => {
     if (extractedData) {
@@ -34,16 +43,28 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       setCurrentStep('Подготовка на документа');
 
       try {
-        const worker = await createWorker();
+        const worker = await createWorker({
+          logger: progress => {
+            if (progress.status === 'loading tesseract core') {
+              setCurrentStep('Зареждане на OCR модула');
+              setProgress(20);
+            } else if (progress.status === 'initializing api') {
+              setCurrentStep('Инициализация');
+              setProgress(40);
+            } else if (progress.status === 'recognizing text') {
+              setCurrentStep('Разпознаване на текст');
+              setProgress(60);
+            }
+          }
+        });
 
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
-        setProgress(40);
+        setProgress(70);
 
         setCurrentStep('Разпознаване на текст');
         const { data: { text } } = await worker.recognize(file);
-        setProgress(70);
 
         await worker.terminate();
 
@@ -68,11 +89,26 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setProgress(100);
         onScanComplete(processedText, data);
 
+        const extractedInfo = [];
+        if (data.squareMeters) extractedInfo.push(`Площ: ${data.squareMeters} кв.м`);
+        if (data.constructionYear) extractedInfo.push(`Година на строителство: ${data.constructionYear}`);
+        if (data.rooms) extractedInfo.push(`Брой стаи: ${data.rooms}`);
+        if (data.floor) extractedInfo.push(`Етаж: ${data.floor}`);
+        if (data.address) extractedInfo.push(`Адрес: ${data.address}`);
+
         toast({
           title: "Успешно сканиране",
-          description: "Документът е обработен успешно. " + 
-            (data.squareMeters ? `Площ: ${data.squareMeters} кв.м. ` : '') +
-            (data.address ? `Адрес: ${data.address}` : '')
+          description: (
+            <div className="space-y-2">
+              <p>Документът е обработен успешно</p>
+              {extractedInfo.map((info, index) => (
+                <p key={index} className="text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  {info}
+                </p>
+              ))}
+            </div>
+          ),
         });
 
       } catch (error) {
@@ -123,7 +159,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
             <FileText className="h-8 w-8 mx-auto text-primary" />
             <div>
               <p className="font-medium">
-                {isDragActive ? "Пуснете документа тук" : "Качете или плъзнете документ"}
+                {isDragActive 
+                  ? "Пуснете документа тук" 
+                  : expectedType 
+                    ? `Качете ${getDocumentTypeName(expectedType).toLowerCase()}`
+                    : "Качете или плъзнете документ"}
               </p>
               <p className="text-sm text-muted-foreground">
                 Поддържани формати: PNG, JPG (ясни копии на документи)
