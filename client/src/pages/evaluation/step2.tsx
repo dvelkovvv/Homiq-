@@ -81,11 +81,6 @@ interface RoomPhotos {
 export default function Step2() {
   const [, setLocation] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
-  const [scannedText, setScannedText] = useState<string>("");
-  const [extractedData, setExtractedData] = useState<any>(null);
-  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
-  const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
-  const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
   const [evaluationType, setEvaluationType] = useState<EvaluationType>("quick");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [documentsStatus, setDocumentsStatus] = useState<DocumentStatus>({
@@ -93,6 +88,10 @@ export default function Step2() {
     sketch: false,
     tax_assessment: false
   });
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
+  const [roomPhotos, setRoomPhotos] = useState<RoomPhotos[]>([]);
+
 
   // Get property data from localStorage instead of URL params
   const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
@@ -136,8 +135,6 @@ export default function Step2() {
 
   const handleScanComplete = (text: string, data: any) => {
     setIsScanning(false);
-    setScannedText(text);
-    setExtractedData(data);
 
     // Get existing property data
     const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
@@ -294,7 +291,7 @@ export default function Step2() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs value={evaluationType} onValueChange={(value: EvaluationType) => setEvaluationType(value)}>
+                <Tabs value={evaluationType} onValueChange={(value) => setEvaluationType(value as EvaluationType)}>
                   <TabsList className="grid w-full grid-cols-2 gap-4 h-auto p-1">
                     <TabsTrigger
                       value="quick"
@@ -503,6 +500,7 @@ export default function Step2() {
                       </div>
                     )}
 
+                    {/*  This section remains largely unchanged */}
                     {scannedText && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <h4 className="font-medium mb-2 text-blue-700">Извлечена информация</h4>
