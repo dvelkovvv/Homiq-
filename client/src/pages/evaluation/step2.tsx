@@ -96,12 +96,11 @@ export default function Step2() {
       }
     }
 
-    // Запазваме всички данни в localStorage
     localStorage.setItem('propertyData', JSON.stringify({
       ...JSON.parse(localStorage.getItem('propertyData') || '{}'),
       evaluationType,
       photos: photos.map(p => p.preview),
-      extractedDocumentData // Запазваме извлечените данни от документите
+      extractedDocumentData 
     }));
 
     localStorage.setItem('currentStep', '3');
