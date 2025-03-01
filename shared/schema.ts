@@ -5,6 +5,7 @@ import { z } from "zod";
 // Property table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
+  propertyId: text("property_id").notNull(),
   address: text("address").notNull(),
   area: integer("area").notNull(),
   location: jsonb("location").$type<{lat: number, lng: number}>().notNull(),
@@ -16,6 +17,7 @@ export const properties = pgTable("properties", {
 
 // Property schema
 export const insertPropertySchema = createInsertSchema(properties, {
+  propertyId: z.string().min(1, "Идентификационният номер е задължителен"),
   address: z.string().min(3, "Адресът трябва да е поне 3 символа"),
   area: z.number().min(1, "Площта трябва да е поне 1 кв.м"),
   location: z.object({

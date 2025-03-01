@@ -11,7 +11,7 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
-import { Building2, ArrowRight, HelpCircle, Home, MapPin } from "lucide-react";
+import { Building2, ArrowRight, HelpCircle, Home, MapPin, Hash } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ export default function Step1() {
     defaultValues: {
       address: "",
       area: 0,
+      propertyId: "",
       location: {
         lat: 42.6977,
         lng: 23.3219
@@ -177,7 +178,26 @@ export default function Step1() {
                         Въведете основна информация за имота
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="propertyId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Идентификационен номер</FormLabel>
+                            <div className="relative">
+                              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                {...field}
+                                placeholder="Въведете идентификационен номер"
+                                className="pl-9 max-w-md"
+                              />
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <FormField
                         control={form.control}
                         name="area"
@@ -286,8 +306,9 @@ export default function Step1() {
                     <ul className="space-y-2 mt-2">
                       <li>1. Въведете адрес или използвайте картата за избор на локация</li>
                       <li>2. Проверете дали адресът е правилно разпознат</li>
-                      <li>3. Попълнете площта на имота</li>
-                      <li>4. Натиснете "Продължи" за следваща стъпка</li>
+                      <li>3. Попълнете идентификационния номер на имота</li>
+                      <li>4. Въведете площта на имота</li>
+                      <li>5. Натиснете "Продължи" за следваща стъпка</li>
                     </ul>
                   </DialogDescription>
                 </DialogContent>
