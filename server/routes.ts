@@ -38,6 +38,33 @@ export async function registerRoutes(app: Express) {
     res.json({ apiKey });
   });
 
+  // Update Google Maps API config
+  app.post("/api/maps/config", (req, res) => {
+    const { apiKey } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: "API key is required" 
+      });
+    }
+
+    try {
+      // Store the API key in environment variable
+      process.env.GOOGLE_MAPS_API_KEY = apiKey;
+
+      res.json({ 
+        success: true,
+        message: "API key updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating API key:', error);
+      res.status(500).json({ 
+        error: "Failed to update API key",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Geocoding endpoint
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
     const { address, latlng } = req.query;
