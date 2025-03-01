@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -14,6 +14,8 @@ const defaultCenter = {
   lng: 23.3219
 };
 
+const libraries = ["places"];
+
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   onAddressSelect?: (address: string) => void;
@@ -23,7 +25,8 @@ interface GoogleMapsProps {
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
     axios.get('/api/maps/config')
@@ -49,44 +52,33 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   }, [initialLocation]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      toast({
-        title: "Въведете адрес",
-        description: "Моля, въведете адрес за търсене",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handlePlacesChanged = () => {
+    if (searchBoxRef.current) {
+      const places = searchBoxRef.current.getPlaces();
+      if (places && places.length > 0) {
+        const place = places[0];
+        if (place.geometry && place.geometry.location) {
+          const newLocation = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+          setCenter(newLocation);
+          onLocationSelect?.(newLocation);
 
-    try {
-      const { data } = await axios.get('/api/geocode', {
-        params: {
-          address: `${searchQuery}, Bulgaria`,
-          language: 'bg'
+          if (place.formatted_address) {
+            onAddressSelect?.(place.formatted_address);
+          }
+
+          if (mapRef.current) {
+            if (place.geometry.viewport) {
+              mapRef.current.fitBounds(place.geometry.viewport);
+            } else {
+              mapRef.current.setCenter(place.geometry.location);
+              mapRef.current.setZoom(17);
+            }
+          }
         }
-      });
-
-      if (!data.results?.[0]) {
-        throw new Error('Адресът не е намерен');
       }
-
-      const location = data.results[0].geometry.location;
-      setCenter(location);
-      onLocationSelect?.(location);
-      onAddressSelect?.(data.results[0].formatted_address);
-
-      toast({
-        title: "Адресът е намерен",
-        description: "Можете да коригирате позицията на маркера",
-      });
-    } catch (error) {
-      console.error('Error searching:', error);
-      toast({
-        title: "Грешка при търсене",
-        description: "Не успяхме да намерим адреса",
-        variant: "destructive"
-      });
     }
   };
 
@@ -143,23 +135,24 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
+    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
       <div className="relative h-full">
-        <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
+        <StandaloneSearchBox
+          onLoad={ref => searchBoxRef.current = ref}
+          onPlacesChanged={handlePlacesChanged}
+        >
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Търсете адрес в България..."
-            className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="absolute top-2 left-2 right-2 z-10 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
-        </div>
+        </StandaloneSearchBox>
 
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
           zoom={12}
+          onLoad={map => mapRef.current = map}
           onClick={handleMapClick}
           options={{
             streetViewControl: false,
