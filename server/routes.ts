@@ -32,8 +32,10 @@ export async function registerRoutes(app: Express) {
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
+      console.error("Google Maps API key not found in environment");
       return res.status(500).json({ error: "API key not configured" });
     }
+    console.log("Providing Maps API key to client"); // Debug log
     res.json({ apiKey });
   });
 
@@ -139,15 +141,6 @@ export async function registerRoutes(app: Express) {
       return res.status(404).json({ error: 'Имотът не е намерен' });
     }
     res.json(property);
-  });
-
-  // Maps API configuration endpoint
-  app.get("/api/maps/config", (_req, res) => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "API key not configured" });
-    }
-    res.json({ apiKey });
   });
 
 

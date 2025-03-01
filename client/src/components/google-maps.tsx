@@ -26,6 +26,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
@@ -35,14 +36,19 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
         if (data.error) {
           throw new Error(data.error);
         }
+        if (!data.apiKey) {
+          throw new Error("API key not received from server");
+        }
         setApiKey(data.apiKey);
         setIsLoading(false);
+        setError(null);
       })
       .catch(error => {
         console.error('Error fetching Maps API key:', error);
+        setError("Грешка при зареждане на картата");
         toast({
           title: "Грешка при зареждане",
-          description: "Не успяхме да заредим картата",
+          description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
           variant: "destructive"
         });
         setIsLoading(false);
@@ -82,6 +88,16 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   };
 
+  if (error) {
+    return (
+      <div className="w-full h-full rounded-md border flex items-center justify-center bg-destructive/5">
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || !apiKey) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
@@ -98,6 +114,15 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       googleMapsApiKey={apiKey}
       language="bg"
       libraries={libraries}
+      onError={(error) => {
+        console.error('Google Maps load error:', error);
+        setError("Грешка при зареждане на Google Maps API");
+        toast({
+          title: "Грешка при зареждане",
+          description: "Не успяхме да заредим картата. Моля, проверете конфигурацията.",
+          variant: "destructive"
+        });
+      }}
     >
       <div className="relative h-full">
         <StandaloneSearchBox
