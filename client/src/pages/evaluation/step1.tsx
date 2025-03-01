@@ -11,10 +11,11 @@ import { ProgressSteps } from "@/components/progress-steps";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
-import { Building2, ArrowRight, HelpCircle, Home, MapPin, Hash } from "lucide-react";
+import { Building2, ArrowRight, HelpCircle, Home, MapPin, Hash, Store, Warehouse } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const STEPS = [
   {
@@ -31,9 +32,31 @@ const STEPS = [
   }
 ];
 
+const PROPERTY_TYPES = [
+  {
+    id: "residential",
+    title: "Жилищен имот",
+    description: "Апартаменти, къщи, вили",
+    icon: Home
+  },
+  {
+    id: "commercial",
+    title: "Търговски имот",
+    description: "Офиси, магазини, складове",
+    icon: Store
+  },
+  {
+    id: "agricultural",
+    title: "Земеделска земя",
+    description: "Ниви, пасища, градини",
+    icon: Warehouse
+  }
+];
+
 export default function Step1() {
   const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [propertyType, setPropertyType] = useState("residential");
 
   const form = useForm({
     defaultValues: {
@@ -50,10 +73,12 @@ export default function Step1() {
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
-      console.log('Form data:', data); // Debug log
+      console.log('Form data:', data);
 
-      // Save to localStorage
-      localStorage.setItem('propertyData', JSON.stringify(data));
+      localStorage.setItem('propertyData', JSON.stringify({
+        ...data,
+        propertyType
+      }));
       localStorage.setItem('currentStep', '2');
 
       toast({
@@ -61,7 +86,6 @@ export default function Step1() {
         description: "Продължете към следващата стъпка",
       });
 
-      // Navigate to next step
       navigate('/evaluation/step2');
     } catch (error) {
       console.error('Error:', error);
@@ -130,6 +154,52 @@ export default function Step1() {
             >
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        Тип на имота
+                      </CardTitle>
+                      <CardDescription>
+                        Изберете категорията на вашия имот
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={propertyType}
+                        onValueChange={setPropertyType}
+                        className="grid gap-4 md:grid-cols-3"
+                      >
+                        {PROPERTY_TYPES.map(type => {
+                          const Icon = type.icon;
+                          return (
+                            <label
+                              key={type.id}
+                              className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                propertyType === type.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-muted hover:border-primary/50'
+                              }`}
+                            >
+                              <RadioGroupItem
+                                value={type.id}
+                                id={type.id}
+                                className="sr-only"
+                              />
+                              <Icon className="h-8 w-8 mb-3 text-primary" />
+                              <div className="text-center">
+                                <p className="font-medium">{type.title}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {type.description}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -249,9 +319,9 @@ export default function Step1() {
                         1
                       </div>
                       <div>
-                        <p className="font-medium">Въведете адрес</p>
+                        <p className="font-medium">Изберете тип имот</p>
                         <p className="text-sm text-muted-foreground">
-                          Изберете точната локация на вашия имот
+                          Посочете категорията на вашия имот
                         </p>
                       </div>
                     </li>
@@ -260,9 +330,9 @@ export default function Step1() {
                         2
                       </div>
                       <div>
-                        <p className="font-medium">Добавете детайли</p>
+                        <p className="font-medium">Въведете адрес</p>
                         <p className="text-sm text-muted-foreground">
-                          Попълнете основната информация за имота
+                          Изберете точната локация на вашия имот
                         </p>
                       </div>
                     </li>
@@ -271,13 +341,13 @@ export default function Step1() {
                         3
                       </div>
                       <div>
-                        <p className="font-medium">Получете оценка</p>
+                        <p className="font-medium">Добавете детайли</p>
                         <p className="text-sm text-muted-foreground">
-                          Вижте детайлен анализ на стойността
+                          Попълнете основната информация за имота
                         </p>
                       </div>
                     </li>
-                  </ul>
+                    </ul>
                 </CardContent>
               </Card>
 
@@ -295,11 +365,12 @@ export default function Step1() {
                   <DialogTitle>Как да попълните формата?</DialogTitle>
                   <DialogDescription>
                     <ul className="space-y-2 mt-2">
-                      <li>1. Въведете адрес или използвайте картата за избор на локация</li>
-                      <li>2. Проверете дали адресът е правилно разпознат</li>
-                      <li>3. Попълнете идентификационния номер на имота</li>
-                      <li>4. Въведете площта на имота</li>
-                      <li>5. Натиснете "Продължи" за следваща стъпка</li>
+                      <li>1. Изберете типа на вашия имот от предложените категории</li>
+                      <li>2. Въведете адрес или използвайте картата за избор на локация</li>
+                      <li>3. Проверете дали адресът е правилно разпознат</li>
+                      <li>4. Попълнете идентификационния номер на имота</li>
+                      <li>5. Въведете площта на имота</li>
+                      <li>6. Натиснете "Продължи" за следваща стъпка</li>
                     </ul>
                   </DialogDescription>
                 </DialogContent>
