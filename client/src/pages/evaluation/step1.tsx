@@ -36,7 +36,6 @@ export default function Step1() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
-    resolver: zodResolver(insertPropertySchema),
     defaultValues: {
       address: "",
       area: 0,
@@ -51,6 +50,9 @@ export default function Step1() {
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
+      console.log('Form data:', data); // Debug log
+
+      // Save to localStorage
       localStorage.setItem('propertyData', JSON.stringify(data));
       localStorage.setItem('currentStep', '2');
 
@@ -59,6 +61,7 @@ export default function Step1() {
         description: "Продължете към следващата стъпка",
       });
 
+      // Navigate to next step
       navigate('/evaluation/step2');
     } catch (error) {
       console.error('Error:', error);
@@ -95,7 +98,6 @@ export default function Step1() {
           transition={{ duration: 0.5 }}
           className="space-y-8"
         >
-          {/* Hero Section */}
           <div className="text-center space-y-4 mb-12">
             <motion.h1 
               className="text-4xl font-bold text-gray-900"
