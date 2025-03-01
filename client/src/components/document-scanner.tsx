@@ -44,7 +44,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     return types[type] || 'Документ';
   };
 
-  const extractDocumentData = (text: string, type: string): ExtractedData => {
+  const extractDocumentData = (text: string, docType: string): ExtractedData => {
     const data: ExtractedData = {};
 
     // Common patterns with improved regex
@@ -53,7 +53,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       year: /(?:построена?|завършен)[^\d]*(?:през\s+)?(\d{4})/i,
       price: /(?:цена|стойност|оценка)[^\d]*(\d+(?:\s*\d+)*)[^\d]*(?:лева|лв|\.|$)/i,
       rooms: /(\d+)(?:\s*(?:стаи|стаен|стайни|стайно))/i,
-      floor: /(?:ет\.|етаж|находящ[^\d]*на)\s*(\d+)(?:\s*[-]/\s*(\d+))?/i,
+      floor: /(?:ет\.|етаж|находящ)[^\d]*на\s*(\d+)(?:\s*[-]\s*(\d+))?/i,
       cadastral: /(?:кадастрален|идентификационен)[^\d\n]*(?:номер|№)?[^\d\n]*([0-9.]+)/i,
       boundaries: /граничи\s*(?:със|с|на|при\s+съседи)[:;\s]+((?:[^,.]+,?\s*)+)/i,
       purpose: /(?:предназначение|използва\s+се\s+за)[:\s]+([^,.;]+)/i
@@ -70,9 +70,9 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       const matches = cleanText.match(pattern);
       if (matches) {
         switch (key) {
-          case 'area':
+          case 'area': {
             // Handle multiple area matches
-            const areas = Array.from(cleanText.matchAll(pattern))
+            const areas = Array.from(cleanText.matchAll(patterns.area))
               .map(m => parseFloat(m[1].replace(/\s/g, '').replace(',', '.')));
             if (areas.length > 0) {
               data.squareMeters = areas[0];
@@ -81,12 +81,14 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
               }
             }
             break;
-          case 'year':
+          }
+          case 'year': {
             const year = parseInt(matches[1]);
             if (year >= 1800 && year <= new Date().getFullYear()) {
               data.constructionYear = year;
             }
             break;
+          }
           case 'price':
             data.price = parseInt(matches[1].replace(/\s/g, ''));
             break;
@@ -116,8 +118,8 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     }
 
     // Document-specific processing
-    switch (type) {
-      case 'notary_act':
+    switch (docType) {
+      case 'notary_act': {
         const notaryPattern = /акт\s*(?:№|номер)?\s*(\d+)(?:[^0-9]+(\d{2}[-.]\d{2}[-.](?:19|20)\d{2}))?/i;
         const notaryMatch = cleanText.match(notaryPattern);
         if (notaryMatch) {
@@ -134,14 +136,16 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           data.commonParts = commonPartsMatch[1].trim();
         }
         break;
+      }
 
-      case 'tax_assessment':
+      case 'tax_assessment': {
         const taxPattern = /данъчна[^\d]*оценка[^\d]*(\d+(?:\s*\d+)*)/i;
         const taxMatch = cleanText.match(taxPattern);
         if (taxMatch) {
           data.taxAssessmentValue = parseInt(taxMatch[1].replace(/\s/g, ''));
         }
         break;
+      }
     }
 
     return data;
