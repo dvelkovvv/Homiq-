@@ -3,22 +3,27 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Search, MapPin, Loader2 } from "lucide-react";
+import { Search, MapPin, Loader2, School, Hospital, Tree } from "lucide-react";
 import axios from 'axios';
 
-interface LocationAnalysis {
+interface Analysis {
+  address: string;
+  location: { lat: number; lng: number };
   metro: { name: string; distance: number } | null;
   parks: number;
   schools: number;
   hospitals: number;
-  coordinates: { lat: number; lng: number };
-  formatted_address: string;
+}
+
+interface SearchResponse {
+  property_id: number;
+  analysis: Analysis;
 }
 
 export function AddressSearch() {
   const [address, setAddress] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [analysis, setAnalysis] = useState<LocationAnalysis | null>(null);
+  const [result, setResult] = useState<SearchResponse | null>(null);
 
   const handleSearch = async () => {
     if (!address.trim()) {
@@ -32,11 +37,11 @@ export function AddressSearch() {
 
     setIsSearching(true);
     try {
-      const { data } = await axios.get('/api/search-location', {
+      const { data } = await axios.get<SearchResponse>('/api/search-location', {
         params: { address }
       });
 
-      setAnalysis(data.analysis);
+      setResult(data);
       toast({
         title: "Анализът е готов",
         description: "Успешно анализирахме локацията"
@@ -80,35 +85,53 @@ export function AddressSearch() {
         </Button>
       </div>
 
-      {analysis && (
+      {result && (
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-primary mt-1" />
               <div>
                 <h3 className="font-medium">Намерен адрес</h3>
-                <p className="text-sm text-muted-foreground">{analysis.formatted_address}</p>
+                <p className="text-sm text-muted-foreground">{result.analysis.address}</p>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {analysis.metro && (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              {result.analysis.metro && (
                 <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-2">Метро станция</h4>
-                  <p className="text-sm">{analysis.metro.name}</p>
+                  <h4 className="font-medium mb-2">Метро</h4>
+                  <p className="text-sm">{result.analysis.metro.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {Math.round(analysis.metro.distance)}м разстояние
+                    {result.analysis.metro.distance}м разстояние
                   </p>
                 </div>
               )}
 
               <div className="p-4 rounded-lg border">
-                <h4 className="font-medium mb-2">Инфраструктура наблизо</h4>
-                <ul className="text-sm space-y-1">
-                  <li>Паркове: {analysis.parks}</li>
-                  <li>Училища: {analysis.schools}</li>
-                  <li>Болници: {analysis.hospitals}</li>
-                </ul>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Tree className="h-4 w-4" />
+                  Паркове
+                </h4>
+                <p className="text-2xl font-bold">{result.analysis.parks}</p>
+                <p className="text-sm text-muted-foreground">в радиус от 2км</p>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <School className="h-4 w-4" />
+                  Училища
+                </h4>
+                <p className="text-2xl font-bold">{result.analysis.schools}</p>
+                <p className="text-sm text-muted-foreground">в радиус от 2км</p>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Hospital className="h-4 w-4" />
+                  Болници
+                </h4>
+                <p className="text-2xl font-bold">{result.analysis.hospitals}</p>
+                <p className="text-sm text-muted-foreground">в радиус от 2км</p>
               </div>
             </div>
           </CardContent>

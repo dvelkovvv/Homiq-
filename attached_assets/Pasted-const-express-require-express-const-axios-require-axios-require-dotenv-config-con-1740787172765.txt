@@ -1,0 +1,103 @@
+const express = require('express');
+const axios = require('axios');
+require('dotenv').config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+let properties = [];
+let propertyIdCounter = 1;
+
+app.use(express.static('public'));
+app.use(express.json());
+
+// Търсене и анализ на локация
+app.get('/search-location', async (req, res) => {
+  const { address } = req.query;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+  try {
+    // Geocoding за координати
+    const geoResponse = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
+      params: { address, key: apiKey }
+    });
+    const location = geoResponse.data.results[0]?.geometry.location;
+    if (!location) throw new Error('Адресът не е намерен');
+    const { lat, lng } = location;
+
+    // Places API за обекти
+    const types = ['subway_station', 'park', 'school', 'hospital', 'supermarket'];
+    const results = {};
+
+    for (const type of types) {
+      const placesResponse = await axios.get(`https://maps.googleapis.com/maps/api/place/nearbysearch/json`, {
+        params: { location: `${lat},${lng}`, radius: 5000, type, key: apiKey }
+      });
+      results[type] = placesResponse.data.results.slice(0, 5); // Лимит до 5 обекта на тип
+    }
+
+    // Distance Matrix за точни разстояния
+    const metro = results['subway_station'][0];
+    let metroDistance = null;
+    if (metro) {
+      const distanceResponse = await axios.get(`https://maps.googleapis.com/maps/api/distancematrix/json`, {
+        params: {
+          origins: `${lat},${lng}`,
+          destinations: `${metro.geometry.location.lat},${metro.geometry.location.lng}`,
+          key: apiKey
+        }
+      });
+      metroDistance = distanceResponse.data.rows[0].elements[0].distance.value; // в метри
+    }
+
+    const analysis = {
+      lat,
+      lng,
+      metroDistance,
+      parkCount: results['park'].length,
+      schoolCount: results['school'].length,
+      hospitalCount: results['hospital'].length,
+      supermarketCount: results['supermarket'].length,
+      formattedAddress: geoResponse.data.results[0].formatted_address,
+      places: results
+    };
+
+    res.json(analysis);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Запазване на имот
+app.post('/save-property', (req, res) => {
+  const { address, lat, lng, metroDistance, parkCount, schoolCount, hospitalCount, supermarketCount } = req.body;
+  const property = {
+    id: propertyIdCounter++,
+    address,
+    lat: parseFloat(lat),
+    lng: parseFloat(lng),
+    metroDistance: metroDistance ? parseFloat(metroDistance) : null,
+    parkCount: parseInt(parkCount),
+    schoolCount: parseInt(schoolCount),
+    hospitalCount: parseInt(hospitalCount),
+    supermarketCount: parseInt(supermarketCount)
+  };
+  properties.push(property);
+  res.json({ success: true, propertyId: property.id });
+});
+
+// Анализ
+app.get('/analyze/:id', (req, res) => {
+  const { id } = req.params;
+  const property = properties.find(p => p.id === parseInt(id));
+  if (!property) return res.status(404).json({ error: 'Имотът не е намерен' });
+
+  let baseValue = 2000;
+  let value = baseValue;
+  if (property.metroDistance && property.metroDistance < 1000) value *= 1.1;
+  if (property.parkCount > 2) value *= 1.05;
+
+  res.json({ property, estimatedValue: value });
+});
+
+app.listen(port, () => console.log(`Server running on port ${port}`));

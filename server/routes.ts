@@ -1,16 +1,18 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { storage } from "./storage";
-import { insertPropertySchema } from "@shared/schema";
 import fetch from "node-fetch";
+
+// In-memory storage
+let properties = [];
+let propertyIdCounter = 1;
 
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   return Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Функция за изчисляване на разстояние в метри
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371e3; // радиус на Земята в метри
+// Функция за изчисляване на разстояние
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371e3; // Радиус на Земята в метри
   const φ1 = lat1 * Math.PI / 180;
   const φ2 = lat2 * Math.PI / 180;
   const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -25,7 +27,18 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 export async function registerRoutes(app: Express) {
-  // Error handling middleware
+  // CORS middleware
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
+  // Error handling
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error('Error:', err);
     res.status(500).json({
@@ -34,15 +47,93 @@ export async function registerRoutes(app: Express) {
     });
   });
 
-  // CORS middleware
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
+  // Търсене на адрес и анализ на локацията
+  app.get('/api/search-location', asyncHandler(async (req: Request, res: Response) => {
+    const { address } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+    if (!address) {
+      return res.status(400).json({ error: "Адресът е задължителен" });
     }
-    next();
+
+    try {
+      // Geocoding за координати
+      const geoResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}&language=bg`
+      );
+      const geoData = await geoResponse.json();
+
+      if (!geoData.results?.[0]) {
+        return res.status(404).json({ error: 'Адресът не е намерен' });
+      }
+
+      const location = geoData.results[0].geometry.location;
+      const { lat, lng } = location;
+
+      // Търсене на близки обекти
+      const searchTypes = ['subway_station', 'park', 'school', 'hospital'];
+      const placesPromises = searchTypes.map(type => 
+        fetch(
+          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=${type}&key=${apiKey}&language=bg`
+        ).then(res => res.json())
+      );
+
+      const placesResults = await Promise.all(placesPromises);
+      const [metroData, parksData, schoolsData, hospitalsData] = placesResults;
+
+      // Анализ на данните
+      const metro = metroData.results?.[0];
+      const metroDistance = metro ? calculateDistance(
+        lat, lng,
+        metro.geometry.location.lat,
+        metro.geometry.location.lng
+      ) : null;
+
+      const analysis = {
+        address: geoData.results[0].formatted_address,
+        location: { lat, lng },
+        metro: metro ? {
+          name: metro.name,
+          distance: Math.round(metroDistance)
+        } : null,
+        parks: parksData.results?.length || 0,
+        schools: schoolsData.results?.length || 0,
+        hospitals: hospitalsData.results?.length || 0
+      };
+
+      // Запазване в in-memory storage
+      const property = {
+        id: propertyIdCounter++,
+        ...analysis
+      };
+      properties.push(property);
+
+      res.json({
+        property_id: property.id,
+        analysis
+      });
+
+    } catch (err) {
+      console.error('Error analyzing location:', err);
+      res.status(500).json({ 
+        error: "Грешка при анализ на локацията",
+        details: err instanceof Error ? err.message : 'Unknown error'
+      });
+    }
+  }));
+
+  // Вземане на всички имоти
+  app.get('/api/properties', (_req, res) => {
+    res.json(properties);
+  });
+
+  // Вземане на конкретен имот
+  app.get('/api/properties/:id', (req, res) => {
+    const property = properties.find(p => p.id === parseInt(req.params.id));
+    if (!property) {
+      return res.status(404).json({ error: 'Имотът не е намерен' });
+    }
+    res.json(property);
   });
 
   // Maps API configuration endpoint
@@ -181,12 +272,14 @@ export async function registerRoutes(app: Express) {
       );
 
       // Create property with analysis data
-      const property = await storage.createProperty({
+      const property = {
+        id: propertyIdCounter++,
         ...result.data,
         metro_distance: metroDistance,
         green_zones: parksData.results.length,
         price_range: priceRange
-      });
+      };
+      properties.push(property);
 
       res.status(201).json({
         ...property,
@@ -215,7 +308,7 @@ export async function registerRoutes(app: Express) {
       });
     }
 
-    const property = await storage.getProperty(id);
+    const property = properties.find(p => p.id === id);
     if (!property) {
       return res.status(404).json({ 
         error: { message: "Property not found" }
@@ -227,84 +320,9 @@ export async function registerRoutes(app: Express) {
 
   // Get all properties
   app.get("/api/properties", asyncHandler(async (_req, res) => {
-    const properties = await storage.getProperties();
     res.json(properties);
   }));
 
-  // Търсене и анализ на локация
-  app.get('/api/search-location', asyncHandler(async (req: Request, res: Response) => {
-    const { address } = req.query;
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-
-    if (!address) {
-      return res.status(400).json({ error: "Адресът е задължителен" });
-    }
-
-    try {
-      // Geocoding за координати
-      const geoResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}`
-      );
-      const geoData = await geoResponse.json();
-
-      const location = geoData.results[0]?.geometry.location;
-      if (!location) {
-        return res.status(404).json({ error: 'Адресът не е намерен' });
-      }
-
-      const { lat, lng } = location;
-
-      // Places API за близки обекти
-      const types = ['subway_station', 'park', 'school', 'hospital'];
-      const results = {};
-
-      for (const type of types) {
-        const placesResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=${type}&key=${apiKey}`
-        );
-        const placesData = await placesResponse.json();
-        results[type] = placesData.results;
-      }
-
-      // Анализ на данните
-      const analysis = {
-        metro: results['subway_station']?.[0] ? {
-          name: results['subway_station'][0].name,
-          distance: calculateDistance(
-            lat, lng,
-            results['subway_station'][0].geometry.location.lat,
-            results['subway_station'][0].geometry.location.lng
-          )
-        } : null,
-        parks: results['park']?.length || 0,
-        schools: results['school']?.length || 0,
-        hospitals: results['hospital']?.length || 0,
-        coordinates: { lat, lng },
-        formatted_address: geoData.results[0].formatted_address
-      };
-
-      // Запазване в базата данни
-      const property = await storage.createProperty({
-        address: analysis.formatted_address,
-        location: analysis.coordinates,
-        area: 0, // ще се попълни по-късно от потребителя
-        metro_distance: analysis.metro?.distance || null,
-        green_zones: analysis.parks
-      });
-
-      res.json({
-        property_id: property.id,
-        analysis
-      });
-
-    } catch (err) {
-      console.error('Error analyzing location:', err);
-      res.status(500).json({ 
-        error: "Грешка при анализ на локацията",
-        details: err instanceof Error ? err.message : 'Unknown error'
-      });
-    }
-  }));
 
   app.post("/api/documents", asyncHandler(async (req: Request, res: Response) => {
     const result = insertDocumentSchema.safeParse(req.body.document);
@@ -323,7 +341,7 @@ export async function registerRoutes(app: Express) {
     );
 
     console.log(`Created document with ID: ${document.id} for property ID: ${document.propertyId}`);
-    res.status(201).json(document);
+    res.json(document);
   }));
 
   app.get("/api/properties/:propertyId/documents", asyncHandler(async (req: Request, res: Response) => {
