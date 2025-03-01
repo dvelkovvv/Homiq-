@@ -35,7 +35,6 @@ export async function registerRoutes(app: Express) {
       console.error("Google Maps API key not found");
       return res.status(500).json({ error: "API key not configured" });
     }
-    console.log("Providing Maps API key"); // Debug log
     res.json({ apiKey });
   });
 
@@ -48,24 +47,32 @@ export async function registerRoutes(app: Express) {
       throw new Error('Google Maps API key is not configured');
     }
 
+    if (!address && !latlng) {
+      return res.status(400).json({ error: "Address or latlng parameter is required" });
+    }
+
     try {
-      let url;
+      const params = new URLSearchParams({
+        key: apiKey,
+        language: 'bg'
+      });
+
       if (address) {
-        url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}&language=bg&components=country:BG`;
+        params.append('address', address as string);
+        params.append('components', 'country:BG');
       } else if (latlng) {
-        url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng}&key=${apiKey}&language=bg`;
-      } else {
-        return res.status(400).json({ error: "Address or latlng parameter is required" });
+        params.append('latlng', latlng as string);
       }
 
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.status === 'OK' && data.results && data.results.length > 0) {
+      if (data.status === 'OK' && data.results?.[0]) {
         res.json(data);
       } else {
         res.status(404).json({
-          error: "Address not found",
+          error: "Location not found",
           details: data.status
         });
       }
@@ -110,15 +117,6 @@ export async function registerRoutes(app: Express) {
   // Вземане на всички имоти
   app.get('/api/properties', (_req, res) => {
     res.json(properties);
-  });
-
-  // Вземане на конкретен имот
-  app.get('/api/properties/:id', (req, res) => {
-    const property = properties.find(p => p.id === parseInt(req.params.id));
-    if (!property) {
-      return res.status(404).json({ error: 'Имотът не е намерен' });
-    }
-    res.json(property);
   });
 
 

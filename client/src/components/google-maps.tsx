@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -20,97 +21,58 @@ interface GoogleMapsProps {
 }
 
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
+  const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch API key from server
     axios.get('/api/maps/config')
       .then(response => {
-        const apiKey = response.data.apiKey;
-        if (!apiKey) {
+        if (!response.data.apiKey) {
           throw new Error('API key not received');
         }
-
-        // Load Google Maps script
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => {
-          setError("Грешка при зареждане на Google Maps API");
-          setIsLoading(false);
-        };
-
-        // Define the callback function
-        window.initMap = () => {
-          const mapElement = document.getElementById('map');
-          if (!mapElement) return;
-
-          const center = initialLocation || defaultCenter;
-
-          const map = new google.maps.Map(mapElement, {
-            zoom: 12,
-            center: center,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-            zoomControl: true,
-          });
-
-          const marker = new google.maps.Marker({
-            position: center,
-            map: map,
-            draggable: true
-          });
-
-          mapRef.current = map;
-          markerRef.current = marker;
-
-          // Add click event listener to map
-          map.addListener('click', (e: google.maps.MapMouseEvent) => {
-            if (e.latLng) {
-              const location = {
-                lat: e.latLng.lat(),
-                lng: e.latLng.lng()
-              };
-              marker.setPosition(location);
-              onLocationSelect?.(location);
-              updateAddress(location);
-            }
-          });
-
-          // Add dragend event listener to marker
-          marker.addListener('dragend', () => {
-            const position = marker.getPosition();
-            if (position) {
-              const location = {
-                lat: position.lat(),
-                lng: position.lng()
-              };
-              onLocationSelect?.(location);
-              updateAddress(location);
-            }
-          });
-
-          setIsLoading(false);
-        };
-
-        document.head.appendChild(script);
+        setApiKey(response.data.apiKey);
+        setIsLoading(false);
       })
       .catch(error => {
-        console.error('Error loading Google Maps:', error);
-        setError("Грешка при зареждане на картата");
-        setIsLoading(false);
+        console.error('Error loading Maps API key:', error);
+        toast({
+          title: "Грешка при зареждане",
+          description: "Проблем при зареждане на картата",
+          variant: "destructive"
+        });
       });
+  }, []);
 
-    return () => {
-      // Cleanup
-      delete window.initMap;
-    };
-  }, [initialLocation, onLocationSelect, onAddressSelect]);
+  useEffect(() => {
+    if (initialLocation) {
+      setCenter(initialLocation);
+    }
+  }, [initialLocation]);
+
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const newLocation = {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng()
+      };
+      setCenter(newLocation);
+      onLocationSelect?.(newLocation);
+      updateAddress(newLocation);
+    }
+  }, [onLocationSelect]);
+
+  const handleMarkerDragEnd = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const newLocation = {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng()
+      };
+      setCenter(newLocation);
+      onLocationSelect?.(newLocation);
+      updateAddress(newLocation);
+    }
+  }, [onLocationSelect]);
 
   const updateAddress = async (location: { lat: number; lng: number }) => {
     try {
@@ -128,17 +90,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   };
 
-  if (error) {
-    return (
-      <div className="w-full h-full rounded-md border flex items-center justify-center bg-destructive/5">
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  if (isLoading || !apiKey) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
@@ -149,12 +101,33 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
-  return <div id="map" style={containerStyle} />;
+  return (
+    <LoadScript googleMapsApiKey={apiKey}>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={center}
+        zoom={12}
+        onClick={handleMapClick}
+        options={{
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          zoomControl: true
+        }}
+      >
+        <Marker
+          position={center}
+          draggable={true}
+          onDragEnd={handleMarkerDragEnd}
+        />
+      </GoogleMap>
+    </LoadScript>
+  );
 }
 
-// Add the initMap to the window object type
-declare global {
-  interface Window {
-    initMap: () => void;
-  }
-}
+// Add the initMap to the window object type - This is no longer needed with @react-google-maps/api
+//declare global {
+//  interface Window {
+//    initMap: () => void;
+//  }
+//}
