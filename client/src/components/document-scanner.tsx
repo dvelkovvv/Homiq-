@@ -11,6 +11,19 @@ interface DocumentScannerProps {
   expectedType?: 'notary_act' | 'sketch' | 'tax_assessment';
 }
 
+interface ExtractedData {
+  squareMeters?: number;
+  constructionYear?: number;
+  price?: number;
+  rooms?: number;
+  floor?: number;
+  totalFloors?: number;
+  cadastralNumber?: string;
+  notaryNumber?: string;
+  documentDate?: string;
+  taxAssessmentValue?: number;
+}
+
 export function DocumentScanner({ onScanComplete, expectedType }: DocumentScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -24,6 +37,74 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       'tax_assessment': 'Данъчна оценка'
     };
     return types[type] || 'Документ';
+  };
+
+  const extractDocumentData = (text: string, type: string): ExtractedData => {
+    const data: ExtractedData = {};
+
+    // Common patterns
+    const areaPattern = /(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|квадратни метра)/i;
+    const yearPattern = /построена?(?:\s+през)?\s+(\d{4})/i;
+    const pricePattern = /цена(?:\s+от)?\s+(\d+(?:\s*\d+)*)\s*(?:лева|лв)/i;
+    const roomsPattern = /(\d+)\s*(?:стаи|стаен)/i;
+    const floorPattern = /(?:ет\.|етаж)\s*(\d+)(?:\s+от\s+(\d+))?/i;
+    const cadastralPattern = /(?:кадастрален номер|идентификатор)[\s:]+([0-9\.]+)/i;
+
+    // Extract common data
+    const areaMatch = text.match(areaPattern);
+    if (areaMatch) {
+      data.squareMeters = parseFloat(areaMatch[1].replace(/\s/g, ''));
+    }
+
+    const yearMatch = text.match(yearPattern);
+    if (yearMatch) {
+      data.constructionYear = parseInt(yearMatch[1]);
+    }
+
+    const priceMatch = text.match(pricePattern);
+    if (priceMatch) {
+      data.price = parseInt(priceMatch[1].replace(/\s/g, ''));
+    }
+
+    const roomsMatch = text.match(roomsPattern);
+    if (roomsMatch) {
+      data.rooms = parseInt(roomsMatch[1]);
+    }
+
+    const floorMatch = text.match(floorPattern);
+    if (floorMatch) {
+      data.floor = parseInt(floorMatch[1]);
+      if (floorMatch[2]) {
+        data.totalFloors = parseInt(floorMatch[2]);
+      }
+    }
+
+    const cadastralMatch = text.match(cadastralPattern);
+    if (cadastralMatch) {
+      data.cadastralNumber = cadastralMatch[1];
+    }
+
+    // Document-specific patterns
+    switch (type) {
+      case 'notary_act':
+        const notaryNumberPattern = /акт[^\d]*(\d+)(?:\s*от\s*|\s+)(\d{2}\.\d{2}\.\d{4})/i;
+        const notaryMatch = text.match(notaryNumberPattern);
+        if (notaryMatch) {
+          data.notaryNumber = notaryMatch[1];
+          data.documentDate = notaryMatch[2];
+        }
+        break;
+
+      case 'tax_assessment':
+        const taxValuePattern = /данъчна\s+оценка[^\d]*(\d+(?:\s*\d+)*)/i;
+        const taxMatch = text.match(taxValuePattern);
+        if (taxMatch) {
+          data.taxAssessmentValue = parseInt(taxMatch[1].replace(/\s/g, ''));
+        }
+        break;
+    }
+
+    return data;
   };
 
   const validateImage = async (file: File): Promise<boolean> => {
@@ -72,7 +153,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         return;
       }
 
-      // Създаваме URL за преглед на изображението
       const imageUrl = URL.createObjectURL(file);
       setUploadedImage(imageUrl);
 
@@ -99,6 +179,14 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         setCurrentStep('Зареждане на български език');
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
+
+        // Set specific OCR parameters for better recognition
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789.,абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ ',
+          tessedit_pageseg_mode: '1', // Automatic page segmentation with OSD
+          tessedit_ocr_engine_mode: '1', // Neural nets LSTM mode only
+        });
+
         setProgress(70);
 
         const { data: { text } } = await worker.recognize(file);
@@ -108,8 +196,11 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           throw new Error("Не беше открит достатъчно текст в документа. Моля, проверете качеството на изображението.");
         }
 
+        const extractedData = extractDocumentData(text.trim(), expectedType || '');
+
         const data = {
           documentType: expectedType,
+          extractedData,
           text: text.trim()
         };
 
