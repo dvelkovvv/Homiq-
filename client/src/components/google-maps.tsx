@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GoogleMap, LoadScript, Marker, Circle } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -20,13 +20,12 @@ interface GoogleMapsProps {
   defaultAddress?: string;
 }
 
-type Libraries = ("places" | "geometry")[];
-const libraries: Libraries = ["places", "geometry"];
+const libraries: ("places" | "geometry")[] = ["places", "geometry"];
 
 export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
-  const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Fetch API key from backend
@@ -36,30 +35,20 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           throw new Error(data.error);
         }
         setApiKey(data.apiKey);
+        setIsLoading(false);
       })
       .catch(error => {
         console.error('Error fetching Maps API key:', error);
-        setError("Грешка при зареждане на конфигурацията");
         toast({
           title: "Грешка при зареждане",
           description: "Не успяхме да заредим картата",
           variant: "destructive"
         });
+        setIsLoading(false);
       });
   }, []);
 
-  if (error) {
-    return (
-      <div className="w-full h-full rounded-md border flex items-center justify-center bg-destructive/5">
-        <div className="text-center">
-          <p className="text-sm text-destructive">{error}</p>
-          <p className="text-xs text-muted-foreground mt-1">Моля, опитайте отново по-късно</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!apiKey) {
+  if (isLoading || !apiKey) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
@@ -85,13 +74,6 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           mapTypeControl: false,
           fullscreenControl: false,
           zoomControl: true,
-          styles: [
-            {
-              featureType: "poi",
-              elementType: "labels",
-              stylers: [{ visibility: "off" }]
-            }
-          ]
         }}
       >
         <Marker
@@ -104,16 +86,6 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
               setCenter({ lat, lng });
               onLocationSelect?.({ lat, lng });
             }
-          }}
-        />
-        <Circle
-          center={center}
-          radius={500}
-          options={{
-            fillColor: '#4299e1',
-            fillOpacity: 0.1,
-            strokeColor: '#4299e1',
-            strokeWeight: 1
           }}
         />
       </GoogleMap>
