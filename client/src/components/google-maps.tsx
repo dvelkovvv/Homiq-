@@ -34,12 +34,9 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       try {
         setIsLoading(true);
         setError(null);
+
         const response = await api.get('api/maps/config');
         console.log('API Config Response:', response.data);
-
-        if (response.data.error) {
-          throw new Error(response.data.details || response.data.error);
-        }
 
         if (!response.data.apiKey) {
           throw new Error('API key not configured');
@@ -52,7 +49,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         setError(errorMessage);
         toast({
-          title: "Грешка при зареждане",
+          title: "Грешка при зареждане на картата",
           description: `Проблем с Google Maps API: ${errorMessage}`,
           variant: "destructive"
         });
@@ -103,6 +100,17 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const newLocation = {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng()
+      };
+      setCenter(newLocation);
+      onLocationSelect?.(newLocation);
+    }
+  };
+
   return (
     <LoadScript 
       googleMapsApiKey={apiKey}
@@ -110,6 +118,11 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       onError={(error) => {
         console.error('Google Maps loading error:', error);
         setError(`Error loading Google Maps: ${error.message}`);
+        toast({
+          title: "Грешка при зареждане на картата",
+          description: "Проблем при инициализиране на Google Maps",
+          variant: "destructive"
+        });
       }}
     >
       <div className="relative h-full">
@@ -117,6 +130,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           mapContainerStyle={containerStyle}
           center={center}
           zoom={12}
+          onClick={handleMapClick}
           options={{
             streetViewControl: false,
             mapTypeControl: false,
