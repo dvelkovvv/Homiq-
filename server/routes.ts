@@ -1,4 +1,4 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer } from "http";
 import fetch from "node-fetch";
 
@@ -6,28 +6,11 @@ import fetch from "node-fetch";
 let properties = [];
 let propertyIdCounter = 1;
 
-const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+const asyncHandler = (fn: Function) => (req: Request, res: Response, next: any) => {
   return Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 export async function registerRoutes(app: Express) {
-  // CORS middleware
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
-  });
-
-  // Error handling
-  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error('Error:', err);
-    res.status(500).json({
-      error: "Internal server error",
-      message: err.message
-    });
-  });
-
   // Get Google Maps API config
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;

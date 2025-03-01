@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, Libraries } from "@react-google-maps/api";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -13,6 +13,9 @@ const defaultCenter = {
   lat: 42.6977,
   lng: 23.3219
 };
+
+// Explicitly specify required libraries
+const libraries: Libraries = ['places', 'geometry'];
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -103,6 +106,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   return (
     <LoadScript 
       googleMapsApiKey={apiKey}
+      libraries={libraries}
       onError={(error) => {
         console.error('Google Maps loading error:', error);
         setError(`Error loading Google Maps: ${error.message}`);
