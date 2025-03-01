@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, X, CheckCircle, Info, Clock, Building2 } from "lucide-react";
+import { FileText, CheckCircle, Info, Clock, Building2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
