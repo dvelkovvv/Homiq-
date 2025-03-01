@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +14,8 @@ const defaultCenter = {
   lng: 23.3219
 };
 
+const libraries = ["places", "geometry"] as const;
+
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   onAddressSelect?: (address: string) => void;
@@ -23,11 +25,7 @@ interface GoogleMapsProps {
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState("");
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const searchBoxRef = useRef<HTMLInputElement | null>(null);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     axios.get('/api/maps/config')
@@ -54,32 +52,29 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }, [initialLocation]);
 
   const handleSearch = async () => {
-    if (!searchInput.trim()) return;
+    if (!searchQuery.trim()) return;
 
     try {
       const { data } = await axios.get('/api/geocode', {
         params: {
-          address: `${searchInput}, Bulgaria`,
+          address: `${searchQuery}, Bulgaria`,
           language: 'bg'
         }
       });
 
-      if (data.results?.[0]) {
-        const location = data.results[0].geometry.location;
-        setCenter(location);
-        onLocationSelect?.(location);
-        onAddressSelect?.(data.results[0].formatted_address);
-
-        if (mapRef.current) {
-          mapRef.current.setCenter(location);
-          mapRef.current.setZoom(17);
-        }
-
-        toast({
-          title: "Адресът е намерен",
-          description: "Локацията е успешно обновена",
-        });
+      if (!data.results?.[0]) {
+        throw new Error('Адресът не е намерен');
       }
+
+      const location = data.results[0].geometry.location;
+      setCenter(location);
+      onLocationSelect?.(location);
+      onAddressSelect?.(data.results[0].formatted_address);
+
+      toast({
+        title: "Адресът е намерен",
+        description: "Локацията е успешно обновена",
+      });
     } catch (error) {
       console.error('Error searching:', error);
       toast({
@@ -143,14 +138,13 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
+    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
       <div className="relative h-full">
         <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
           <input
-            ref={searchBoxRef}
             type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Търсете адрес в България..."
             className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -161,27 +155,21 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           mapContainerStyle={containerStyle}
           center={center}
           zoom={12}
-          onLoad={map => {
-            mapRef.current = map;
-            map.setOptions({
-              restriction: {
-                latLngBounds: {
-                  north: 44.2,
-                  south: 41.2,
-                  east: 29.0,
-                  west: 22.0
-                },
-                strictBounds: true
-              }
-            });
-          }}
           onClick={handleMapClick}
           options={{
             streetViewControl: false,
             mapTypeControl: false,
             fullscreenControl: false,
             zoomControl: true,
-            gestureHandling: 'greedy'
+            restriction: {
+              latLngBounds: {
+                north: 44.2,
+                south: 41.2,
+                east: 29.0,
+                west: 22.0
+              },
+              strictBounds: true
+            }
           }}
         >
           <Marker
