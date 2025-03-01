@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Search, MapPin, Loader2, Building2, School, Hospital, Tree, CheckCircle, ArrowRight } from "lucide-react";
+import { Search, MapPin, Loader2, Building2, School, Hospital, Trees, CheckCircle, ArrowRight } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from 'axios';
@@ -165,7 +165,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
                     transition={{ delay: 0.4 }}
                     className="p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
                   >
-                    <Tree className="h-5 w-5 text-green-500 mb-2" />
+                    <Trees className="h-5 w-5 text-green-500 mb-2" />
                     <h4 className="font-medium">Паркове</h4>
                     <p className="text-2xl font-bold">{analysis.nearby.parks}</p>
                     <p className="text-sm text-muted-foreground">в близост</p>
