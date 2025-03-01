@@ -48,7 +48,6 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       setSelectedAddress(data.results[0].formatted_address);
       onLocationSelect?.(location);
 
-      // Analyze location after successful search
       await fetchLocationAnalysis(location);
 
       toast({
@@ -69,6 +68,9 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
   const fetchLocationAnalysis = async (location: { lat: number; lng: number }) => {
     try {
+      setIsSearching(true);
+
+      // Get address from coordinates
       const { data } = await axios.get('/api/geocode', {
         params: {
           latlng: `${location.lat},${location.lng}`,
@@ -91,15 +93,15 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
             metro: nearbyData[0].data.results?.[0],
             parks: nearbyData[1].data.results?.length || 0,
             schools: nearbyData[2].data.results?.length || 0,
-            hospitals: 0 // To be implemented
+            hospitals: 0
           }
         });
-      }
 
-      toast({
-        title: "Локацията е анализирана",
-        description: "Успешно анализирахме избраната локация",
-      });
+        toast({
+          title: "Локацията е анализирана",
+          description: "Успешно анализирахме избраната локация",
+        });
+      }
     } catch (error) {
       console.error('Error analyzing location:', error);
       toast({
@@ -107,11 +109,14 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
         description: "Не успяхме да анализираме локацията",
         variant: "destructive"
       });
+    } finally {
+      setIsSearching(false);
     }
   };
 
   const handleLocationSelect = async (location: { lat: number; lng: number }) => {
     setSelectedLocation(location);
+    onLocationSelect?.(location);
     await fetchLocationAnalysis(location);
   };
 
@@ -170,6 +175,19 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
             onAddressSelect={setSelectedAddress}
             initialLocation={selectedLocation || undefined}
           />
+          {isSearching && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center"
+            >
+              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <p className="text-sm font-medium">Анализиране на локацията...</p>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
 
