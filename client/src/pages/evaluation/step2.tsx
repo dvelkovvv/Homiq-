@@ -3,11 +3,11 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, CheckCircle, Info, Clock, Building2, X } from "lucide-react";
+import { FileText, Info, Clock, Building2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 type EvaluationType = 'quick' | 'licensed';
 
@@ -45,8 +45,8 @@ export default function Step2() {
       }
 
       toast({
-        title: "Документът е обработен успешно",
-        description: "Данните са извлечени и запазени"
+        title: "Документът е обработен",
+        description: "Успешно извлечени данни"
       });
     }
   };
@@ -60,7 +60,7 @@ export default function Step2() {
     setPhotos(prev => [...prev, ...newPhotos]);
 
     toast({
-      title: "Снимките са добавени успешно",
+      title: "Снимките са добавени",
       description: `${files.length} ${files.length === 1 ? 'снимка е добавена' : 'снимки са добавени'}`
     });
   };
@@ -183,7 +183,7 @@ export default function Step2() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                  <Clock className="h-5 w-5 text-green-500 mt-1" />
                   <div>
                     <div className="font-medium">Моментална оценка</div>
                     <div className="text-sm text-muted-foreground">
@@ -198,7 +198,7 @@ export default function Step2() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                  <Building2 className="h-5 w-5 text-green-500 mt-1" />
                   <div>
                     <div className="font-medium">Пазарен анализ</div>
                     <div className="text-sm text-muted-foreground">
@@ -213,7 +213,7 @@ export default function Step2() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                  <Building2 className="h-5 w-5 text-green-500 mt-1" />
                   <div>
                     <div className="font-medium">Локация и инфраструктура</div>
                     <div className="text-sm text-muted-foreground">
@@ -268,9 +268,6 @@ export default function Step2() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Нотариален акт</h3>
-                    {documentsStatus.notary_act && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
                   </div>
                   <DocumentScanner
                     onScanComplete={handleScanComplete}
@@ -290,9 +287,6 @@ export default function Step2() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Скица</h3>
-                    {documentsStatus.sketch && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
                   </div>
                   <DocumentScanner
                     onScanComplete={handleScanComplete}
@@ -312,9 +306,6 @@ export default function Step2() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Данъчна оценка</h3>
-                    {documentsStatus.tax_assessment && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
                   </div>
                   <DocumentScanner
                     onScanComplete={handleScanComplete}
@@ -377,7 +368,7 @@ export default function Step2() {
                             onClick={() => handleRemovePhoto(index)}
                             className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                           >
-                            <X className="h-4 w-4" />
+                            ✕
                           </button>
                         </div>
                       </motion.div>
@@ -403,7 +394,7 @@ export default function Step2() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.6 }}
                       >
-                        <CheckCircle className="h-4 w-4" />
+                        <Building2 className="h-4 w-4" />
                         Снимайте при добра осветеност
                       </motion.li>
                       <motion.li 
@@ -412,7 +403,7 @@ export default function Step2() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.7 }}
                       >
-                        <CheckCircle className="h-4 w-4" />
+                        <Building2 className="h-4 w-4" />
                         Включете всички основни помещения
                       </motion.li>
                       <motion.li 
@@ -421,7 +412,7 @@ export default function Step2() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.8 }}
                       >
-                        <CheckCircle className="h-4 w-4" />
+                        <Building2 className="h-4 w-4" />
                         Покажете общото състояние на имота
                       </motion.li>
                       <motion.li 
@@ -430,7 +421,7 @@ export default function Step2() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.9 }}
                       >
-                        <CheckCircle className="h-4 w-4" />
+                        <Building2 className="h-4 w-4" />
                         Добавете снимки на обзавеждането
                       </motion.li>
                     </ul>
