@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, MapPin, CheckCircle, Info, Clock, Building2, ArrowRight, Upload, X } from "lucide-react";
+import { FileText, MapPin, CheckCircle, Info, Clock, Building2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
@@ -100,7 +99,7 @@ export default function Step2() {
       ...JSON.parse(localStorage.getItem('propertyData') || '{}'),
       evaluationType,
       photos: photos.map(p => p.preview),
-      extractedDocumentData 
+      extractedDocumentData
     }));
 
     localStorage.setItem('currentStep', '3');
@@ -374,14 +373,12 @@ export default function Step2() {
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="h-8 w-8"
+                          <button
                             onClick={() => handleRemovePhoto(index)}
+                            className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                           >
                             <X className="h-4 w-4" />
-                          </Button>
+                          </button>
                         </div>
                       </motion.div>
                     ))}
@@ -442,32 +439,6 @@ export default function Step2() {
               </motion.div>
             </CardContent>
           </Card>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 }}
-            className="flex justify-end gap-4 mt-6"
-          >
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/evaluation/step1")}
-              className="gap-2"
-            >
-              Назад
-            </Button>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                onClick={handleContinue}
-                className="bg-primary hover:bg-primary/90 gap-2"
-              >
-                Продължи
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          </motion.div>
         </TabsContent>
       </Tabs>
     </EvaluationFormLayout>
