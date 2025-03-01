@@ -32,22 +32,11 @@ export default function Step2() {
     tax_assessment: false
   });
   const [photos, setPhotos] = useState<RoomPhoto[]>([]);
+  const [extractedDocumentData, setExtractedDocumentData] = useState<any[]>([]);
 
   const handleScanComplete = (text: string, data: any) => {
     if (data) {
-      const propertyData = JSON.parse(localStorage.getItem('propertyData') || '{}');
-      const documents = propertyData.documents || [];
-      documents.push({
-        type: data.documentType,
-        extractedData: data,
-        text: text,
-        scannedAt: new Date().toISOString()
-      });
-
-      localStorage.setItem('propertyData', JSON.stringify({
-        ...propertyData,
-        documents
-      }));
+      setExtractedDocumentData(prev => [...prev, data]);
 
       if (data.documentType) {
         setDocumentsStatus(prev => ({
@@ -107,10 +96,12 @@ export default function Step2() {
       }
     }
 
+    // Запазваме всички данни в localStorage
     localStorage.setItem('propertyData', JSON.stringify({
       ...JSON.parse(localStorage.getItem('propertyData') || '{}'),
       evaluationType,
-      photos: photos.map(p => p.preview)
+      photos: photos.map(p => p.preview),
+      extractedDocumentData // Запазваме извлечените данни от документите
     }));
 
     localStorage.setItem('currentStep', '3');
@@ -122,7 +113,7 @@ export default function Step2() {
       title="Изберете тип оценка"
       onBack={() => setLocation("/evaluation/step1")}
       onNext={handleContinue}
-      nextLabel={evaluationType === 'licensed' ? 'Продължи със документите' : 'Продължи към оценка'}
+      nextLabel="Продължи"
     >
       <Tabs 
         defaultValue={evaluationType} 
