@@ -14,7 +14,8 @@ const defaultCenter = {
   lng: 23.3219
 };
 
-const libraries = ["places", "geometry"] as const;
+// Specify the required libraries
+const libraries = ["places"] as const;
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -52,7 +53,14 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }, [initialLocation]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Въведете адрес",
+        description: "Моля, въведете адрес за търсене",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const { data } = await axios.get('/api/geocode', {
@@ -73,7 +81,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
 
       toast({
         title: "Адресът е намерен",
-        description: "Локацията е успешно обновена",
+        description: "Можете да коригирате позицията на маркера",
       });
     } catch (error) {
       console.error('Error searching:', error);
