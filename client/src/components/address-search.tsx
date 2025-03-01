@@ -8,6 +8,9 @@ import { GoogleMaps } from "./google-maps";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from 'axios';
 
+// Configure axios base URL
+axios.defaults.baseURL = window.location.origin;
+
 interface AddressSearchProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   onContinue?: () => void;
@@ -70,7 +73,6 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
     try {
       setIsSearching(true);
 
-      // Get address from coordinates
       const { data } = await axios.get('api/geocode', {
         params: {
           latlng: `${location.lat},${location.lng}`,
@@ -81,11 +83,25 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       if (data.results?.[0]) {
         setSelectedAddress(data.results[0].formatted_address);
 
-        // Fetch nearby places data
         const nearbyData = await Promise.all([
-          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'subway_station' }}),
-          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'park' }}),
-          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'school' }})
+          axios.get('api/places/nearby', { 
+            params: { 
+              location: `${location.lat},${location.lng}`, 
+              type: 'subway_station' 
+            }
+          }),
+          axios.get('api/places/nearby', { 
+            params: { 
+              location: `${location.lat},${location.lng}`, 
+              type: 'park' 
+            }
+          }),
+          axios.get('api/places/nearby', { 
+            params: { 
+              location: `${location.lat},${location.lng}`, 
+              type: 'school' 
+            }
+          })
         ]);
 
         setAnalysis({

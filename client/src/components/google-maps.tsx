@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { GoogleMap, LoadScript, Marker, Libraries } from "@react-google-maps/api";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import axios from 'axios';
+import { api } from "@/lib/api";
 
 const containerStyle = {
   width: '100%',
@@ -34,7 +34,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get('/api/maps/config');
+        const response = await api.get('api/maps/config');
         console.log('API Config Response:', response.data);
 
         if (response.data.error) {
