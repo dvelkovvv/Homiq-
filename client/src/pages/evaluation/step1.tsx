@@ -1,92 +1,20 @@
 import { useForm } from "react-hook-form";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPropertySchema } from "@shared/schema";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { GoogleMaps } from "@/components/google-maps";
+import { AddressSearch } from "@/components/address-search";
 import { toast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
-import { Home, Building2, Warehouse, Trees, Factory, Info, HelpCircle } from "lucide-react";
 import { ProgressSteps } from "@/components/progress-steps";
-import { useCallback, useEffect, useState } from "react";
-import { debounce } from "lodash";
+import { useState } from "react";
+import { Link } from "wouter";
 import { Logo } from "@/components/logo";
-import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
-import { InstructionCard } from "@/components/instruction-card";
+import { HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 
-// Placeholder for AddressSearch component -  replace with your actual implementation
-const AddressSearch = ({ onLocationFound, defaultAddress, onAddressChange }: any) => {
-  const [address, setAddress] = useState(defaultAddress || "");
-  const handleAddressChange = (e: any) => {
-    setAddress(e.target.value);
-    onAddressChange(e.target.value);
-  };
-
-
-  const handleSubmit = async () => {
-    // Simulate geocoding - Replace with your actual geocoding logic
-    const geocodedLocation = await geocodeAddress(address);
-    if(geocodedLocation){
-      onLocationFound(geocodedLocation);
-    } else {
-      toast({
-        title: "Невалиден адрес",
-        description: "Моля, въведете валиден адрес.",
-        variant: "destructive"
-      });
-    }
-  }
-
-
-  return (
-    <div>
-      <Input
-        type="text"
-        value={address}
-        onChange={handleAddressChange}
-        placeholder="Въведете адрес"
-        className="bg-white"
-      />
-      <Button onClick={handleSubmit}>Търси</Button>
-    </div>
-  );
-};
-
-const geocodeAddress = async (address: string) => {
-  // Replace with your actual geocoding API call
-  // This is a placeholder, it always returns a valid location for demonstration purposes.
-  //  In a real application, you would make an API call to a geocoding service (e.g., Google Maps Geocoding API).
-
-  if(address.trim().length === 0){
-    return null;
-  }
-
-  return { lat: 42.6977, lng: 23.3219, display_name: address };
-};
-
-
-const propertyTypeIcons = {
-  apartment: Building2,
-  house: Home,
-  villa: Warehouse,
-  agricultural: Trees,
-  industrial: Factory,
-};
-
-const propertyTypeLabels = {
-  apartment: "Апартамент",
-  house: "Къща",
-  villa: "Вила",
-  agricultural: "Земеделска земя",
-  industrial: "Индустриален имот",
-};
 
 const STEPS = [
   {
@@ -104,100 +32,28 @@ const STEPS = [
 ];
 
 export default function Step1() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addressValidated, setAddressValidated] = useState(false);
-  const [showFields, setShowFields] = useState({
-    rooms: false,
-    floor: false,
-    totalFloors: false,
-    heating: false,
-    parking: false,
-    yearBuilt: false,
-    industrial: false
-  });
 
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
     defaultValues: {
-      type: undefined,
       address: "",
-      squareMeters: 1,
-      yearBuilt: new Date().getFullYear(),
+      area: 0,
       location: {
         lat: 42.6977,
         lng: 23.3219
-      },
-      rooms: 1,
-      floor: 0,
-      totalFloors: 1,
-      heating: "electric",
-      parking: false
+      }
     }
   });
-
-  const propertyType = form.watch("type");
-
-  useEffect(() => {
-    if (propertyType === "apartment") {
-      setShowFields({
-        rooms: true,
-        floor: true,
-        totalFloors: true,
-        heating: true,
-        parking: true,
-        yearBuilt: true,
-        industrial: false
-      });
-    } else if (propertyType === "house") {
-      setShowFields({
-        rooms: true,
-        floor: false,
-        totalFloors: true,
-        heating: true,
-        parking: true,
-        yearBuilt: true,
-        industrial: false
-      });
-    } else if (propertyType === "villa") {
-      setShowFields({
-        rooms: true,
-        floor: false,
-        totalFloors: false,
-        heating: true,
-        parking: true,
-        yearBuilt: true,
-        industrial: false
-      });
-    } else if (propertyType === "agricultural") {
-      setShowFields({
-        rooms: false,
-        floor: false,
-        totalFloors: false,
-        heating: false,
-        parking: false,
-        yearBuilt: false,
-        industrial: false
-      });
-    } else if (propertyType === "industrial") {
-      setShowFields({
-        rooms: false,
-        floor: false,
-        totalFloors: true,
-        heating: true,
-        parking: true,
-        yearBuilt: true,
-        industrial: true
-      });
-    }
-  }, [propertyType]);
 
   const onSubmit = async (data: any) => {
     try {
       if (!addressValidated) {
         toast({
           title: "Невалиден адрес",
-          description: "Моля, изберете адрес от предложенията в търсачката",
+          description: "Моля, изберете адрес от картата",
           variant: "destructive"
         });
         return;
@@ -205,80 +61,26 @@ export default function Step1() {
 
       setIsSubmitting(true);
 
-      // Validate location data
-      if (!data.location || !data.location.lat || !data.location.lng) {
-        toast({
-          title: "Непълни данни за локацията",
-          description: "Моля, изберете точен адрес от картата",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const formData = {
-        ...data,
-        submittedAt: new Date().toISOString()
-      };
-
-      localStorage.setItem('propertyData', JSON.stringify(formData));
+      // Save form data to localStorage
+      localStorage.setItem('propertyData', JSON.stringify(data));
       localStorage.setItem('currentStep', '2');
 
       toast({
         title: "Успешно запазени данни",
-        description: "Продължете към следващата стъпка за избор на тип оценка.",
+        description: "Продължете към следващата стъпка",
       });
 
-      setLocation('/evaluation/step2');
-
-    } catch (error: any) {
+      navigate('/evaluation/step2');
+    } catch (error) {
       console.error('Error:', error);
       toast({
         title: "Грешка",
-        description: "Възникна проблем при запазването на данните. Моля, опитайте отново.",
+        description: "Възникна проблем при запазването на данните",
         variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const saveFormData = useCallback(
-    debounce((data: any) => {
-      localStorage.setItem('propertyFormData', JSON.stringify(data));
-    }, 1000),
-    []
-  );
-
-  useEffect(() => {
-    const savedData = localStorage.getItem('propertyFormData');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      form.reset(parsedData);
-    }
-  }, []);
-
-  useEffect(() => {
-    const subscription = form.watch((data) => {
-      if (Object.keys(form.formState.dirtyFields).length > 0) {
-        saveFormData(data);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch, saveFormData]);
-
-  useUnsavedChanges(Object.keys(form.formState.dirtyFields).length > 0);
-
-  // Remove automatic step redirection
-  useEffect(() => {
-    // Clear any existing steps when starting from step 1
-    localStorage.removeItem('currentStep');
-  }, []);
-
-  // Handle address validation from Google Maps component
-  const handleLocationSelect = (location: { lat: number; lng: number; display_name: string }) => {
-    form.setValue('location', { lat: location.lat, lng: location.lng });
-    form.setValue('address', location.display_name);
-    setAddressValidated(true);
   };
 
   return (
@@ -300,411 +102,60 @@ export default function Step1() {
       <main className="container mx-auto px-4 py-8">
         <ProgressSteps currentStep={1} steps={STEPS} />
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div
-            className="lg:col-span-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Card className="p-6">
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Тип имот</FormLabel>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {Object.entries(propertyTypeIcons).map(([value, Icon]) => (
-                            <div
-                              key={value}
-                              className={`cursor-pointer p-4 rounded-lg border transition-all ${
-                                field.value === value
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                              onClick={() => field.onChange(value)}
-                            >
-                              <div className="flex flex-col items-center gap-2">
-                                <Icon className="h-6 w-6" />
-                                <span className="text-sm font-medium">
-                                  {propertyTypeLabels[value]}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </Card>
-
-                <Card className="p-6">
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Адрес</FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            <Input
-                              {...field}
-                              placeholder="Въведете адрес"
-                              className="bg-white"
-                              readOnly
-                            />
-                            <AddressSearch
-                              onLocationFound={handleLocationSelect}
-                              defaultAddress={field.value}
-                              onAddressChange={(address) => field.onChange(address)}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <FormField
-                      control={form.control}
-                      name="squareMeters"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Площ (кв.м)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="Въведете площ"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              className="bg-white"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+        <div className="mt-8 max-w-2xl mx-auto">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Адрес на имота</FormLabel>
+                    <AddressSearch
+                      onLocationSelect={(location) => {
+                        form.setValue('location', location);
+                        setAddressValidated(true);
+                      }}
+                      onContinue={() => form.handleSubmit(onSubmit)()}
                     />
-
-                    {showFields.yearBuilt && (
-                      <FormField
-                        control={form.control}
-                        name="yearBuilt"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Година на строеж</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="1800"
-                                max={new Date().getFullYear()}
-                                placeholder="Въведете година"
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                className="bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </div>
-                </Card>
-
-                {(showFields.rooms || showFields.floor || showFields.totalFloors) && (
-                  <Card className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {showFields.rooms && (
-                        <FormField
-                          control={form.control}
-                          name="rooms"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Брой стаи</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Брой стаи"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {showFields.floor && (
-                        <FormField
-                          control={form.control}
-                          name="floor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Етаж</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Етаж"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {showFields.totalFloors && (
-                        <FormField
-                          control={form.control}
-                          name="totalFloors"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Общо етажи</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Общо етажи"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-
-                    {(showFields.heating || showFields.parking) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                        {showFields.heating && (
-                          <FormField
-                            control={form.control}
-                            name="heating"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Отопление</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="bg-white">
-                                      <SelectValue placeholder="Изберете тип отопление" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="electric">Електричество</SelectItem>
-                                    <SelectItem value="gas">Газ</SelectItem>
-                                    <SelectItem value="other">Друго</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-
-                        {showFields.parking && (
-                          <FormField
-                            control={form.control}
-                            name="parking"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Паркомясто</FormLabel>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </Card>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
 
-                {showFields.industrial && (
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Индустриални характеристики</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="productionArea"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Производствена площ (кв.м)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="Въведете площ"
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                className="bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="storageArea"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Складова площ (кв.м)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="Въведете площ"
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                className="bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="ceilingHeight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Височина на помещенията (м)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                placeholder="Въведете височина"
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                className="bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="loadingDock"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">Товарен достъп</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="threePhasePower"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">Трифазен ток</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </Card>
+              <FormField
+                control={form.control}
+                name="area"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Площ (кв.м)</FormLabel>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Въведете площ"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
 
-                <Card className="p-6">
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Местоположение на имота</FormLabel>
-                        <FormControl>
-                          <GoogleMaps
-                            onLocationSelect={handleLocationSelect}
-                            initialLocation={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </Card>
-
-                <div className="flex justify-between">
-                  <Link href="/">
-                    <Button variant="outline">
-                      Назад
-                    </Button>
-                  </Link>
-                  <Button
-                    type="submit"
-                    className="bg-[#003366] hover:bg-[#002244]"
-                    disabled={isSubmitting || !addressValidated}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Spinner className="mr-2" />
-                        Обработка...
-                      </>
-                    ) : (
-                      'Продължи напред'
-                    )}
+              <div className="flex justify-between">
+                <Link href="/">
+                  <Button variant="outline">
+                    Назад
                   </Button>
-                </div>
-              </form>
-            </Form>
-          </motion.div>
-
-          <div className="hidden lg:block space-y-4">
-            <InstructionCard
-              icon={<Info className="h-5 w-5 text-blue-500" />}
-              title="Как да попълните формата?"
-              description="Следвайте стъпките внимателно и попълнете всички задължителни полета. Можете да запазите прогреса си по всяко време."
-            />
-            <InstructionCard
-              icon={<HelpCircle className="h-5 w-5 text-green-500" />}
-              title="Нуждаете се от помощ?"
-              description="Ако имате въпроси относно попълването на формата, не се колебайте да се свържете с нас."
-            />
-          </div>
+                </Link>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !addressValidated}
+                >
+                  Продължи
+                </Button>
+              </div>
+            </form>
+          </Form>
         </div>
       </main>
 
