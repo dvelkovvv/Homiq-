@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -20,71 +19,108 @@ interface GoogleMapsProps {
   initialLocation?: { lat: number; lng: number };
 }
 
-const libraries: ("places" | "geometry")[] = ["places", "geometry"];
-
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
-  const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
 
   useEffect(() => {
     axios.get('/api/maps/config')
       .then(({ data }) => {
-        if (data.error) {
-          throw new Error(data.error);
-        }
         if (!data.apiKey) {
           throw new Error("API key not received from server");
         }
         setApiKey(data.apiKey);
-        setIsLoading(false);
-        setError(null);
+
+        // Load Google Maps API
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initializeMap;
+        script.onerror = () => {
+          setError("Грешка при зареждане на Google Maps API");
+          setIsLoading(false);
+        };
+        document.head.appendChild(script);
       })
       .catch(error => {
         console.error('Error fetching Maps API key:', error);
         setError("Грешка при зареждане на картата");
-        toast({
-          title: "Грешка при зареждане",
-          description: "Не успяхме да заредим картата. Моля, опитайте отново по-късно.",
-          variant: "destructive"
-        });
         setIsLoading(false);
       });
   }, []);
 
-  useEffect(() => {
-    if (initialLocation) {
-      setCenter(initialLocation);
-    }
-  }, [initialLocation]);
+  const initializeMap = () => {
+    try {
+      const mapElement = document.getElementById('map');
+      if (!mapElement) return;
 
-  const handlePlacesChanged = () => {
-    if (searchBoxRef.current) {
-      const places = searchBoxRef.current.getPlaces();
-      if (places && places.length > 0) {
-        const place = places[0];
-        if (place.geometry && place.geometry.location) {
-          const newLocation = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
+      const center = initialLocation || defaultCenter;
+
+      const map = new google.maps.Map(mapElement, {
+        zoom: 12,
+        center: center,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+      });
+
+      const marker = new google.maps.Marker({
+        position: center,
+        map: map,
+        draggable: true
+      });
+
+      mapRef.current = map;
+      markerRef.current = marker;
+
+      // Add click event listener to map
+      map.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (e.latLng) {
+          const location = {
+            lat: e.latLng.lat(),
+            lng: e.latLng.lng()
           };
-          setCenter(newLocation);
-          onLocationSelect?.(newLocation);
-          if (place.formatted_address) {
-            onAddressSelect?.(place.formatted_address);
-          }
-
-          if (mapRef.current && place.geometry.viewport) {
-            mapRef.current.fitBounds(place.geometry.viewport);
-          } else if (mapRef.current) {
-            mapRef.current.setCenter(place.geometry.location);
-            mapRef.current.setZoom(17);
-          }
+          marker.setPosition(location);
+          onLocationSelect?.(location);
+          updateAddress(location);
         }
+      });
+
+      // Add dragend event listener to marker
+      marker.addListener('dragend', () => {
+        const position = marker.getPosition();
+        if (position) {
+          const location = {
+            lat: position.lat(),
+            lng: position.lng()
+          };
+          onLocationSelect?.(location);
+          updateAddress(location);
+        }
+      });
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setError("Грешка при инициализиране на картата");
+      setIsLoading(false);
+    }
+  };
+
+  const updateAddress = async (location: { lat: number; lng: number }) => {
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ location });
+      if (result.results?.[0]) {
+        onAddressSelect?.(result.results[0].formatted_address);
       }
+    } catch (error) {
+      console.error('Geocoding error:', error);
     }
   };
 
@@ -98,7 +134,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
-  if (isLoading || !apiKey) {
+  if (isLoading) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
@@ -109,100 +145,5 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
-  return (
-    <LoadScript
-      googleMapsApiKey={apiKey}
-      language="bg"
-      libraries={libraries}
-      onError={(error) => {
-        console.error('Google Maps load error:', error);
-        setError("Грешка при зареждане на Google Maps API");
-        toast({
-          title: "Грешка при зареждане",
-          description: "Не успяхме да заредим картата. Моля, проверете конфигурацията.",
-          variant: "destructive"
-        });
-      }}
-    >
-      <div className="relative h-full">
-        <StandaloneSearchBox
-          onLoad={ref => searchBoxRef.current = ref}
-          onPlacesChanged={handlePlacesChanged}
-        >
-          <input
-            type="text"
-            placeholder="Търсете адрес..."
-            className="absolute top-2 left-2 right-2 z-10 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </StandaloneSearchBox>
-
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={15}
-          onLoad={map => {
-            mapRef.current = map;
-          }}
-          options={{
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-            zoomControl: true,
-            styles: [
-              {
-                featureType: "poi",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-              }
-            ]
-          }}
-          onClick={(e) => {
-            if (e.latLng) {
-              const newLocation = {
-                lat: e.latLng.lat(),
-                lng: e.latLng.lng()
-              };
-              setCenter(newLocation);
-              onLocationSelect?.(newLocation);
-
-              const geocoder = new google.maps.Geocoder();
-              geocoder.geocode(
-                { location: newLocation },
-                (results, status) => {
-                  if (status === "OK" && results?.[0]) {
-                    onAddressSelect?.(results[0].formatted_address);
-                  }
-                }
-              );
-            }
-          }}
-        >
-          <Marker
-            position={center}
-            draggable={true}
-            onDragEnd={(e) => {
-              if (e.latLng) {
-                const newLocation = {
-                  lat: e.latLng.lat(),
-                  lng: e.latLng.lng()
-                };
-                setCenter(newLocation);
-                onLocationSelect?.(newLocation);
-
-                const geocoder = new google.maps.Geocoder();
-                geocoder.geocode(
-                  { location: newLocation },
-                  (results, status) => {
-                    if (status === "OK" && results?.[0]) {
-                      onAddressSelect?.(results[0].formatted_address);
-                    }
-                  }
-                );
-              }
-            }}
-          />
-        </GoogleMap>
-      </div>
-    </LoadScript>
-  );
+  return <div id="map" style={containerStyle} />;
 }
