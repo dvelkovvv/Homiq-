@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { GoogleMap, LoadScript, Marker, Libraries } from "@react-google-maps/api";
-import { Loader2, AlertCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { Loader2 } from "lucide-react";
 
 const containerStyle = {
   width: '100%',
@@ -14,8 +12,6 @@ const defaultCenter = {
   lng: 23.3219
 };
 
-const libraries: Libraries = ['places'];
-
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   initialLocation?: { lat: number; lng: number };
@@ -23,35 +19,7 @@ interface GoogleMapsProps {
 
 export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadApiKey = async () => {
-      try {
-        const response = await api.get('api/maps/config');
-        console.log('Maps API response:', response);
-
-        if (!response.data?.apiKey) {
-          throw new Error('API key not configured');
-        }
-
-        setApiKey(response.data.apiKey);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error loading Maps API key:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load Maps API key');
-        toast({
-          title: "Грешка при зареждане на картата",
-          description: "Моля, проверете конфигурацията на Google Maps API",
-          variant: "destructive"
-        });
-      }
-    };
-
-    loadApiKey();
-  }, []);
 
   useEffect(() => {
     if (initialLocation) {
@@ -70,7 +38,7 @@ export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProp
     }
   };
 
-  if (isLoading || !apiKey) {
+  if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -78,21 +46,10 @@ export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProp
     );
   }
 
-  if (error) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <LoadScript 
-      googleMapsApiKey={apiKey}
-      libraries={libraries}
+      googleMapsApiKey={process.env.GOOGLE_MAPS_API_KEY || ''}
+      onLoad={() => setIsLoading(false)}
     >
       <GoogleMap
         mapContainerStyle={containerStyle}

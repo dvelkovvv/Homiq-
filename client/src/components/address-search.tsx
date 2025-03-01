@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
-import { api } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
 interface AddressSearchProps {
@@ -27,32 +26,31 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
     }
 
     setIsSearching(true);
+
     try {
-      const response = await api.get('api/geocode', {
-        params: {
-          address: `${searchQuery}, Bulgaria`
-        }
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({
+        address: `${searchQuery}, Bulgaria`
       });
 
-      console.log('Geocoding response:', response);
+      if (result.results?.[0]) {
+        const location = {
+          lat: result.results[0].geometry.location.lat(),
+          lng: result.results[0].geometry.location.lng()
+        };
+        setSelectedLocation(location);
+        onLocationSelect?.(location);
 
-      if (!response.data?.results?.[0]) {
-        throw new Error('Адресът не е намерен');
+        toast({
+          title: "Адресът е намерен",
+          description: "Можете да коригирате позицията на маркера"
+        });
       }
-
-      const location = response.data.results[0].geometry.location;
-      setSelectedLocation(location);
-      onLocationSelect?.(location);
-
-      toast({
-        title: "Адресът е намерен",
-        description: "Можете да коригирате позицията на маркера"
-      });
     } catch (error) {
       console.error('Error searching:', error);
       toast({
         title: "Грешка при търсене",
-        description: error instanceof Error ? error.message : "Не успяхме да намерим адреса",
+        description: "Не успяхме да намерим адреса",
         variant: "destructive"
       });
     } finally {
