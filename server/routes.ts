@@ -12,64 +12,70 @@ const asyncHandler = (fn: Function) => (req: Request, res: Response, next: any) 
 
 export async function registerRoutes(app: Express) {
   // Get Google Maps API config
-  app.get("/api/maps/config", (_req, res) => {
+  app.get("/api/maps/config", asyncHandler(async (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     console.log('Checking Maps API key configuration');
-    console.log('API Key exists:', !!apiKey);
-    console.log('API Key length:', apiKey?.length || 0);
 
     if (!apiKey) {
       console.error("Google Maps API key not found in environment");
       return res.status(500).json({ error: "API key not configured" });
     }
 
-    // Test the API key with a simple geocoding request
-    fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=Sofia,Bulgaria&key=${apiKey}`)
-      .then(response => response.json())
-      .then(data => {
-        console.log('API Key test response:', data);
+    try {
+      // Test the API key with a simple geocoding request
+      const testUrl = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+      testUrl.searchParams.append('address', 'Sofia,Bulgaria');
+      testUrl.searchParams.append('key', apiKey);
 
-        if (data.status === 'REQUEST_DENIED') {
-          console.error('API Key test failed:', data.error_message);
-          return res.status(400).json({ 
-            error: "API key validation failed",
-            details: data.error_message,
-            hint: "Please check API key restrictions and enabled services in Google Cloud Console"
-          });
-        }
+      console.log('Testing API key with URL:', testUrl.toString());
 
-        console.log('API Key test successful');
-        res.json({ apiKey });
-      })
-      .catch(error => {
-        console.error('API Key test error:', error);
-        res.status(500).json({ 
-          error: "Failed to validate API key",
-          details: error.message
+      const response = await fetch(testUrl);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      if (data.status === 'REQUEST_DENIED') {
+        console.error('API Key test failed:', data.error_message);
+        return res.status(400).json({ 
+          error: "API key validation failed",
+          details: data.error_message,
+          hint: "Please verify API key and enabled services in Google Cloud Console"
         });
-      });
-  });
+      }
 
-  // Geocoding endpoint
+      if (data.status !== 'OK') {
+        throw new Error(`Unexpected API response status: ${data.status}`);
+      }
+
+      console.log('API Key test successful');
+      res.json({ apiKey });
+    } catch (error) {
+      console.error('API Key test error:', error);
+      res.status(500).json({ 
+        error: "Failed to validate API key",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
+
+  // Geocoding endpoint with improved error handling
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
-    const { address, latlng } = req.query;
+    const { address, latlng, language = 'bg' } = req.query;
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-      console.error('Geocoding error: API key not configured');
       throw new Error('Google Maps API key is not configured');
     }
 
     if (!address && !latlng) {
-      console.error('Geocoding error: Missing parameters');
       return res.status(400).json({ error: "Address or latlng parameter is required" });
     }
 
     try {
-      const params = new URLSearchParams({
-        key: apiKey,
-        language: 'bg'
-      });
+      const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+      const params = new URLSearchParams({ key: apiKey, language });
 
       if (address) {
         params.append('address', address as string);
@@ -78,17 +84,17 @@ export async function registerRoutes(app: Express) {
         params.append('latlng', latlng as string);
       }
 
-      const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
       url.search = params.toString();
       console.log('Geocoding request URL:', url.toString());
 
       const response = await fetch(url);
       const data = await response.json();
 
-      console.log('Geocoding response:', data);
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
 
       if (data.status === 'REQUEST_DENIED') {
-        console.error('API access denied:', data.error_message);
         return res.status(403).json({
           error: "Google Maps API access denied",
           details: data.error_message,
@@ -99,7 +105,6 @@ export async function registerRoutes(app: Express) {
       if (data.status === 'OK' && data.results?.[0]) {
         res.json(data);
       } else {
-        console.error('Geocoding error:', data.status, data.error_message);
         res.status(404).json({
           error: "Location not found",
           details: data.status,
@@ -110,7 +115,7 @@ export async function registerRoutes(app: Express) {
       console.error('Geocoding error:', error);
       res.status(500).json({
         error: "Failed to geocode",
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   }));
