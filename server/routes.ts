@@ -40,8 +40,31 @@ export async function registerRoutes(app: Express) {
       return res.status(500).json({ error: "API key not configured" });
     }
 
-    console.log('Sending API key to client');
-    res.json({ apiKey });
+    // Test the API key with a simple geocoding request
+    fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=Sofia,Bulgaria&key=${apiKey}`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('API Key test response:', data);
+
+        if (data.status === 'REQUEST_DENIED') {
+          console.error('API Key test failed:', data.error_message);
+          return res.status(400).json({ 
+            error: "API key validation failed",
+            details: data.error_message,
+            hint: "Please check API key restrictions and enabled services in Google Cloud Console"
+          });
+        }
+
+        console.log('API Key test successful');
+        res.json({ apiKey });
+      })
+      .catch(error => {
+        console.error('API Key test error:', error);
+        res.status(500).json({ 
+          error: "Failed to validate API key",
+          details: error.message
+        });
+      });
   });
 
   // Update Google Maps API config
@@ -106,6 +129,15 @@ export async function registerRoutes(app: Express) {
       const data = await response.json();
 
       console.log('Geocoding response:', data);
+
+      if (data.status === 'REQUEST_DENIED') {
+        console.error('API access denied:', data.error_message);
+        return res.status(403).json({
+          error: "Google Maps API access denied",
+          details: data.error_message,
+          hint: "Please verify API key configuration and enabled services"
+        });
+      }
 
       if (data.status === 'OK' && data.results?.[0]) {
         res.json(data);
