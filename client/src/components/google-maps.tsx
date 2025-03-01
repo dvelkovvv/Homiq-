@@ -71,7 +71,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
             lng: place.geometry.location.lng()
           };
 
-          // Verify if location is in Bulgaria
+          // Проверка дали локацията е в България
           if (newLocation.lat < 41 || newLocation.lat > 44 || 
               newLocation.lng < 22 || newLocation.lng > 29) {
             toast({
@@ -84,10 +84,14 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
 
           setCenter(newLocation);
           onLocationSelect?.(newLocation);
-          if (place.formatted_address) {
-            onAddressSelect?.(place.formatted_address);
-          }
 
+          // Обработка на адреса
+          const formattedAddress = place.formatted_address || 
+            place.name || 
+            `${place.geometry.location.lat()}, ${place.geometry.location.lng()}`;
+          onAddressSelect?.(formattedAddress);
+
+          // Настройка на изгледа на картата
           if (mapRef.current) {
             if (place.geometry.viewport) {
               mapRef.current.fitBounds(place.geometry.viewport);
@@ -96,6 +100,11 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
               mapRef.current.setZoom(17);
             }
           }
+
+          toast({
+            title: "Адресът е намерен",
+            description: "Локацията е успешно обновена",
+          });
         }
       }
     }
@@ -129,7 +138,8 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     try {
       const { data } = await axios.get('/api/geocode', {
         params: {
-          latlng: `${location.lat},${location.lng}`
+          latlng: `${location.lat},${location.lng}`,
+          language: 'bg'
         }
       });
 
@@ -162,7 +172,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
         >
           <input
             type="text"
-            placeholder="Търсете адрес..."
+            placeholder="Търсете адрес в България..."
             className="absolute top-2 left-2 right-2 z-10 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </StandaloneSearchBox>
@@ -173,7 +183,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           zoom={12}
           onLoad={map => {
             mapRef.current = map;
-            // Set bounds restriction
+            // Ограничаване на картата до България
             map.setOptions({
               restriction: {
                 latLngBounds: {
@@ -183,6 +193,9 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
                   west: 22.0
                 },
                 strictBounds: true
+              },
+              componentRestrictions: {
+                country: "BG"
               }
             });
           }}
