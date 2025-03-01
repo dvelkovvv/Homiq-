@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { MapPin, Loader2, Building2, School, Hospital, Trees, CheckCircle, ArrowRight } from "lucide-react";
+import { MapPin, Loader2, Building2, School, Hospital, Trees, CheckCircle, ArrowRight, Search } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from 'axios';
@@ -12,14 +14,69 @@ interface AddressSearchProps {
 }
 
 export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchProps) {
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [analysis, setAnalysis] = useState<any>(null);
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Въведете адрес или идентификационен номер",
+        description: "Моля, въведете адрес или идентификационен номер за търсене",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // First try to search by property ID
+      if (searchQuery.match(/^\d+$/)) {
+        const { data } = await axios.get(`/api/properties/${searchQuery}`);
+        if (data) {
+          setSelectedLocation(data.location);
+          setSelectedAddress(data.address);
+          await fetchLocationAnalysis(data.location);
+          return;
+        }
+      }
+
+      // If not found by ID or not a number, search by address
+      const { data } = await axios.get('/api/geocode', {
+        params: { address: searchQuery }
+      });
+
+      if (!data.results?.[0]) {
+        throw new Error('Адресът не е намерен');
+      }
+
+      const location = data.results[0].geometry.location;
+      setSelectedLocation(location);
+      setSelectedAddress(data.results[0].formatted_address);
+      setAnalysis(data.analysis);
+      onLocationSelect?.(location);
+
+      toast({
+        title: "Адресът е намерен",
+        description: "Можете да коригирате позицията на маркера",
+      });
+
+    } catch (error) {
+      console.error('Error searching:', error);
+      toast({
+        title: "Грешка при търсене",
+        description: error instanceof Error ? error.message : "Не успяхме да намерим имота",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const fetchLocationAnalysis = async (location: { lat: number; lng: number }) => {
     try {
-      setIsSearching(true);
       const { data } = await axios.get('/api/geocode', {
         params: { 
           latlng: `${location.lat},${location.lng}`,
@@ -38,11 +95,9 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       console.error('Error analyzing location:', error);
       toast({
         title: "Грешка при анализ",
-        description: error instanceof Error ? error.message : "Не успяхме да анализираме локацията",
+        description: "Не успяхме да анализираме локацията",
         variant: "destructive"
       });
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -57,6 +112,52 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
   return (
     <div className="space-y-6">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Input
+            placeholder="Въведете адрес или идентификационен номер..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="pr-10"
+          />
+          {selectedLocation && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </motion.div>
+          )}
+        </div>
+        <Button 
+          onClick={handleSearch}
+          disabled={isSearching}
+          className="min-w-[120px]"
+        >
+          {isSearching ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Търсене...
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
+              Търси
+            </motion.div>
+          )}
+        </Button>
+      </div>
+
       <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
         <div className="h-[400px] relative">
           <GoogleMaps
