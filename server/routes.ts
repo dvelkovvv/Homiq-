@@ -65,8 +65,12 @@ export async function registerRoutes(app: Express) {
       }
 
       const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
+      console.log('Geocoding request URL:', url); // Debug log
+
       const response = await fetch(url);
       const data = await response.json();
+
+      console.log('Geocoding response:', data); // Debug log
 
       if (data.status === 'OK' && data.results?.[0]) {
         res.json(data);
@@ -171,7 +175,7 @@ export async function registerRoutes(app: Express) {
           }
         });
       }
-      
+
       try {
         // Get nearby metro stations and parks
         const [metroData, parksData] = await Promise.all([
@@ -188,7 +192,7 @@ export async function registerRoutes(app: Express) {
             language: 'bg'
           })
         ]);
-        
+
         // Calculate metro distance if any station found
         let metroDistance = null;
         if (metroData.results?.[0]) {
@@ -199,14 +203,14 @@ export async function registerRoutes(app: Express) {
             station.geometry.location.lng
           );
         }
-        
+
         // Calculate price range based on location analysis
         const priceRange = calculatePriceRange(
           metroDistance,
           parksData.results.length,
           result.data.area
         );
-        
+
         // Create property with analysis data
         const property = {
           id: propertyIdCounter++,
@@ -216,7 +220,7 @@ export async function registerRoutes(app: Express) {
           price_range: priceRange
         };
         properties.push(property);
-        
+
         res.status(201).json({
           ...property,
           analysis: {
