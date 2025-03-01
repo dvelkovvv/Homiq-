@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Search, MapPin, Loader2, Building2 } from "lucide-react";
+import { Search, MapPin, Loader2, Building2, School, Hospital, Tree, CheckCircle, ArrowRight } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from 'axios';
 
 interface AddressSearchProps {
@@ -61,88 +62,164 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex gap-2">
-        <Input
-          placeholder="Въведете адрес..."
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1"
-        />
+        <div className="relative flex-1">
+          <Input
+            placeholder="Въведете адрес..."
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="pr-10"
+          />
+          {selectedLocation && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </motion.div>
+          )}
+        </div>
         <Button 
           onClick={handleSearch}
           disabled={isSearching}
+          className="min-w-[120px]"
         >
           {isSearching ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
               Търсене...
-            </>
+            </motion.div>
           ) : (
-            <>
-              <Search className="mr-2 h-4 w-4" />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
               Търси
-            </>
+            </motion.div>
           )}
         </Button>
       </div>
 
-      <div className="h-[400px] rounded-lg border overflow-hidden">
-        <GoogleMaps
-          onLocationSelect={(location) => {
-            setSelectedLocation(location);
-            onLocationSelect?.(location);
-          }}
-          initialLocation={selectedLocation || undefined}
-        />
+      <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
+        <div className="h-[400px]">
+          <GoogleMaps
+            onLocationSelect={(location) => {
+              setSelectedLocation(location);
+              onLocationSelect?.(location);
+            }}
+            initialLocation={selectedLocation || undefined}
+          />
+        </div>
       </div>
 
-      {analysis && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3 mb-4">
-              <MapPin className="h-5 w-5 text-primary mt-1" />
-              <div>
-                <h3 className="font-medium">Намерен адрес</h3>
-                <p className="text-sm text-muted-foreground">{analysis.address}</p>
-              </div>
-            </div>
+      <AnimatePresence>
+        {analysis && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-start gap-3 mb-6"
+                >
+                  <MapPin className="h-5 w-5 text-primary mt-1" />
+                  <div>
+                    <h3 className="font-medium">Намерен адрес</h3>
+                    <p className="text-sm text-muted-foreground">{analysis.address}</p>
+                  </div>
+                </motion.div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              {analysis.nearby.metro && (
-                <div className="p-4 rounded-lg border">
-                  <Building2 className="h-5 w-5 text-primary mb-2" />
-                  <h4 className="font-medium">Метро станция</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {analysis.nearby.metro.name}
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  {analysis.nearby.metro && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
+                    >
+                      <Building2 className="h-5 w-5 text-primary mb-2" />
+                      <h4 className="font-medium">Метро</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {analysis.nearby.metro.name}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
+                  >
+                    <Tree className="h-5 w-5 text-green-500 mb-2" />
+                    <h4 className="font-medium">Паркове</h4>
+                    <p className="text-2xl font-bold">{analysis.nearby.parks}</p>
+                    <p className="text-sm text-muted-foreground">в близост</p>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
+                  >
+                    <School className="h-5 w-5 text-blue-500 mb-2" />
+                    <h4 className="font-medium">Училища</h4>
+                    <p className="text-2xl font-bold">{analysis.nearby.schools}</p>
+                    <p className="text-sm text-muted-foreground">в близост</p>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="p-4 rounded-lg border bg-white hover:shadow-md transition-shadow"
+                  >
+                    <Hospital className="h-5 w-5 text-red-500 mb-2" />
+                    <h4 className="font-medium">Болници</h4>
+                    <p className="text-2xl font-bold">{analysis.nearby.hospitals || 0}</p>
+                    <p className="text-sm text-muted-foreground">в близост</p>
+                  </motion.div>
                 </div>
-              )}
-
-              <div className="p-4 rounded-lg border">
-                <h4 className="font-medium">Паркове наблизо</h4>
-                <p className="text-2xl font-bold">{analysis.nearby.parks}</p>
-              </div>
-
-              <div className="p-4 rounded-lg border">
-                <h4 className="font-medium">Училища наблизо</h4>
-                <p className="text-2xl font-bold">{analysis.nearby.schools}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {selectedLocation && (
-        <div className="flex justify-end">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-end"
+        >
           <Button 
             onClick={() => onContinue?.()}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary hover:bg-primary/90 gap-2"
           >
             Продължи
+            <motion.div
+              animate={{ x: [0, 5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </motion.div>
           </Button>
-        </div>
+        </motion.div>
       )}
     </div>
   );
