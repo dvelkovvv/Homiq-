@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
-import { Loader2, Search, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 import axios from 'axios';
 
 const containerStyle = {
@@ -24,10 +23,8 @@ interface GoogleMapsProps {
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadApiKey = async () => {
@@ -70,58 +67,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   }, [initialLocation]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      toast({
-        title: "Въведете адрес",
-        description: "Моля, въведете адрес за търсене",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSearching(true);
-    setError(null);
-    try {
-      console.log('Searching for address:', searchQuery);
-      const { data } = await axios.get('/api/geocode', {
-        params: {
-          address: `${searchQuery}, Bulgaria`,
-          language: 'bg'
-        }
-      });
-
-      if (data.error) {
-        throw new Error(data.details || data.error);
-      }
-
-      if (!data.results?.[0]) {
-        throw new Error('Адресът не е намерен');
-      }
-
-      const location = data.results[0].geometry.location;
-      setCenter(location);
-      onLocationSelect?.(location);
-      onAddressSelect?.(data.results[0].formatted_address);
-
-      toast({
-        title: "Адресът е намерен",
-        description: "Можете да коригирате позицията на маркера",
-      });
-    } catch (error) {
-      console.error('Error searching:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setError(errorMessage);
-      toast({
-        title: "Грешка при търсене",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
@@ -140,7 +85,15 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           <AlertCircle className="h-8 w-8 text-destructive" />
           <div>
             <p className="font-medium text-destructive">Грешка при зареждане на картата</p>
-            <p className="text-sm text-muted-foreground mt-1">{error || 'Google Maps API ключът не е конфигуриран правилно'}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error || 'Google Maps API ключът не е конфигуриран правилно'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Моля, проверете дали:
+              1. API ключът е правилен
+              2. JavaScript Maps API е активиран
+              3. Домейнът е разрешен в конзолата
+            </p>
           </div>
         </div>
       </div>
@@ -148,30 +101,14 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
+    <LoadScript 
+      googleMapsApiKey={apiKey}
+      onError={(error) => {
+        console.error('Google Maps loading error:', error);
+        setError(`Error loading Google Maps: ${error.message}`);
+      }}
+    >
       <div className="relative h-full">
-        <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Търсете адрес в България..."
-            className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <Button 
-            onClick={handleSearch}
-            disabled={isSearching}
-            className="shrink-0"
-          >
-            {isSearching ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
