@@ -10,31 +10,12 @@ const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextF
   return Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Функция за изчисляване на разстояние
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const R = 6371e3; // Радиус на Земята в метри
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lng2 - lng1) * Math.PI / 180;
-
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) *
-    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
 export async function registerRoutes(app: Express) {
   // CORS middleware
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
     next();
   });
 
@@ -47,80 +28,104 @@ export async function registerRoutes(app: Express) {
     });
   });
 
-  // Търсене на адрес и анализ на локацията
-  app.get('/api/search-location', asyncHandler(async (req: Request, res: Response) => {
+  // Get Google Maps API config
+  app.get("/api/maps/config", (_req, res) => {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "API key not configured" });
+    }
+    res.json({ apiKey });
+  });
+
+  // Geocoding endpoint
+  app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
     const { address } = req.query;
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!address) {
-      return res.status(400).json({ error: "Адресът е задължителен" });
+      return res.status(400).json({ error: "Address parameter is required" });
     }
 
     try {
-      // Geocoding за координати
-      const geoResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}&language=bg`
-      );
-      const geoData = await geoResponse.json();
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?${new URLSearchParams({
+        address: address as string,
+        key: apiKey,
+        language: 'bg',
+        components: 'country:BG'
+      })}`;
 
-      if (!geoData.results?.[0]) {
-        return res.status(404).json({ error: 'Адресът не е намерен' });
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        // Get location details
+        const location = data.results[0].geometry.location;
+        const formattedAddress = data.results[0].formatted_address;
+
+        // Search for nearby places
+        const [metroStations, parks, schools] = await Promise.all([
+          getNearbyPlaces(location, 'subway_station', apiKey),
+          getNearbyPlaces(location, 'park', apiKey),
+          getNearbyPlaces(location, 'school', apiKey),
+        ]);
+
+        const analysis = {
+          address: formattedAddress,
+          location: location,
+          nearby: {
+            metro: metroStations.results?.[0],
+            parks: parks.results?.length || 0,
+            schools: schools.results?.length || 0,
+          }
+        };
+
+        res.json({
+          results: data.results,
+          analysis
+        });
+      } else {
+        res.status(404).json({
+          error: "Address not found",
+          details: data.status
+        });
       }
-
-      const location = geoData.results[0].geometry.location;
-      const { lat, lng } = location;
-
-      // Търсене на близки обекти
-      const searchTypes = ['subway_station', 'park', 'school', 'hospital'];
-      const placesPromises = searchTypes.map(type =>
-        fetch(
-          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=${type}&key=${apiKey}&language=bg`
-        ).then(res => res.json())
-      );
-
-      const placesResults = await Promise.all(placesPromises);
-      const [metroData, parksData, schoolsData, hospitalsData] = placesResults;
-
-      // Анализ на данните
-      const metro = metroData.results?.[0];
-      const metroDistance = metro ? calculateDistance(
-        lat, lng,
-        metro.geometry.location.lat,
-        metro.geometry.location.lng
-      ) : null;
-
-      const analysis = {
-        address: geoData.results[0].formatted_address,
-        location: { lat, lng },
-        metro: metro ? {
-          name: metro.name,
-          distance: Math.round(metroDistance)
-        } : null,
-        parks: parksData.results?.length || 0,
-        schools: schoolsData.results?.length || 0,
-        hospitals: hospitalsData.results?.length || 0
-      };
-
-      // Запазване в in-memory storage
-      const property = {
-        id: propertyIdCounter++,
-        ...analysis
-      };
-      properties.push(property);
-
-      res.json({
-        property_id: property.id,
-        analysis
-      });
-
-    } catch (err) {
-      console.error('Error analyzing location:', err);
+    } catch (error) {
+      console.error('Geocoding error:', error);
       res.status(500).json({
-        error: "Грешка при анализ на локацията",
-        details: err instanceof Error ? err.message : 'Unknown error'
+        error: "Failed to geocode address",
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }));
+
+  // Save property data
+  app.post("/api/properties", asyncHandler(async (req: Request, res: Response) => {
+    const { address, location, area } = req.body;
+
+    if (!address || !location || !area) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const property = {
+      id: propertyIdCounter++,
+      address,
+      location,
+      area,
+      createdAt: new Date().toISOString()
+    };
+
+    properties.push(property);
+    res.status(201).json(property);
+  }));
+
+  // Get property by ID
+  app.get("/api/properties/:id", (req, res) => {
+    const property = properties.find(p => p.id === parseInt(req.params.id));
+    if (!property) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    res.json(property);
+  });
 
   // Вземане на всички имоти
   app.get('/api/properties', (_req, res) => {
@@ -145,45 +150,6 @@ export async function registerRoutes(app: Express) {
     res.json({ apiKey });
   });
 
-  // Geocoding endpoint
-  app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
-    const { address } = req.query;
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-
-    if (!address) {
-      return res.status(400).json({ error: "Address parameter is required" });
-    }
-
-    try {
-      console.log('Geocoding address:', address);
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?${new URLSearchParams({
-        address: address as string,
-        key: apiKey,
-        language: 'bg',
-        components: 'country:BG'
-      })}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      console.log('Geocoding response:', data);
-
-      if (data.status === 'OK' && data.results && data.results.length > 0) {
-        res.json(data);
-      } else {
-        res.status(404).json({
-          error: "Address not found",
-          details: data.status
-        });
-      }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      res.status(500).json({
-        error: "Failed to geocode address",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }));
 
   // Places nearby search endpoint
   app.get("/api/places/nearby", asyncHandler(async (req: Request, res: Response) => {
@@ -227,78 +193,78 @@ export async function registerRoutes(app: Express) {
 
   // Create property with analysis
   app.post("/api/properties", asyncHandler(async (req: Request, res: Response) => {
-    const result = insertPropertySchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({
-        error: {
-          message: "Невалидни данни",
-          details: result.error.issues
-        }
-      });
-    }
-
-    try {
-      // Get nearby metro stations and parks
-      const [metroData, parksData] = await Promise.all([
-        proxyGoogleMapsRequest('place/nearbysearch/json', {
-          location: `${result.data.location.lat},${result.data.location.lng}`,
-          type: 'subway_station',
-          radius: '1500',
-          language: 'bg'
-        }),
-        proxyGoogleMapsRequest('place/nearbysearch/json', {
-          location: `${result.data.location.lat},${result.data.location.lng}`,
-          type: 'park',
-          radius: '1000',
-          language: 'bg'
-        })
-      ]);
-
-      // Calculate metro distance if any station found
-      let metroDistance = null;
-      if (metroData.results?.[0]) {
-        const station = metroData.results[0];
-        metroDistance = calculateDistance(
-          result.data.location.lat, result.data.location.lng,
-          station.geometry.location.lat,
-          station.geometry.location.lng
-        );
+      const result = insertPropertySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: {
+            message: "Невалидни данни",
+            details: result.error.issues
+          }
+        });
       }
-
-      // Calculate price range based on location analysis
-      const priceRange = calculatePriceRange(
-        metroDistance,
-        parksData.results.length,
-        result.data.area
-      );
-
-      // Create property with analysis data
-      const property = {
-        id: propertyIdCounter++,
-        ...result.data,
-        metro_distance: metroDistance,
-        green_zones: parksData.results.length,
-        price_range: priceRange
-      };
-      properties.push(property);
-
-      res.status(201).json({
-        ...property,
-        analysis: {
-          metro_stations: metroData.results.length,
-          parks: parksData.results.length,
-          nearest_metro: metroData.results[0]?.name,
-          nearest_park: parksData.results[0]?.name,
-          price_range: priceRange
+      
+      try {
+        // Get nearby metro stations and parks
+        const [metroData, parksData] = await Promise.all([
+          proxyGoogleMapsRequest('place/nearbysearch/json', {
+            location: `${result.data.location.lat},${result.data.location.lng}`,
+            type: 'subway_station',
+            radius: '1500',
+            language: 'bg'
+          }),
+          proxyGoogleMapsRequest('place/nearbysearch/json', {
+            location: `${result.data.location.lat},${result.data.location.lng}`,
+            type: 'park',
+            radius: '1000',
+            language: 'bg'
+          })
+        ]);
+        
+        // Calculate metro distance if any station found
+        let metroDistance = null;
+        if (metroData.results?.[0]) {
+          const station = metroData.results[0];
+          metroDistance = calculateDistance(
+            result.data.location.lat, result.data.location.lng,
+            station.geometry.location.lat,
+            station.geometry.location.lng
+          );
         }
-      });
-    } catch (error) {
-      res.status(500).json({
-        error: "Failed to create property",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }));
+        
+        // Calculate price range based on location analysis
+        const priceRange = calculatePriceRange(
+          metroDistance,
+          parksData.results.length,
+          result.data.area
+        );
+        
+        // Create property with analysis data
+        const property = {
+          id: propertyIdCounter++,
+          ...result.data,
+          metro_distance: metroDistance,
+          green_zones: parksData.results.length,
+          price_range: priceRange
+        };
+        properties.push(property);
+        
+        res.status(201).json({
+          ...property,
+          analysis: {
+            metro_stations: metroData.results.length,
+            parks: parksData.results.length,
+            nearest_metro: metroData.results[0]?.name,
+            nearest_park: parksData.results[0]?.name,
+            price_range: priceRange
+          }
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to create property",
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }));
 
   // Get property by ID
   app.get("/api/properties/:id", asyncHandler(async (req: Request, res: Response) => {
@@ -436,6 +402,35 @@ export async function registerRoutes(app: Express) {
     }
 
     return data;
+  }
+
+  // Функция за изчисляване на разстояние
+  function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const R = 6371e3; // Радиус на Земята в метри
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+  async function getNearbyPlaces(location: { lat: number; lng: number }, type: string, apiKey: string) {
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${new URLSearchParams({
+      location: `${location.lat},${location.lng}`,
+      radius: '2000',
+      type,
+      language: 'bg',
+      key: apiKey
+    })}`;
+
+    const response = await fetch(url);
+    return await response.json();
   }
 
   const httpServer = createServer(app);

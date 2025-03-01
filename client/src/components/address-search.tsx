@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Search, Loader2 } from "lucide-react";
+import { Search, MapPin, Loader2, Building2 } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
 import axios from 'axios';
 
@@ -15,6 +16,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
   const [address, setAddress] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [analysis, setAnalysis] = useState<any>(null);
 
   const handleSearch = async () => {
     if (!address.trim()) {
@@ -28,23 +30,17 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
     setIsSearching(true);
     try {
-      console.log('Searching for address:', address);
       const { data } = await axios.get('/api/geocode', {
         params: { address }
       });
-
-      console.log('Got geocoding response:', data);
 
       if (!data.results?.[0]) {
         throw new Error('Адресът не е намерен');
       }
 
-      const location = {
-        lat: data.results[0].geometry.location.lat,
-        lng: data.results[0].geometry.location.lng
-      };
-
+      const location = data.results[0].geometry.location;
       setSelectedLocation(location);
+      setAnalysis(data.analysis);
       onLocationSelect?.(location);
 
       toast({
@@ -71,8 +67,8 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
           placeholder="Въведете адрес..."
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          className="flex-1"
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          className="flex-1"
         />
         <Button 
           onClick={handleSearch}
@@ -102,9 +98,48 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
         />
       </div>
 
+      {analysis && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3 mb-4">
+              <MapPin className="h-5 w-5 text-primary mt-1" />
+              <div>
+                <h3 className="font-medium">Намерен адрес</h3>
+                <p className="text-sm text-muted-foreground">{analysis.address}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {analysis.nearby.metro && (
+                <div className="p-4 rounded-lg border">
+                  <Building2 className="h-5 w-5 text-primary mb-2" />
+                  <h4 className="font-medium">Метро станция</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {analysis.nearby.metro.name}
+                  </p>
+                </div>
+              )}
+
+              <div className="p-4 rounded-lg border">
+                <h4 className="font-medium">Паркове наблизо</h4>
+                <p className="text-2xl font-bold">{analysis.nearby.parks}</p>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <h4 className="font-medium">Училища наблизо</h4>
+                <p className="text-2xl font-bold">{analysis.nearby.schools}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {selectedLocation && (
         <div className="flex justify-end">
-          <Button onClick={() => onContinue?.()}>
+          <Button 
+            onClick={() => onContinue?.()}
+            className="bg-primary hover:bg-primary/90"
+          >
             Продължи
           </Button>
         </div>
