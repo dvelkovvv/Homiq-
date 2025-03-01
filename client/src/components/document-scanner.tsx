@@ -22,6 +22,11 @@ interface ExtractedData {
   notaryNumber?: string;
   documentDate?: string;
   taxAssessmentValue?: number;
+  boundaries?: string[];
+  purpose?: string;
+  builtUpArea?: number;
+  totalArea?: number;
+  commonParts?: string;
 }
 
 export function DocumentScanner({ onScanComplete, expectedType }: DocumentScannerProps) {
@@ -42,62 +47,97 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const extractDocumentData = (text: string, type: string): ExtractedData => {
     const data: ExtractedData = {};
 
-    // Common patterns
-    const areaPattern = /(\d+(?:\.\d+)?)\s*(?:кв\.м|кв\.метра|квадратни метра)/i;
-    const yearPattern = /построена?(?:\s+през)?\s+(\d{4})/i;
-    const pricePattern = /цена(?:\s+от)?\s+(\d+(?:\s*\d+)*)\s*(?:лева|лв)/i;
-    const roomsPattern = /(\d+)\s*(?:стаи|стаен)/i;
-    const floorPattern = /(?:ет\.|етаж)\s*(\d+)(?:\s+от\s+(\d+))?/i;
-    const cadastralPattern = /(?:кадастрален номер|идентификатор)[\s:]+([0-9\.]+)/i;
+    // Common patterns with improved regex
+    const patterns = {
+      area: /(?:застроена|разгъната|обща|площ)[^\d]*(\d+(?:[,.]\d+)?)\s*(?:кв\.м|кв\.метра|квадратни метра)/gi,
+      year: /(?:построена?|завършен)[^\d]*(?:през\s+)?(\d{4})/i,
+      price: /(?:цена|стойност|оценка)[^\d]*(\d+(?:\s*\d+)*)[^\d]*(?:лева|лв|\.|$)/i,
+      rooms: /(\d+)(?:\s*(?:стаи|стаен|стайни|стайно))/i,
+      floor: /(?:ет\.|етаж|находящ[^\d]*на)\s*(\d+)(?:\s*[-]/\s*(\d+))?/i,
+      cadastral: /(?:кадастрален|идентификационен)[^\d\n]*(?:номер|№)?[^\d\n]*([0-9.]+)/i,
+      boundaries: /граничи\s*(?:със|с|на|при\s+съседи)[:;\s]+((?:[^,.]+,?\s*)+)/i,
+      purpose: /(?:предназначение|използва\s+се\s+за)[:\s]+([^,.;]+)/i
+    };
 
-    // Extract common data
-    const areaMatch = text.match(areaPattern);
-    if (areaMatch) {
-      data.squareMeters = parseFloat(areaMatch[1].replace(/\s/g, ''));
-    }
+    // Improved text preprocessing
+    const cleanText = text
+      .replace(/\s+/g, ' ')
+      .replace(/[_|]/g, '')
+      .trim();
 
-    const yearMatch = text.match(yearPattern);
-    if (yearMatch) {
-      data.constructionYear = parseInt(yearMatch[1]);
-    }
-
-    const priceMatch = text.match(pricePattern);
-    if (priceMatch) {
-      data.price = parseInt(priceMatch[1].replace(/\s/g, ''));
-    }
-
-    const roomsMatch = text.match(roomsPattern);
-    if (roomsMatch) {
-      data.rooms = parseInt(roomsMatch[1]);
-    }
-
-    const floorMatch = text.match(floorPattern);
-    if (floorMatch) {
-      data.floor = parseInt(floorMatch[1]);
-      if (floorMatch[2]) {
-        data.totalFloors = parseInt(floorMatch[2]);
+    // Extract data using patterns
+    for (const [key, pattern] of Object.entries(patterns)) {
+      const matches = cleanText.match(pattern);
+      if (matches) {
+        switch (key) {
+          case 'area':
+            // Handle multiple area matches
+            const areas = Array.from(cleanText.matchAll(pattern))
+              .map(m => parseFloat(m[1].replace(/\s/g, '').replace(',', '.')));
+            if (areas.length > 0) {
+              data.squareMeters = areas[0];
+              if (areas.length > 1) {
+                data.totalArea = areas[1];
+              }
+            }
+            break;
+          case 'year':
+            const year = parseInt(matches[1]);
+            if (year >= 1800 && year <= new Date().getFullYear()) {
+              data.constructionYear = year;
+            }
+            break;
+          case 'price':
+            data.price = parseInt(matches[1].replace(/\s/g, ''));
+            break;
+          case 'rooms':
+            data.rooms = parseInt(matches[1]);
+            break;
+          case 'floor':
+            data.floor = parseInt(matches[1]);
+            if (matches[2]) {
+              data.totalFloors = parseInt(matches[2]);
+            }
+            break;
+          case 'cadastral':
+            data.cadastralNumber = matches[1].trim();
+            break;
+          case 'boundaries':
+            data.boundaries = matches[1]
+              .split(/[,;]/)
+              .map(b => b.trim())
+              .filter(b => b.length > 0);
+            break;
+          case 'purpose':
+            data.purpose = matches[1].trim();
+            break;
+        }
       }
     }
 
-    const cadastralMatch = text.match(cadastralPattern);
-    if (cadastralMatch) {
-      data.cadastralNumber = cadastralMatch[1];
-    }
-
-    // Document-specific patterns
+    // Document-specific processing
     switch (type) {
       case 'notary_act':
-        const notaryNumberPattern = /акт[^\d]*(\d+)(?:\s*от\s*|\s+)(\d{2}\.\d{2}\.\d{4})/i;
-        const notaryMatch = text.match(notaryNumberPattern);
+        const notaryPattern = /акт\s*(?:№|номер)?\s*(\d+)(?:[^0-9]+(\d{2}[-.]\d{2}[-.](?:19|20)\d{2}))?/i;
+        const notaryMatch = cleanText.match(notaryPattern);
         if (notaryMatch) {
           data.notaryNumber = notaryMatch[1];
-          data.documentDate = notaryMatch[2];
+          if (notaryMatch[2]) {
+            data.documentDate = notaryMatch[2];
+          }
+        }
+
+        // Extract common parts information
+        const commonPartsPattern = /общи\s+части[^:]*:\s*([^.]+)/i;
+        const commonPartsMatch = cleanText.match(commonPartsPattern);
+        if (commonPartsMatch) {
+          data.commonParts = commonPartsMatch[1].trim();
         }
         break;
 
       case 'tax_assessment':
-        const taxValuePattern = /данъчна\s+оценка[^\d]*(\d+(?:\s*\d+)*)/i;
-        const taxMatch = text.match(taxValuePattern);
+        const taxPattern = /данъчна[^\d]*оценка[^\d]*(\d+(?:\s*\d+)*)/i;
+        const taxMatch = cleanText.match(taxPattern);
         if (taxMatch) {
           data.taxAssessmentValue = parseInt(taxMatch[1].replace(/\s/g, ''));
         }
@@ -180,11 +220,15 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         await worker.loadLanguage('bul');
         await worker.initialize('bul');
 
-        // Set specific OCR parameters for better recognition
+        // Оптимизирани параметри за по-добро разпознаване
         await worker.setParameters({
-          tessedit_char_whitelist: '0123456789.,абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ ',
-          tessedit_pageseg_mode: '1', // Automatic page segmentation with OSD
-          tessedit_ocr_engine_mode: '1', // Neural nets LSTM mode only
+          tessedit_char_whitelist: '0123456789.,абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ- ',
+          tessedit_pageseg_mode: '1',
+          tessedit_ocr_engine_mode: '1',
+          tessedit_do_invert: '0',
+          textord_heavy_nr: '1',
+          textord_min_linesize: '3',
+          preserve_interword_spaces: '1'
         });
 
         setProgress(70);
