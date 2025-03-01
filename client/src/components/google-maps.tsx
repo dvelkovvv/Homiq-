@@ -17,12 +17,11 @@ const defaultCenter = {
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   initialLocation?: { lat: number; lng: number };
-  defaultAddress?: string;
 }
 
 const libraries: ("places" | "geometry")[] = ["places", "geometry"];
 
-export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }: GoogleMapsProps) {
+export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +46,12 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
         setIsLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (initialLocation) {
+      setCenter(initialLocation);
+    }
+  }, [initialLocation]);
 
   if (isLoading || !apiKey) {
     return (
@@ -75,16 +80,28 @@ export function GoogleMaps({ onLocationSelect, initialLocation, defaultAddress }
           fullscreenControl: false,
           zoomControl: true,
         }}
+        onClick={(e) => {
+          if (e.latLng) {
+            const newLocation = {
+              lat: e.latLng.lat(),
+              lng: e.latLng.lng()
+            };
+            setCenter(newLocation);
+            onLocationSelect?.(newLocation);
+          }
+        }}
       >
         <Marker
           position={center}
           draggable={true}
           onDragEnd={(e) => {
             if (e.latLng) {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
-              setCenter({ lat, lng });
-              onLocationSelect?.({ lat, lng });
+              const newLocation = {
+                lat: e.latLng.lat(),
+                lng: e.latLng.lng()
+              };
+              setCenter(newLocation);
+              onLocationSelect?.(newLocation);
             }
           }}
         />

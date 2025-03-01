@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Search, MapPin, Loader2 } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { GoogleMaps } from "./google-maps";
 import axios from 'axios';
 
@@ -69,6 +69,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           className="flex-1"
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
         <Button 
           onClick={handleSearch}
@@ -90,7 +91,10 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
       <div className="h-[400px] rounded-lg border overflow-hidden">
         <GoogleMaps
-          onLocationSelect={onLocationSelect}
+          onLocationSelect={(location) => {
+            setSelectedLocation(location);
+            onLocationSelect?.(location);
+          }}
           initialLocation={selectedLocation || undefined}
         />
       </div>
@@ -105,18 +109,3 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
     </div>
   );
 }
-
-// Placeholder for GoogleMaps component - needs to be implemented separately
-export const GoogleMaps = ({ onLocationSelect, initialLocation }: { onLocationSelect?: (location: { lat: number; lng: number }) => void; initialLocation?: { lat: number; lng: number } }) => {
-  // Implement Google Maps logic here using the Google Maps API
-  return (
-    <div>
-      {/* Google Map would be rendered here */}
-      <p>Google Map will be rendered here.  Replace with actual Google Map implementation.</p>
-      {initialLocation && (
-        <p>Initial Location: Lat: {initialLocation.lat}, Lng: {initialLocation.lng}</p>
-      )}
-      <button onClick={() => onLocationSelect?.({ lat: 42.6977, lng: 23.3219 })}>Select Sofia</button>
-    </div>
-  );
-};
