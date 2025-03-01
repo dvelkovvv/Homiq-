@@ -32,59 +32,37 @@ export async function registerRoutes(app: Express) {
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      console.error("Google Maps API key not found in environment");
+      console.error("Google Maps API key not found");
       return res.status(500).json({ error: "API key not configured" });
     }
-    console.log("Providing Maps API key to client"); // Debug log
+    console.log("Providing Maps API key"); // Debug log
     res.json({ apiKey });
   });
 
   // Geocoding endpoint
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
-    const { address } = req.query;
+    const { address, latlng } = req.query;
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    if (!address) {
-      return res.status(400).json({ error: "Address parameter is required" });
+    if (!apiKey) {
+      throw new Error('Google Maps API key is not configured');
     }
 
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?${new URLSearchParams({
-        address: address as string,
-        key: apiKey,
-        language: 'bg',
-        components: 'country:BG'
-      })}`;
+      let url;
+      if (address) {
+        url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address as string)}&key=${apiKey}&language=bg&components=country:BG`;
+      } else if (latlng) {
+        url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng}&key=${apiKey}&language=bg`;
+      } else {
+        return res.status(400).json({ error: "Address or latlng parameter is required" });
+      }
 
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.status === 'OK' && data.results && data.results.length > 0) {
-        // Get location details
-        const location = data.results[0].geometry.location;
-        const formattedAddress = data.results[0].formatted_address;
-
-        // Search for nearby places
-        const [metroStations, parks, schools] = await Promise.all([
-          getNearbyPlaces(location, 'subway_station', apiKey),
-          getNearbyPlaces(location, 'park', apiKey),
-          getNearbyPlaces(location, 'school', apiKey),
-        ]);
-
-        const analysis = {
-          address: formattedAddress,
-          location: location,
-          nearby: {
-            metro: metroStations.results?.[0],
-            parks: parks.results?.length || 0,
-            schools: schools.results?.length || 0,
-          }
-        };
-
-        res.json({
-          results: data.results,
-          analysis
-        });
+        res.json(data);
       } else {
         res.status(404).json({
           error: "Address not found",
@@ -94,7 +72,7 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Geocoding error:', error);
       res.status(500).json({
-        error: "Failed to geocode address",
+        error: "Failed to geocode",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

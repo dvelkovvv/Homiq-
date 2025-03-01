@@ -20,107 +20,111 @@ interface GoogleMapsProps {
 }
 
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
 
   useEffect(() => {
+    // Fetch API key from server
     axios.get('/api/maps/config')
-      .then(({ data }) => {
-        if (!data.apiKey) {
-          throw new Error("API key not received from server");
+      .then(response => {
+        const apiKey = response.data.apiKey;
+        if (!apiKey) {
+          throw new Error('API key not received');
         }
-        setApiKey(data.apiKey);
 
-        // Load Google Maps API
+        // Load Google Maps script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
         script.async = true;
         script.defer = true;
-        script.onload = initializeMap;
         script.onerror = () => {
           setError("Грешка при зареждане на Google Maps API");
           setIsLoading(false);
         };
+
+        // Define the callback function
+        window.initMap = () => {
+          const mapElement = document.getElementById('map');
+          if (!mapElement) return;
+
+          const center = initialLocation || defaultCenter;
+
+          const map = new google.maps.Map(mapElement, {
+            zoom: 12,
+            center: center,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            zoomControl: true,
+          });
+
+          const marker = new google.maps.Marker({
+            position: center,
+            map: map,
+            draggable: true
+          });
+
+          mapRef.current = map;
+          markerRef.current = marker;
+
+          // Add click event listener to map
+          map.addListener('click', (e: google.maps.MapMouseEvent) => {
+            if (e.latLng) {
+              const location = {
+                lat: e.latLng.lat(),
+                lng: e.latLng.lng()
+              };
+              marker.setPosition(location);
+              onLocationSelect?.(location);
+              updateAddress(location);
+            }
+          });
+
+          // Add dragend event listener to marker
+          marker.addListener('dragend', () => {
+            const position = marker.getPosition();
+            if (position) {
+              const location = {
+                lat: position.lat(),
+                lng: position.lng()
+              };
+              onLocationSelect?.(location);
+              updateAddress(location);
+            }
+          });
+
+          setIsLoading(false);
+        };
+
         document.head.appendChild(script);
       })
       .catch(error => {
-        console.error('Error fetching Maps API key:', error);
+        console.error('Error loading Google Maps:', error);
         setError("Грешка при зареждане на картата");
         setIsLoading(false);
       });
-  }, []);
 
-  const initializeMap = () => {
-    try {
-      const mapElement = document.getElementById('map');
-      if (!mapElement) return;
-
-      const center = initialLocation || defaultCenter;
-
-      const map = new google.maps.Map(mapElement, {
-        zoom: 12,
-        center: center,
-        streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: false,
-        zoomControl: true,
-      });
-
-      const marker = new google.maps.Marker({
-        position: center,
-        map: map,
-        draggable: true
-      });
-
-      mapRef.current = map;
-      markerRef.current = marker;
-
-      // Add click event listener to map
-      map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.latLng) {
-          const location = {
-            lat: e.latLng.lat(),
-            lng: e.latLng.lng()
-          };
-          marker.setPosition(location);
-          onLocationSelect?.(location);
-          updateAddress(location);
-        }
-      });
-
-      // Add dragend event listener to marker
-      marker.addListener('dragend', () => {
-        const position = marker.getPosition();
-        if (position) {
-          const location = {
-            lat: position.lat(),
-            lng: position.lng()
-          };
-          onLocationSelect?.(location);
-          updateAddress(location);
-        }
-      });
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      setError("Грешка при инициализиране на картата");
-      setIsLoading(false);
-    }
-  };
+    return () => {
+      // Cleanup
+      delete window.initMap;
+    };
+  }, [initialLocation, onLocationSelect, onAddressSelect]);
 
   const updateAddress = async (location: { lat: number; lng: number }) => {
     try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await geocoder.geocode({ location });
-      if (result.results?.[0]) {
-        onAddressSelect?.(result.results[0].formatted_address);
+      const response = await axios.get('/api/geocode', {
+        params: {
+          latlng: `${location.lat},${location.lng}`
+        }
+      });
+
+      if (response.data.results?.[0]) {
+        onAddressSelect?.(response.data.results[0].formatted_address);
       }
     } catch (error) {
-      console.error('Geocoding error:', error);
+      console.error('Error getting address:', error);
     }
   };
 
@@ -146,4 +150,11 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return <div id="map" style={containerStyle} />;
+}
+
+// Add the initMap to the window object type
+declare global {
+  interface Window {
+    initMap: () => void;
+  }
 }
