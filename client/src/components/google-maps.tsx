@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -13,6 +13,8 @@ const defaultCenter = {
   lat: 42.6977,
   lng: 23.3219
 };
+
+const libraries: ("places" | "geometry")[] = ["places"];
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -76,14 +78,14 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
 
   const updateAddress = async (location: { lat: number; lng: number }) => {
     try {
-      const response = await axios.get('/api/geocode', {
+      const { data } = await axios.get('/api/geocode', {
         params: {
           latlng: `${location.lat},${location.lng}`
         }
       });
 
-      if (response.data.results?.[0]) {
-        onAddressSelect?.(response.data.results[0].formatted_address);
+      if (data.results?.[0]) {
+        onAddressSelect?.(data.results[0].formatted_address);
       }
     } catch (error) {
       console.error('Error getting address:', error);
@@ -102,7 +104,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
+    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}
@@ -124,10 +126,3 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     </LoadScript>
   );
 }
-
-// Add the initMap to the window object type - This is no longer needed with @react-google-maps/api
-//declare global {
-//  interface Window {
-//    initMap: () => void;
-//  }
-//}

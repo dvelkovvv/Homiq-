@@ -23,8 +23,8 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast({
-        title: "Въведете адрес или идентификационен номер",
-        description: "Моля, въведете адрес или идентификационен номер за търсене",
+        title: "Въведете адрес",
+        description: "Моля, въведете адрес за търсене",
         variant: "destructive"
       });
       return;
@@ -32,20 +32,11 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
     setIsSearching(true);
     try {
-      // First try to search by property ID
-      if (searchQuery.match(/^\d+$/)) {
-        const { data } = await axios.get(`/api/properties/${searchQuery}`);
-        if (data) {
-          setSelectedLocation(data.location);
-          setSelectedAddress(data.address);
-          await fetchLocationAnalysis(data.location);
-          return;
-        }
-      }
-
-      // If not found by ID or not a number, search by address
       const { data } = await axios.get('/api/geocode', {
-        params: { address: searchQuery }
+        params: {
+          address: `${searchQuery}, Bulgaria`,
+          language: 'bg'
+        }
       });
 
       if (!data.results?.[0]) {
@@ -55,19 +46,20 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       const location = data.results[0].geometry.location;
       setSelectedLocation(location);
       setSelectedAddress(data.results[0].formatted_address);
-      setAnalysis(data.analysis);
       onLocationSelect?.(location);
+
+      // Analyze location after successful search
+      await fetchLocationAnalysis(location);
 
       toast({
         title: "Адресът е намерен",
         description: "Можете да коригирате позицията на маркера",
       });
-
     } catch (error) {
       console.error('Error searching:', error);
       toast({
         title: "Грешка при търсене",
-        description: error instanceof Error ? error.message : "Не успяхме да намерим имота",
+        description: error instanceof Error ? error.message : "Не успяхме да намерим адреса",
         variant: "destructive"
       });
     } finally {
@@ -84,8 +76,25 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
         }
       });
 
-      setAnalysis(data.analysis);
-      onLocationSelect?.(location);
+      if (data.results?.[0]) {
+        setSelectedAddress(data.results[0].formatted_address);
+
+        // Fetch nearby places data
+        const nearbyData = await Promise.all([
+          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'subway_station' }}),
+          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'park' }}),
+          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'school' }})
+        ]);
+
+        setAnalysis({
+          nearby: {
+            metro: nearbyData[0].data.results?.[0],
+            parks: nearbyData[1].data.results?.length || 0,
+            schools: nearbyData[2].data.results?.length || 0,
+            hospitals: 0 // To be implemented
+          }
+        });
+      }
 
       toast({
         title: "Локацията е анализирана",
@@ -106,16 +115,12 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
     await fetchLocationAnalysis(location);
   };
 
-  const handleAddressSelect = (address: string) => {
-    setSelectedAddress(address);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Input
-            placeholder="Въведете адрес или идентификационен номер..."
+            placeholder="Въведете адрес..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -162,17 +167,9 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
         <div className="h-[400px] relative">
           <GoogleMaps
             onLocationSelect={handleLocationSelect}
-            onAddressSelect={handleAddressSelect}
+            onAddressSelect={setSelectedAddress}
             initialLocation={selectedLocation || undefined}
           />
-          {isSearching && (
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
-              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <p className="text-sm font-medium">Анализиране на локацията...</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -183,7 +180,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <Card className="overflow-hidden">
+            <Card>
               <CardContent className="p-6">
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -266,9 +263,9 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <button
+            <Button
               onClick={() => onContinue?.()}
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2"
             >
               Продължи
               <motion.div
@@ -277,7 +274,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
               >
                 <ArrowRight className="h-4 w-4" />
               </motion.div>
-            </button>
+            </Button>
           </motion.div>
         </motion.div>
       )}
