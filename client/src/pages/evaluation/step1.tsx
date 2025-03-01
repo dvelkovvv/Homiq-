@@ -34,7 +34,6 @@ const STEPS = [
 export default function Step1() {
   const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [addressValidated, setAddressValidated] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertPropertySchema),
@@ -51,15 +50,6 @@ export default function Step1() {
 
   const onSubmit = async (data: any) => {
     try {
-      if (!addressValidated) {
-        toast({
-          title: "Невалиден адрес",
-          description: "Моля, изберете адрес от картата",
-          variant: "destructive"
-        });
-        return;
-      }
-
       setIsSubmitting(true);
       localStorage.setItem('propertyData', JSON.stringify(data));
       localStorage.setItem('currentStep', '2');
@@ -157,7 +147,6 @@ export default function Step1() {
                             <AddressSearch
                               onLocationSelect={(location) => {
                                 form.setValue('location', location);
-                                setAddressValidated(true);
                               }}
                               onContinue={() => form.handleSubmit(onSubmit)()}
                             />
@@ -227,7 +216,7 @@ export default function Step1() {
                     </Link>
                     <Button
                       type="submit"
-                      disabled={isSubmitting || !addressValidated}
+                      disabled={isSubmitting}
                       className="bg-primary hover:bg-primary/90 gap-2"
                     >
                       Продължи
