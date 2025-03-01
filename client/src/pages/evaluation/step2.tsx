@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvaluationFormLayout } from "@/components/evaluation-form-layout";
-import { FileText, Image as ImageIcon, MapPin, CheckCircle, Info, Clock, Building2, ArrowRight, Upload, X } from "lucide-react";
+import { FileText, MapPin, CheckCircle, Info, Clock, Building2, ArrowRight, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DocumentScanner } from "@/components/document-scanner";
 import { FileUploadZone } from "@/components/file-upload-zone";
 import { motion, AnimatePresence } from "framer-motion";
+
+type EvaluationType = 'quick' | 'licensed';
 
 interface DocumentStatus {
   notary_act: boolean;
@@ -23,7 +25,7 @@ interface RoomPhoto {
 
 export default function Step2() {
   const [, setLocation] = useLocation();
-  const [evaluationType, setEvaluationType] = useState<'quick' | 'licensed'>('quick');
+  const [evaluationType, setEvaluationType] = useState<EvaluationType>('quick');
   const [documentsStatus, setDocumentsStatus] = useState<DocumentStatus>({
     notary_act: false,
     sketch: false,
@@ -122,7 +124,11 @@ export default function Step2() {
       onNext={handleContinue}
       nextLabel={evaluationType === 'licensed' ? 'Продължи със документите' : 'Продължи към оценка'}
     >
-      <Tabs value={evaluationType} onValueChange={(value: 'quick' | 'licensed') => setEvaluationType(value)} className="w-full">
+      <Tabs 
+        defaultValue={evaluationType} 
+        onValueChange={(value) => setEvaluationType(value as EvaluationType)} 
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-2 h-auto p-2 gap-2">
           <motion.div
             whileHover={{ scale: 1.02 }}
@@ -446,7 +452,6 @@ export default function Step2() {
               </motion.div>
             </CardContent>
           </Card>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

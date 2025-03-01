@@ -71,7 +71,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
             onAddressSelect?.(place.formatted_address);
           }
 
-          // Pan the map to show the selected location
           if (mapRef.current && place.geometry.viewport) {
             mapRef.current.fitBounds(place.geometry.viewport);
           } else if (mapRef.current) {
@@ -116,7 +115,9 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           mapContainerStyle={containerStyle}
           center={center}
           zoom={15}
-          onLoad={map => mapRef.current = map}
+          onLoad={map => {
+            mapRef.current = map;
+          }}
           options={{
             streetViewControl: false,
             mapTypeControl: false,
@@ -139,7 +140,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
               setCenter(newLocation);
               onLocationSelect?.(newLocation);
 
-              // Reverse geocode the clicked location
               const geocoder = new google.maps.Geocoder();
               geocoder.geocode(
                 { location: newLocation },
@@ -164,7 +164,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
                 setCenter(newLocation);
                 onLocationSelect?.(newLocation);
 
-                // Reverse geocode the dragged location
                 const geocoder = new google.maps.Geocoder();
                 geocoder.geocode(
                   { location: newLocation },
