@@ -14,9 +14,6 @@ const defaultCenter = {
   lng: 23.3219
 };
 
-// Specify the required libraries
-const libraries = ["places"] as const;
-
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   onAddressSelect?: (address: string) => void;
@@ -146,7 +143,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
+    <LoadScript googleMapsApiKey={apiKey}>
       <div className="relative h-full">
         <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
           <input
