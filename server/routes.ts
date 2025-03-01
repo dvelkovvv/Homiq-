@@ -72,7 +72,7 @@ export async function registerRoutes(app: Express) {
 
       // Търсене на близки обекти
       const searchTypes = ['subway_station', 'park', 'school', 'hospital'];
-      const placesPromises = searchTypes.map(type => 
+      const placesPromises = searchTypes.map(type =>
         fetch(
           `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=${type}&key=${apiKey}&language=bg`
         ).then(res => res.json())
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express) {
 
     } catch (err) {
       console.error('Error analyzing location:', err);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Грешка при анализ на локацията",
         details: err instanceof Error ? err.message : 'Unknown error'
       });
@@ -147,37 +147,38 @@ export async function registerRoutes(app: Express) {
 
   // Geocoding endpoint
   app.get("/api/geocode", asyncHandler(async (req: Request, res: Response) => {
-    const { address, latlng } = req.query;
+    const { address } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    if (!address && !latlng) {
-      return res.status(400).json({ error: "Either address or latlng parameter is required" });
+    if (!address) {
+      return res.status(400).json({ error: "Address parameter is required" });
     }
 
     try {
-      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-      if (!apiKey) {
-        throw new Error('Google Maps API key is not configured');
-      }
+      console.log('Geocoding address:', address);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?${new URLSearchParams({
-        ...(address ? { address: address as string } : { latlng: latlng as string }),
-        components: 'country:BG',
+        address: address as string,
+        key: apiKey,
         language: 'bg',
-        key: apiKey
+        components: 'country:BG'
       })}`;
 
       const response = await fetch(url);
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(`Google Maps API request failed: ${response.statusText}`);
-      }
+      console.log('Geocoding response:', data);
 
-      if (data.status !== 'OK') {
-        throw new Error(data.error_message || 'Google Maps API returned error');
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        res.json(data);
+      } else {
+        res.status(404).json({
+          error: "Address not found",
+          details: data.status
+        });
       }
-      res.json(data);
     } catch (error) {
-      res.status(500).json({ 
+      console.error('Geocoding error:', error);
+      res.status(500).json({
         error: "Failed to geocode address",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -217,7 +218,7 @@ export async function registerRoutes(app: Express) {
       }
       res.json(data);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to fetch nearby places",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -228,7 +229,7 @@ export async function registerRoutes(app: Express) {
   app.post("/api/properties", asyncHandler(async (req: Request, res: Response) => {
     const result = insertPropertySchema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: {
           message: "Невалидни данни",
           details: result.error.issues
@@ -292,7 +293,7 @@ export async function registerRoutes(app: Express) {
         }
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to create property",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -303,14 +304,14 @@ export async function registerRoutes(app: Express) {
   app.get("/api/properties/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: { message: "Invalid property ID" }
       });
     }
 
     const property = properties.find(p => p.id === id);
     if (!property) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: { message: "Property not found" }
       });
     }

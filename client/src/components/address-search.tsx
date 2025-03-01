@@ -28,9 +28,12 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
     setIsSearching(true);
     try {
+      console.log('Searching for address:', address);
       const { data } = await axios.get('/api/geocode', {
         params: { address }
       });
+
+      console.log('Got geocoding response:', data);
 
       if (!data.results?.[0]) {
         throw new Error('Адресът не е намерен');
@@ -53,7 +56,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       console.error('Error searching location:', error);
       toast({
         title: "Грешка при търсене",
-        description: "Не успяхме да намерим адреса",
+        description: error instanceof Error ? error.message : "Не успяхме да намерим адреса",
         variant: "destructive"
       });
     } finally {
