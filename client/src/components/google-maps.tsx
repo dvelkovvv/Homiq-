@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
-import { Loader2, Search, Key } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import axios from 'axios';
 
 const containerStyle = {
@@ -28,27 +26,33 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-  const [newApiKey, setNewApiKey] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('/api/maps/config')
-      .then(response => {
+    const loadApiKey = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get('/api/maps/config');
+
         if (!response.data.apiKey) {
-          setShowApiKeyDialog(true);
-          throw new Error('API key not received');
+          throw new Error('API key not configured');
         }
+
+        console.log('API Key loaded successfully');
         setApiKey(response.data.apiKey);
-      })
-      .catch(error => {
-        console.error('Error loading Maps API key:', error);
-        setShowApiKeyDialog(true);
+      } catch (error) {
+        console.error('Error loading API key:', error);
         toast({
           title: "Грешка при зареждане",
-          description: "Моля, въведете валиден Google Maps API ключ",
+          description: "Проблем при зареждане на Google Maps конфигурацията",
           variant: "destructive"
         });
-      });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadApiKey();
   }, []);
 
   useEffect(() => {
@@ -56,35 +60,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       setCenter(initialLocation);
     }
   }, [initialLocation]);
-
-  const handleApiKeySubmit = async () => {
-    if (!newApiKey.trim()) {
-      toast({
-        title: "Въведете API ключ",
-        description: "Моля, въведете валиден Google Maps API ключ",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const response = await axios.post('/api/maps/config', { apiKey: newApiKey });
-      if (response.data.success) {
-        setApiKey(newApiKey);
-        setShowApiKeyDialog(false);
-        toast({
-          title: "Успешно",
-          description: "API ключът е конфигуриран успешно",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Грешка",
-        description: "Неуспешно запазване на API ключа",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -98,12 +73,15 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
 
     setIsSearching(true);
     try {
+      console.log('Searching for address:', searchQuery);
       const { data } = await axios.get('/api/geocode', {
         params: {
           address: `${searchQuery}, Bulgaria`,
           language: 'bg'
         }
       });
+
+      console.log('Geocoding response:', data);
 
       if (!data.results?.[0]) {
         throw new Error('Адресът не е намерен');
@@ -171,7 +149,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   };
 
-  if (!apiKey && !showApiKeyDialog) {
+  if (isLoading) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
@@ -182,89 +160,71 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
+  if (!apiKey) {
+    return (
+      <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-sm text-muted-foreground">
+            Google Maps API ключът не е конфигуриран правилно
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Въведете Google Maps API ключ</DialogTitle>
-            <DialogDescription>
-              За да работи картата, е необходим валиден Google Maps API ключ.
-              Можете да го намерите в Google Cloud Console.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Въведете API ключ"
-                value={newApiKey}
-                onChange={(e) => setNewApiKey(e.target.value)}
-              />
-              <Button onClick={handleApiKeySubmit}>
-                <Key className="h-4 w-4 mr-2" />
-                Запази
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+    <LoadScript googleMapsApiKey={apiKey}>
+      <div className="relative h-full">
+        <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Търсете адрес в България..."
+            className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <Button 
+            onClick={handleSearch}
+            disabled={isSearching}
+            className="shrink-0"
+          >
+            {isSearching ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
 
-      {apiKey && (
-        <LoadScript googleMapsApiKey={apiKey}>
-          <div className="relative h-full">
-            <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Търсете адрес в България..."
-                className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <Button 
-                onClick={handleSearch}
-                disabled={isSearching}
-                className="shrink-0"
-              >
-                {isSearching ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={center}
-              zoom={12}
-              onClick={handleMapClick}
-              options={{
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false,
-                zoomControl: true,
-                restriction: {
-                  latLngBounds: {
-                    north: 44.2,
-                    south: 41.2,
-                    east: 29.0,
-                    west: 22.0
-                  },
-                  strictBounds: true
-                }
-              }}
-            >
-              <Marker
-                position={center}
-                draggable={true}
-                onDragEnd={handleMarkerDragEnd}
-              />
-            </GoogleMap>
-          </div>
-        </LoadScript>
-      )}
-    </>
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={center}
+          zoom={12}
+          onClick={handleMapClick}
+          options={{
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            zoomControl: true,
+            restriction: {
+              latLngBounds: {
+                north: 44.2,
+                south: 41.2,
+                east: 29.0,
+                west: 22.0
+              },
+              strictBounds: true
+            }
+          }}
+        >
+          <Marker
+            position={center}
+            draggable={true}
+            onDragEnd={handleMarkerDragEnd}
+          />
+        </GoogleMap>
+      </div>
+    </LoadScript>
   );
 }

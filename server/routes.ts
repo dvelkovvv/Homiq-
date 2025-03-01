@@ -31,6 +31,8 @@ export async function registerRoutes(app: Express) {
   // Get Google Maps API config
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    console.log('Fetching Maps API key, exists:', !!apiKey);
+
     if (!apiKey) {
       console.error("Google Maps API key not found");
       return res.status(500).json({ error: "API key not configured" });
@@ -71,10 +73,12 @@ export async function registerRoutes(app: Express) {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
+      console.error('Geocoding error: API key not configured');
       throw new Error('Google Maps API key is not configured');
     }
 
     if (!address && !latlng) {
+      console.error('Geocoding error: Missing parameters');
       return res.status(400).json({ error: "Address or latlng parameter is required" });
     }
 
@@ -92,19 +96,21 @@ export async function registerRoutes(app: Express) {
       }
 
       const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
-      console.log('Geocoding request URL:', url); // Debug log
+      console.log('Geocoding request URL:', url);
 
       const response = await fetch(url);
       const data = await response.json();
 
-      console.log('Geocoding response:', data); // Debug log
+      console.log('Geocoding response:', data);
 
       if (data.status === 'OK' && data.results?.[0]) {
         res.json(data);
       } else {
+        console.error('Geocoding error:', data.status, data.error_message);
         res.status(404).json({
           error: "Location not found",
-          details: data.status
+          details: data.status,
+          message: data.error_message
         });
       }
     } catch (error) {
