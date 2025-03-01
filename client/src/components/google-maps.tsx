@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -14,16 +14,6 @@ const defaultCenter = {
   lng: 23.3219
 };
 
-// София bounds
-const defaultBounds = {
-  north: 42.7731,
-  south: 42.6255,
-  east: 23.4341,
-  west: 23.1903,
-};
-
-const libraries: ("places")[] = ["places"];
-
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
   onAddressSelect?: (address: string) => void;
@@ -33,8 +23,11 @@ interface GoogleMapsProps {
 export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation }: GoogleMapsProps) {
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
-  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
+  const [searchInput, setSearchInput] = useState("");
   const mapRef = useRef<google.maps.Map | null>(null);
+  const searchBoxRef = useRef<HTMLInputElement | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
   useEffect(() => {
     axios.get('/api/maps/config')
@@ -60,53 +53,40 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   }, [initialLocation]);
 
-  const handlePlacesChanged = () => {
-    if (searchBoxRef.current) {
-      const places = searchBoxRef.current.getPlaces();
-      if (places && places.length > 0) {
-        const place = places[0];
-        if (place.geometry && place.geometry.location) {
-          const newLocation = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          };
+  const handleSearch = async () => {
+    if (!searchInput.trim()) return;
 
-          // Проверка дали локацията е в България
-          if (newLocation.lat < 41 || newLocation.lat > 44 || 
-              newLocation.lng < 22 || newLocation.lng > 29) {
-            toast({
-              title: "Невалидна локация",
-              description: "Моля, изберете адрес в България",
-              variant: "destructive"
-            });
-            return;
-          }
-
-          setCenter(newLocation);
-          onLocationSelect?.(newLocation);
-
-          // Обработка на адреса
-          const formattedAddress = place.formatted_address || 
-            place.name || 
-            `${place.geometry.location.lat()}, ${place.geometry.location.lng()}`;
-          onAddressSelect?.(formattedAddress);
-
-          // Настройка на изгледа на картата
-          if (mapRef.current) {
-            if (place.geometry.viewport) {
-              mapRef.current.fitBounds(place.geometry.viewport);
-            } else {
-              mapRef.current.setCenter(place.geometry.location);
-              mapRef.current.setZoom(17);
-            }
-          }
-
-          toast({
-            title: "Адресът е намерен",
-            description: "Локацията е успешно обновена",
-          });
+    try {
+      const { data } = await axios.get('/api/geocode', {
+        params: {
+          address: `${searchInput}, Bulgaria`,
+          language: 'bg'
         }
+      });
+
+      if (data.results?.[0]) {
+        const location = data.results[0].geometry.location;
+        setCenter(location);
+        onLocationSelect?.(location);
+        onAddressSelect?.(data.results[0].formatted_address);
+
+        if (mapRef.current) {
+          mapRef.current.setCenter(location);
+          mapRef.current.setZoom(17);
+        }
+
+        toast({
+          title: "Адресът е намерен",
+          description: "Локацията е успешно обновена",
+        });
       }
+    } catch (error) {
+      console.error('Error searching:', error);
+      toast({
+        title: "Грешка при търсене",
+        description: "Не успяхме да намерим адреса",
+        variant: "destructive"
+      });
     }
   };
 
@@ -163,19 +143,19 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
+    <LoadScript googleMapsApiKey={apiKey}>
       <div className="relative h-full">
-        <StandaloneSearchBox
-          onLoad={ref => searchBoxRef.current = ref}
-          onPlacesChanged={handlePlacesChanged}
-          bounds={defaultBounds}
-        >
+        <div className="absolute top-2 left-2 right-2 z-10 flex gap-2">
           <input
+            ref={searchBoxRef}
             type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Търсете адрес в България..."
-            className="absolute top-2 left-2 right-2 z-10 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 h-10 px-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
-        </StandaloneSearchBox>
+        </div>
 
         <GoogleMap
           mapContainerStyle={containerStyle}
@@ -183,7 +163,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
           zoom={12}
           onLoad={map => {
             mapRef.current = map;
-            // Ограничаване на картата до България
             map.setOptions({
               restriction: {
                 latLngBounds: {
@@ -193,9 +172,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
                   west: 22.0
                 },
                 strictBounds: true
-              },
-              componentRestrictions: {
-                country: "BG"
               }
             });
           }}
