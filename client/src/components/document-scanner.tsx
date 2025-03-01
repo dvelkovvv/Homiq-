@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createWorker } from 'tesseract.js';
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, X } from "lucide-react";
+import { Loader2, FileText, X, User, MapPin, Ruler, Hash } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 interface DocumentScannerProps {
   onScanComplete: (text: string, data: any) => void;
@@ -12,7 +13,9 @@ interface DocumentScannerProps {
 }
 
 interface ExtractedData {
+  owner?: string;
   squareMeters?: number;
+  address?: string;
   constructionYear?: number;
   price?: number;
   rooms?: number;
@@ -34,6 +37,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
 
   const getDocumentTypeName = (type: string): string => {
     const types: Record<string, string> = {
@@ -49,12 +53,14 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
 
     // Common patterns with improved regex
     const patterns = {
+      owner: /(?:собственик|притежател)[^:]*:\s*([^,.\n]+)/i,
       area: /(?:застроена|разгъната|обща|площ)[^\d]*(\d+(?:[,.]\d+)?)\s*(?:кв\.м|кв\.метра|квадратни метра)/gi,
+      address: /(?:адрес|находящ[^\n]*се[^\n]*в)[^:]*:\s*([^,.\n]+(?:[,.\n][^,.\n]+)*)/i,
+      cadastral: /(?:кадастрален|идентификационен)[^\d\n]*(?:номер|№)?[^\d\n]*([0-9.]+)/i,
       year: /(?:построена?|завършен)[^\d]*(?:през\s+)?(\d{4})/i,
       price: /(?:цена|стойност|оценка)[^\d]*(\d+(?:\s*\d+)*)[^\d]*(?:лева|лв|\.|$)/i,
       rooms: /(\d+)(?:\s*(?:стаи|стаен|стайни|стайно))/i,
       floor: /(?:ет\.|етаж|находящ)[^\d]*на\s*(\d+)(?:\s*[-]\s*(\d+))?/i,
-      cadastral: /(?:кадастрален|идентификационен)[^\d\n]*(?:номер|№)?[^\d\n]*([0-9.]+)/i,
       boundaries: /граничи\s*(?:със|с|на|при\s+съседи)[:;\s]+((?:[^,.]+,?\s*)+)/i,
       purpose: /(?:предназначение|използва\s+се\s+за)[:\s]+([^,.;]+)/i
     };
@@ -70,8 +76,13 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       const matches = cleanText.match(pattern);
       if (matches) {
         switch (key) {
+          case 'owner':
+            data.owner = matches[1].trim();
+            break;
+          case 'address':
+            data.address = matches[1].trim();
+            break;
           case 'area': {
-            // Handle multiple area matches
             const areas = Array.from(cleanText.matchAll(patterns.area))
               .map(m => parseFloat(m[1].replace(/\s/g, '').replace(',', '.')));
             if (areas.length > 0) {
@@ -117,37 +128,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       }
     }
 
-    // Document-specific processing
-    switch (docType) {
-      case 'notary_act': {
-        const notaryPattern = /акт\s*(?:№|номер)?\s*(\d+)(?:[^0-9]+(\d{2}[-.]\d{2}[-.](?:19|20)\d{2}))?/i;
-        const notaryMatch = cleanText.match(notaryPattern);
-        if (notaryMatch) {
-          data.notaryNumber = notaryMatch[1];
-          if (notaryMatch[2]) {
-            data.documentDate = notaryMatch[2];
-          }
-        }
-
-        // Extract common parts information
-        const commonPartsPattern = /общи\s+части[^:]*:\s*([^.]+)/i;
-        const commonPartsMatch = cleanText.match(commonPartsPattern);
-        if (commonPartsMatch) {
-          data.commonParts = commonPartsMatch[1].trim();
-        }
-        break;
-      }
-
-      case 'tax_assessment': {
-        const taxPattern = /данъчна[^\d]*оценка[^\d]*(\d+(?:\s*\d+)*)/i;
-        const taxMatch = cleanText.match(taxPattern);
-        if (taxMatch) {
-          data.taxAssessmentValue = parseInt(taxMatch[1].replace(/\s/g, ''));
-        }
-        break;
-      }
-    }
-
     return data;
   };
 
@@ -175,6 +155,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
     if (uploadedImage) {
       URL.revokeObjectURL(uploadedImage);
       setUploadedImage(null);
+      setExtractedData(null);
     }
   };
 
@@ -229,9 +210,6 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           tessedit_char_whitelist: '0123456789.,абвгдежзийклмнопрстуфхцчшщъьюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ- ',
           tessedit_pageseg_mode: '1',
           tessedit_ocr_engine_mode: '1',
-          tessedit_do_invert: '0',
-          textord_heavy_nr: '1',
-          textord_min_linesize: '3',
           preserve_interword_spaces: '1'
         });
 
@@ -244,15 +222,14 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
           throw new Error("Не беше открит достатъчно текст в документа. Моля, проверете качеството на изображението.");
         }
 
-        const extractedData = extractDocumentData(text.trim(), expectedType || '');
+        const data = extractDocumentData(text.trim(), expectedType || '');
+        setExtractedData(data);
 
-        const data = {
+        onScanComplete(text.trim(), {
           documentType: expectedType,
-          extractedData,
+          extractedData: data,
           text: text.trim()
-        };
-
-        onScanComplete(text.trim(), data);
+        });
 
         toast({
           title: "Успешно сканиране",
@@ -263,9 +240,7 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
         console.error('OCR Error:', error);
         toast({
           title: "Грешка при сканиране",
-          description: error instanceof Error 
-            ? error.message 
-            : "Възникна проблем при обработката на документа. Моля, проверете качеството на изображението и опитайте отново.",
+          description: error instanceof Error ? error.message : "Възникна проблем при обработката на документа",
           variant: "destructive"
         });
         handleRemoveImage();
@@ -326,23 +301,75 @@ export function DocumentScanner({ onScanComplete, expectedType }: DocumentScanne
       </div>
 
       {uploadedImage && (
-        <div className="relative aspect-video rounded-lg overflow-hidden group">
-          <img 
-            src={uploadedImage} 
-            alt="Качен документ" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
-              onClick={handleRemoveImage}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+        <>
+          <div className="relative aspect-video rounded-lg overflow-hidden group">
+            <img 
+              src={uploadedImage} 
+              alt="Качен документ" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleRemoveImage}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
+
+          {extractedData && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-lg border bg-muted/30"
+            >
+              <h3 className="font-medium mb-4">Извлечени данни:</h3>
+              <div className="space-y-3">
+                {expectedType === 'notary_act' && (
+                  <>
+                    {extractedData.owner && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Собственик: {extractedData.owner}</span>
+                      </div>
+                    )}
+                    {extractedData.address && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Адрес: {extractedData.address}</span>
+                      </div>
+                    )}
+                    {extractedData.squareMeters && (
+                      <div className="flex items-center gap-2">
+                        <Ruler className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Площ: {extractedData.squareMeters} кв.м</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {expectedType === 'sketch' && (
+                  <>
+                    {extractedData.cadastralNumber && (
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Идентификатор: {extractedData.cadastralNumber}</span>
+                      </div>
+                    )}
+                    {extractedData.squareMeters && (
+                      <div className="flex items-center gap-2">
+                        <Ruler className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Площ: {extractedData.squareMeters} кв.м</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </>
       )}
     </div>
   );
