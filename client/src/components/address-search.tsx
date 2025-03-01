@@ -32,7 +32,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
     setIsSearching(true);
     try {
-      const { data } = await axios.get('/api/geocode', {
+      const { data } = await axios.get('api/geocode', {
         params: {
           address: `${searchQuery}, Bulgaria`,
           language: 'bg'
@@ -71,7 +71,7 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
       setIsSearching(true);
 
       // Get address from coordinates
-      const { data } = await axios.get('/api/geocode', {
+      const { data } = await axios.get('api/geocode', {
         params: {
           latlng: `${location.lat},${location.lng}`,
           language: 'bg'
@@ -83,9 +83,9 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
         // Fetch nearby places data
         const nearbyData = await Promise.all([
-          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'subway_station' }}),
-          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'park' }}),
-          axios.get('/api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'school' }})
+          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'subway_station' }}),
+          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'park' }}),
+          axios.get('api/places/nearby', { params: { location: `${location.lat},${location.lng}`, type: 'school' }})
         ]);
 
         setAnalysis({
