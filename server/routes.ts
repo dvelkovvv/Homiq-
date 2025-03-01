@@ -31,12 +31,16 @@ export async function registerRoutes(app: Express) {
   // Get Google Maps API config
   app.get("/api/maps/config", (_req, res) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    console.log('Fetching Maps API key, exists:', !!apiKey);
+    console.log('Checking Maps API key configuration');
+    console.log('API Key exists:', !!apiKey);
+    console.log('API Key length:', apiKey?.length || 0);
 
     if (!apiKey) {
-      console.error("Google Maps API key not found");
+      console.error("Google Maps API key not found in environment");
       return res.status(500).json({ error: "API key not configured" });
     }
+
+    console.log('Sending API key to client');
     res.json({ apiKey });
   });
 
