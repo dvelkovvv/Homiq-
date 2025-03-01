@@ -31,9 +31,9 @@ export function GoogleMaps({ onLocationSelect, initialLocation }: GoogleMapsProp
     const loadApiKey = async () => {
       try {
         const response = await api.get('api/maps/config');
-        console.log('Maps API config response:', response.data);
+        console.log('Maps API response:', response);
 
-        if (!response.data.apiKey) {
+        if (!response.data?.apiKey) {
           throw new Error('API key not configured');
         }
 

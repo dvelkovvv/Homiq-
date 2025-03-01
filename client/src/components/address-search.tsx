@@ -28,17 +28,19 @@ export function AddressSearch({ onLocationSelect, onContinue }: AddressSearchPro
 
     setIsSearching(true);
     try {
-      const { data } = await api.get('api/geocode', {
+      const response = await api.get('api/geocode', {
         params: {
           address: `${searchQuery}, Bulgaria`
         }
       });
 
-      if (!data.results?.[0]) {
+      console.log('Geocoding response:', response);
+
+      if (!response.data?.results?.[0]) {
         throw new Error('Адресът не е намерен');
       }
 
-      const location = data.results[0].geometry.location;
+      const location = response.data.results[0].geometry.location;
       setSelectedLocation(location);
       onLocationSelect?.(location);
 
