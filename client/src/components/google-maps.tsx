@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { GoogleMap, useLoadScript, Marker } from "@react-google-maps/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from 'axios';
@@ -14,7 +14,7 @@ const defaultCenter = {
   lng: 23.3219
 };
 
-const libraries: ("places")[] = ["places"];
+const libraries = ["places"] as const;
 
 interface GoogleMapsProps {
   onLocationSelect?: (location: { lat: number; lng: number }) => void;
@@ -26,7 +26,6 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
   const [center, setCenter] = useState(initialLocation || defaultCenter);
   const [apiKey, setApiKey] = useState<string | null>(null);
 
-  // Fetch API key
   useEffect(() => {
     axios.get('/api/maps/config')
       .then(response => {
@@ -45,8 +44,8 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
       });
   }, []);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey || '',
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: apiKey ?? '',
     libraries,
   });
 
@@ -96,6 +95,17 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     }
   };
 
+  if (!apiKey) {
+    return (
+      <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Зареждане на картата...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loadError) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-destructive/5">
@@ -106,7 +116,7 @@ export function GoogleMaps({ onLocationSelect, onAddressSelect, initialLocation 
     );
   }
 
-  if (!isLoaded || !apiKey) {
+  if (!isLoaded) {
     return (
       <div className="w-full h-full rounded-md border flex items-center justify-center bg-accent/5">
         <div className="flex flex-col items-center gap-2">
