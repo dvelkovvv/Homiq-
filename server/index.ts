@@ -1,6 +1,9 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import express, { type Request, Response, NextFunction } from 'express';
+import { registerRoutes } from './routes';
+import { setupVite, log } from './vite';
+import dotenv from 'dotenv';
+
+dotenv.config();  // Зарежда променливите от .env файла
 
 const app = express();
 
@@ -20,18 +23,18 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const duration = Date.now() - start;
     const statusCode = res.statusCode;
     const method = req.method;
 
     let logLine = `${method} ${path} ${statusCode} in ${duration}ms`;
-    if (capturedJsonResponse && path.startsWith("/api")) {
+    if (capturedJsonResponse && path.startsWith('/api')) {
       logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
     }
 
     if (logLine.length > 80) {
-      logLine = logLine.slice(0, 79) + "…";
+      logLine = logLine.slice(0, 79) + '…';
     }
 
     log(`${statusCode >= 400 ? '[ERROR]' : '[INFO]'} ${logLine}`);
@@ -48,12 +51,12 @@ app.use((req, res, next) => {
     // Log startup information
     log('Starting server...');
     log(`Environment: ${process.env.NODE_ENV}`);
-    log(`Port: ${process.env.PORT || 5000}`);
+    log(`Port: ${process.env.PORT || 3000}`);
 
     const server = await registerRoutes(app);
 
     // Force development mode for now to avoid build requirement
-    process.env.NODE_ENV = "development";
+    process.env.NODE_ENV = 'development';
 
     // Setup Vite in development mode
     log('Setting up Vite development server...');
@@ -62,13 +65,13 @@ app.use((req, res, next) => {
     // Global error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+      const message = err.message || 'Internal Server Error';
       const stack = process.env.NODE_ENV === 'development' ? err.stack : undefined;
 
       log(`[ERROR] ${status} - ${message}`);
       if (stack) log(stack);
 
-      res.status(status).json({ 
+      res.status(status).json({
         error: {
           message,
           ...(stack && { stack })
@@ -77,15 +80,18 @@ app.use((req, res, next) => {
     });
 
     // Start server
-    const port = process.env.PORT || 5000;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`Server running on port ${port}`);
-      log(`Server URL: http://0.0.0.0:${port}`);
-    });
+    const port = process.env.PORT || 3000;
+    server.listen(
+      {
+        port,
+        host: '0.0.0.0',
+        reusePort: true,
+      },
+      () => {
+        log(`Server running on port ${port}`);
+        log(`Server URL: http://0.0.0.0:${port}`);
+      }
+    );
 
     // Handle server errors
     server.on('error', (error: any) => {
